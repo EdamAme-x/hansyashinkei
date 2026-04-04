@@ -1,8 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Fog, Color,
-  TextureLoader, NoToneMapping,
+  NoToneMapping,
   type Object3D,
-  type Texture,
 } from "three";
 import type { SceneTheme } from "@domain/entities/ThemeConfig";
 
@@ -13,17 +12,11 @@ export class ThreeSceneAdapter {
 
   constructor(container: HTMLElement, sceneTheme: SceneTheme) {
     this.scene = new Scene();
-
-    if (sceneTheme.background.type === "color") {
-      this.scene.background = new Color(sceneTheme.background.hex);
-    } else {
-      this.scene.background = new Color(sceneTheme.fogColor);
-      new TextureLoader().load(sceneTheme.background.url, (tex) => {
-        this.scene.background = tex;
-      });
-    }
-
+    this.scene.background = new Color(sceneTheme.fogColor);
     this.scene.fog = new Fog(sceneTheme.fogColor, sceneTheme.fogNear, sceneTheme.fogFar);
+
+    // Background image → CSS layer (not Three.js texture)
+    this.applyBackgroundImage(sceneTheme);
 
     this.camera = new PerspectiveCamera(
       70,
@@ -34,7 +27,7 @@ export class ThreeSceneAdapter {
     this.camera.position.set(0, 12, 14);
     this.camera.lookAt(0, 0, -40);
 
-    this.renderer = new WebGLRenderer({ antialias: true });
+    this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = NoToneMapping;
@@ -60,34 +53,36 @@ export class ThreeSceneAdapter {
   }
 
   applySceneTheme(sceneTheme: SceneTheme): void {
-    // Dispose the previous background texture to prevent GPU memory leaks.
-    if (this.scene.background && (this.scene.background as Texture).isTexture) {
-      (this.scene.background as Texture).dispose();
-    }
-
-    if (sceneTheme.background.type === "color") {
-      this.scene.background = new Color(sceneTheme.background.hex);
-    } else {
-      new TextureLoader().load(sceneTheme.background.url, (tex) => {
-        // Dispose any texture that was set between the load call and the callback.
-        if (this.scene.background && (this.scene.background as Texture).isTexture) {
-          (this.scene.background as Texture).dispose();
-        }
-        this.scene.background = tex;
-      });
-    }
+    this.scene.background = new Color(sceneTheme.fogColor);
     if (this.scene.fog) {
       const fog = this.scene.fog as Fog;
       fog.color.set(sceneTheme.fogColor);
       fog.near = sceneTheme.fogNear;
       fog.far = sceneTheme.fogFar;
     }
+    this.applyBackgroundImage(sceneTheme);
+  }
+
+  private applyBackgroundImage(sceneTheme: SceneTheme): void {
+    const bgBlur = document.getElementById("bg-blur");
+    const bgImage = document.getElementById("bg-image");
+    if (!bgBlur || !bgImage) return;
+
+    if (sceneTheme.background.type === "texture") {
+      const url = sceneTheme.background.url;
+      bgBlur.style.backgroundImage = `url(${url})`;
+      bgImage.style.backgroundImage = `url(${url})`;
+      bgBlur.style.display = "";
+      bgImage.style.display = "";
+    } else {
+      bgBlur.style.backgroundImage = "";
+      bgImage.style.backgroundImage = "";
+      bgBlur.style.display = "none";
+      bgImage.style.display = "none";
+    }
   }
 
   dispose(): void {
-    if (this.scene.background && (this.scene.background as Texture).isTexture) {
-      (this.scene.background as Texture).dispose();
-    }
     this.renderer.dispose();
   }
 }

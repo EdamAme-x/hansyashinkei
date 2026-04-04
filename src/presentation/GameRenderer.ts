@@ -78,6 +78,14 @@ export class GameRenderer {
       blending: AdditiveBlending,
       depthWrite: false,
     });
+    // Load initial wall texture if set
+    if (this.scene.wallTextureUrl) {
+      new TextureLoader().load(this.scene.wallTextureUrl, (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        this.wallMaterial.map = tex;
+        this.wallMaterial.needsUpdate = true;
+      });
+    }
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: this.scene.wallEdgeColor,
       linewidth: 1,
@@ -165,6 +173,21 @@ export class GameRenderer {
     zoneLine.rotation.x = -Math.PI / 2;
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
+
+    // Horizon glow — hides the hard edge where the floor ends
+    const glowDepth = 15;
+    const glowGeo = new PlaneGeometry(laneWidth * laneCount + 4, glowDepth);
+    const glowMat = new MeshBasicMaterial({
+      color: s.fogColor,
+      transparent: true,
+      opacity: 0.6,
+      blending: AdditiveBlending,
+      depthWrite: false,
+    });
+    const glow = new Mesh(glowGeo, glowMat);
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(0, 0.03, -LANE_LENGTH / 2 + 10 + glowDepth / 2);
+    this.adapter.add(glow);
   }
 
   private getWallGroup(): Group {

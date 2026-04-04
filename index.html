@@ -34,6 +34,25 @@
       html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: 'Orbitron', sans-serif; }
       #app { width: 100%; height: 100%; position: relative; }
 
+      /* Background layer — YouTube-style letterbox with edge glow */
+      #bg-layer {
+        position: fixed; inset: 0; z-index: -1; overflow: hidden;
+      }
+      #bg-blur {
+        position: absolute; inset: -40px;
+        background-size: cover; background-position: center;
+        filter: blur(40px) brightness(0.3);
+      }
+      #bg-image {
+        position: absolute; inset: 0;
+        background-size: contain; background-position: center; background-repeat: no-repeat;
+        filter: brightness(0.5);
+      }
+      #bg-mask {
+        position: absolute; inset: 0;
+        background: rgba(0,0,0,0.4);
+      }
+
       .overlay {
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -374,6 +393,19 @@
         padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; opacity: 0.4;
       }
       .theme-clear-btn:hover { opacity: 0.7; }
+      .theme-preview-img {
+        width: 2.5rem; height: 2.5rem; border-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.15);
+        background-size: cover; background-position: center;
+        flex-shrink: 0;
+      }
+      .theme-preview-img.empty {
+        background: rgba(255,255,255,0.04);
+        border-style: dashed;
+      }
+      .theme-status {
+        font-size: 0.65rem; opacity: 0.4; min-width: 2.5rem;
+      }
 
       /* How to play */
       .how-to-play {
@@ -435,6 +467,12 @@
     <div id="rotate-prompt" aria-label="画面を横向きにしてください">
       <div class="rotate-icon">📱↻</div>
       画面を横向きにしてね
+    </div>
+
+    <div id="bg-layer" aria-hidden="true">
+      <div id="bg-blur"></div>
+      <div id="bg-image"></div>
+      <div id="bg-mask"></div>
     </div>
 
     <div id="app" role="application" aria-label="反射神経ゲーム">
@@ -541,26 +579,20 @@
         <div class="theme-custom">
           <div class="theme-row">
             <span class="theme-row-label">BACKGROUND</span>
-            <label class="theme-file-btn">
-              SELECT
-              <input type="file" id="theme-bg-file" accept="image/*" />
-            </label>
+            <div id="theme-bg-preview" class="theme-preview-img empty"></div>
+            <label class="theme-file-btn">SELECT<input type="file" id="theme-bg-file" accept="image/*" /></label>
             <button id="theme-bg-clear" class="theme-clear-btn">CLEAR</button>
           </div>
           <div class="theme-row">
             <span class="theme-row-label">WALL IMAGE</span>
-            <label class="theme-file-btn">
-              SELECT
-              <input type="file" id="theme-wall-file" accept="image/*" />
-            </label>
+            <div id="theme-wall-preview" class="theme-preview-img empty"></div>
+            <label class="theme-file-btn">SELECT<input type="file" id="theme-wall-file" accept="image/*" /></label>
             <button id="theme-wall-clear" class="theme-clear-btn">CLEAR</button>
           </div>
           <div class="theme-row">
             <span class="theme-row-label">BGM</span>
-            <label class="theme-file-btn">
-              SELECT
-              <input type="file" id="theme-bgm-file" accept="audio/*" />
-            </label>
+            <span id="theme-bgm-status" class="theme-status">DEFAULT</span>
+            <label class="theme-file-btn">SELECT<input type="file" id="theme-bgm-file" accept="audio/*" /></label>
             <button id="theme-bgm-clear" class="theme-clear-btn">CLEAR</button>
           </div>
         </div>
