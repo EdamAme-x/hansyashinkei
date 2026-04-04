@@ -149,8 +149,8 @@ export function tick(world: GameWorldState, dt: number): void {
   world.speed = computeSpeed(config, world.score);
   world.walls = world.walls.filter((w) => w.z < config.despawnZ);
 
-  // Spawn interval warmup: 1.2x at score 0 → 1.0x at score 100
-  const spawnScale = Math.max(1, 1.2 - 0.2 * (world.score / 100));
+  // Spawn interval warmup: 1.15x at score 0 → 1.0x at score 100
+  const spawnScale = Math.max(1, 1.15 - 0.15 * (world.score / 100));
   const baseInterval = config.spawnInterval * spawnScale * (config.baseSpeed / world.speed);
   world.spawnTimer += dt;
   if (world.spawnTimer >= baseInterval) {
