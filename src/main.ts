@@ -30,9 +30,8 @@ async function main() {
   const themeManager = new ThemeManager(themeRepo);
 
   const gameConfig = createDefaultConfig();
-  applyDevParams(gameConfig);
-
   const inputConfig = loadInputConfig();
+  applyDevParams(gameConfig, inputConfig);
 
   new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager);
 }
