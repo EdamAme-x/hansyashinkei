@@ -223,12 +223,14 @@
       /* Credit */
       #credit {
         position: fixed; bottom: 1rem; right: 1.2rem; z-index: 30;
+        display: flex; gap: 1rem;
         font-size: 0.8rem; font-weight: 700; opacity: 0.4;
-        color: #fff; text-decoration: none; letter-spacing: 0.08em;
         pointer-events: auto; transition: bottom 0.2s;
       }
-      #credit:hover { opacity: 0.7; }
-      #replay-bar:not(.hidden) ~ #credit,
+      #credit a {
+        color: #fff; text-decoration: none; letter-spacing: 0.08em;
+      }
+      #credit a:hover { opacity: 0.7; }
       body:has(#replay-bar:not(.hidden)) #credit { bottom: 4rem; }
 
       /* Keybind screen */
@@ -328,7 +330,10 @@
       <div id="touch-zone-left" class="touch-zone touch-zone-left"></div>
       <div id="touch-zone-right" class="touch-zone touch-zone-right"></div>
 
-      <a id="credit" href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
+      <div id="credit">
+        <a href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
+        <a href="https://github.com/EdamAme-x/hansyashinkei" target="_blank" rel="noopener">GitHub</a>
+      </div>
 
       <div id="score-display" class="hidden">0</div>
       <div id="speedup-display" class="hidden">SPEED UP</div>
