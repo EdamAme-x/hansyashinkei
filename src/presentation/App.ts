@@ -45,7 +45,7 @@ export class App {
   private recording: RecordingSession | null = null;
   private replayController: ReplayController | null = null;
   private renderDirty = true;
-  private lastScoredWaveCount = 0;
+
 
   constructor(
     container: HTMLElement,
@@ -123,7 +123,7 @@ export class App {
       const seed = generateSeed();
       this.world = createGameWorld(this.gameConfig, mulberry32(seed));
       this.lastTier = 0;
-      this.lastScoredWaveCount = 0;
+
       this.recording = {
         seed,
         dts: [],
@@ -428,13 +428,6 @@ export class App {
         if (this.recording) {
           this.recording.dts.push(dt);
           this.recording.frameCount++;
-        }
-
-        // Wall pass SE
-        const waveCount = this.world.scoredWaves.size;
-        if (waveCount > this.lastScoredWaveCount) {
-          this.lastScoredWaveCount = waveCount;
-          this.audio.playWallPass();
         }
 
         const tier = getSpeedTier(this.gameConfig, this.world.score);

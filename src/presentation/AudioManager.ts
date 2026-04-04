@@ -52,27 +52,23 @@ export class AudioManager {
 
   playDodge(): void {
     const urls = SE.dodge;
-    this.playSe(urls[Math.floor(Math.random() * urls.length)], 0.15);
-  }
-
-  playWallPass(): void {
-    this.playSe(SE.wallPass, 0.12);
+    this.playSe(urls[Math.floor(Math.random() * urls.length)], 0.04);
   }
 
   playSpeedUp(): void {
-    this.playSe(SE.speedUp, 0.3);
+    this.playSe(SE.speedUp, 0.1);
   }
 
   playDeath(): void {
-    this.playSe(SE.death, 0.4);
+    this.playSe(SE.death, 0.15);
   }
 
   playNewBest(): void {
-    this.playSe(SE.newBest, 0.35);
+    this.playSe(SE.newBest, 0.12);
   }
 
   playStart(): void {
-    this.playSe(SE.start, 0.25);
+    this.playSe(SE.start, 0.1);
   }
 
   private playSe(url: string, volume: number): void {
