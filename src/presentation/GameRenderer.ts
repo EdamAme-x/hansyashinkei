@@ -58,11 +58,12 @@ export class GameRenderer {
       roughness: 0.3,
     });
     this.wallReflectionMaterial = new MeshStandardMaterial({
-      color: 0x111111,
+      color: 0x222222,
       metalness: 0.9,
       roughness: 0.3,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.12,
+      depthWrite: false,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: 0xffffff,
@@ -162,10 +163,13 @@ export class GameRenderer {
     const line = new LineSegments(this.wallEdgesGeometry, this.wallEdgesMaterial);
     group.add(line);
 
-    // Reflection: flipped copy below the floor
+    // Reflection: mirrored across floor (y=0).
+    // Group is at world y=wallHeight/2. Reflection local y=-wallHeight
+    // puts its center at world y = wallHeight/2 - wallHeight = -wallHeight/2.
     const reflection = new Mesh(this.wallGeometry, this.wallReflectionMaterial);
     reflection.scale.y = -1;
     reflection.position.y = -this.config.render.wallHeight;
+    reflection.renderOrder = -1;
     group.add(reflection);
 
     this.adapter.add(group);
