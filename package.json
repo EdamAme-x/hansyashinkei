@@ -1,12 +1,12 @@
 {
   "name": "hansyashinkei",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.9.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
