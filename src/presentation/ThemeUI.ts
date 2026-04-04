@@ -54,44 +54,38 @@ export class ThemeUI {
 
   private updatePreviews(): void {
     const overrides = this.manager.getOverrides();
-    const theme = this.manager.current;
 
-    // Background preview
-    const bgUrl = theme.scene.background.type === "texture" ? theme.scene.background.url : null;
-    if (bgUrl) {
-      this.bgPreview.style.backgroundImage = `url(${bgUrl})`;
+    if (overrides.backgroundUrl) {
+      this.bgPreview.style.backgroundImage = `url(${overrides.backgroundUrl})`;
       this.bgPreview.classList.remove("empty");
     } else {
       this.bgPreview.style.backgroundImage = "";
       this.bgPreview.classList.add("empty");
     }
 
-    // Wall preview
-    const wallUrl = theme.scene.wallTextureUrl;
-    if (wallUrl) {
-      this.wallPreview.style.backgroundImage = `url(${wallUrl})`;
+    if (overrides.wallTextureUrl) {
+      this.wallPreview.style.backgroundImage = `url(${overrides.wallTextureUrl})`;
       this.wallPreview.classList.remove("empty");
     } else {
       this.wallPreview.style.backgroundImage = "";
       this.wallPreview.classList.add("empty");
     }
 
-    // BGM status
-    this.bgmStatus.textContent = overrides.bgmUrl ? "CUSTOM" : "DEFAULT";
+    this.bgmStatus.textContent = overrides.hasBgm ? "CUSTOM" : "DEFAULT";
   }
 
   private async onBgFile(): Promise<void> {
     const file = this.bgFileInput.files?.[0];
     if (!file) return;
     const dataUrl = await this.imageStore.save("bg", file);
-    this.manager.updateOverrides({ backgroundUrl: dataUrl });
+    this.manager.updateOverrides({ hasBackground: true, backgroundUrl: dataUrl });
     this.bgFileInput.value = "";
     this.updatePreviews();
   }
 
   private clearBg(): void {
     this.imageStore.remove("bg").catch(() => {});
-    this.manager.updateOverrides({ backgroundUrl: null });
+    this.manager.updateOverrides({ hasBackground: false, backgroundUrl: null });
     this.updatePreviews();
   }
 
@@ -99,14 +93,14 @@ export class ThemeUI {
     const file = this.wallFileInput.files?.[0];
     if (!file) return;
     const dataUrl = await this.imageStore.save("wall", file);
-    this.manager.updateOverrides({ wallTextureUrl: dataUrl });
+    this.manager.updateOverrides({ hasWallTexture: true, wallTextureUrl: dataUrl });
     this.wallFileInput.value = "";
     this.updatePreviews();
   }
 
   private clearWall(): void {
     this.imageStore.remove("wall").catch(() => {});
-    this.manager.updateOverrides({ wallTextureUrl: null });
+    this.manager.updateOverrides({ hasWallTexture: false, wallTextureUrl: null });
     this.updatePreviews();
   }
 
@@ -114,13 +108,27 @@ export class ThemeUI {
     const file = this.bgmFileInput.files?.[0];
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
-    this.manager.updateOverrides({ bgmUrl: dataUrl });
+    await this.imageStore.save("bgm", this.dataUrlToFile(dataUrl));
+    this.manager.updateOverrides({ hasBgm: true, bgmUrl: dataUrl });
     this.bgmFileInput.value = "";
     this.updatePreviews();
   }
 
   private clearBgm(): void {
-    this.manager.updateOverrides({ bgmUrl: null });
+    this.imageStore.remove("bgm").catch(() => {});
+    this.manager.updateOverrides({ hasBgm: false, bgmUrl: null });
     this.updatePreviews();
+  }
+
+  private dataUrlToFile(dataUrl: string): File {
+    const commaIdx = dataUrl.indexOf(",");
+    if (commaIdx === -1) return new File([], "audio");
+    const header = dataUrl.slice(0, commaIdx);
+    const base64 = dataUrl.slice(commaIdx + 1);
+    const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], "audio", { type: mime });
   }
 }

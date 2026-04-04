@@ -36,9 +36,19 @@ async function optimizeImage(file: File): Promise<string> {
   });
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+}
+
 export class ImageStore implements IImageStore {
   async save(key: string, file: File): Promise<string> {
-    const dataUrl = await optimizeImage(file);
+    const dataUrl = file.type.startsWith("image/")
+      ? await optimizeImage(file)
+      : await fileToDataUrl(file);
     const db = await openGameDb();
 
     return new Promise((resolve, reject) => {

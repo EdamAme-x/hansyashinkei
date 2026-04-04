@@ -30,8 +30,9 @@ async function main() {
   const manageReplay = new ManageReplay(replayRepo, replaySerializer, 20);
 
   const themeRepo = new ThemeRepository();
-  const themeManager = new ThemeManager(themeRepo);
   const imageStore = new ImageStore();
+  const themeManager = new ThemeManager(themeRepo, imageStore);
+  await themeManager.init();
 
   const manageSave = new ManageSave(
     {

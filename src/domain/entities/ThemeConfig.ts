@@ -54,17 +54,22 @@ export interface ThemeConfig {
 }
 
 /** Serializable user customizations (stored in localStorage). */
+/** Stored in localStorage (small). URLs are loaded separately from IndexedDB. */
 export interface CustomThemeOverrides {
-  backgroundUrl: string | null;
-  wallTextureUrl: string | null;
-  bgmUrl: string | null;
+  hasBackground: boolean;
+  hasWallTexture: boolean;
+  hasBgm: boolean;
+  // Populated at runtime from IndexedDB, NOT persisted in localStorage
+  backgroundUrl?: string | null;
+  wallTextureUrl?: string | null;
+  bgmUrl?: string | null;
 }
 
 export function createEmptyOverrides(): CustomThemeOverrides {
   return {
-    backgroundUrl: null,
-    wallTextureUrl: null,
-    bgmUrl: null,
+    hasBackground: false,
+    hasWallTexture: false,
+    hasBgm: false,
   };
 }
 
