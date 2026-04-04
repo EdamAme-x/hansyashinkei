@@ -4,7 +4,7 @@ import {
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
-  TextureLoader, SRGBColorSpace, CanvasTexture,
+  TextureLoader, SRGBColorSpace,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
@@ -122,32 +122,33 @@ export class GameRenderer {
     }
   }
 
+  /** Create a PlaneGeometry that tapers to near-zero width at the far end. */
+  private makeTaperGeo(width: number, length: number): PlaneGeometry {
+    const geo = new PlaneGeometry(width, length);
+    const pos = geo.attributes.position;
+    const halfLen = length / 2;
+    for (let i = 0; i < pos.count; i++) {
+      // After rotation -PI/2, local Y becomes world Z.
+      // Y > 0 = near camera, Y < 0 = far from camera.
+      const y = pos.getY(i);
+      // Scale X based on distance: 1.0 at near, ~0.01 at far end
+      const t = (y + halfLen) / length; // 0 at far, 1 at near
+      const scale = 0.01 + 0.99 * t;
+      pos.setX(i, pos.getX(i) * scale);
+    }
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+    return geo;
+  }
+
   private buildLanes(): void {
     const { laneCount } = this.config;
     const { laneWidth } = this;
     const s = this.scene;
 
-    // Alpha gradient texture: opaque at near (player) end, transparent at far end.
-    // PlaneGeometry rotated -PI/2: UV y=0 = +Z (near), y=1 = -Z (far).
-    const fadeCanvas = document.createElement("canvas");
-    fadeCanvas.width = 4;
-    fadeCanvas.height = 128;
-    const fadeCtx = fadeCanvas.getContext("2d");
-    if (fadeCtx) {
-      const grad = fadeCtx.createLinearGradient(0, 0, 0, 128);
-      grad.addColorStop(0, "rgba(255,255,255,1)");   // near camera: opaque
-      grad.addColorStop(0.7, "rgba(255,255,255,1)");  // stay opaque for 70%
-      grad.addColorStop(1, "rgba(255,255,255,0)");     // far: transparent
-      fadeCtx.fillStyle = grad;
-      fadeCtx.fillRect(0, 0, 4, 128);
-    }
-    const fadeTex = new CanvasTexture(fadeCanvas);
-
-    const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH);
+    const groundGeo = this.makeTaperGeo(laneWidth * laneCount + 2, LANE_LENGTH);
     const groundMat = new MeshStandardMaterial({
       color: s.groundColor, metalness: s.groundMetalness, roughness: s.groundRoughness,
-      transparent: true,
-      alphaMap: fadeTex,
     });
     const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -155,11 +156,9 @@ export class GameRenderer {
     this.adapter.add(ground);
 
     for (let i = 0; i < laneCount; i++) {
-      const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH);
+      const stripGeo = this.makeTaperGeo(laneWidth * 0.92, LANE_LENGTH);
       const stripMat = new MeshStandardMaterial({
         color: s.laneStripColor, metalness: 0.6, roughness: 0.5,
-        transparent: true,
-        alphaMap: fadeTex,
       });
       const strip = new Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -169,13 +168,11 @@ export class GameRenderer {
 
     for (let i = 0; i <= laneCount; i++) {
       const x = i * laneWidth - this.laneOffset - laneWidth / 2;
-      const lineGeo = new PlaneGeometry(0.06, LANE_LENGTH);
+      const lineGeo = this.makeTaperGeo(0.06, LANE_LENGTH);
       const lineMat = new MeshStandardMaterial({
         color: s.laneDividerColor,
         emissive: new Color(s.laneDividerEmissive),
         emissiveIntensity: s.laneDividerEmissiveIntensity,
-        transparent: true,
-        alphaMap: fadeTex,
       });
       const line = new Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
