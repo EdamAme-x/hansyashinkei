@@ -12,5 +12,5 @@ export function mulberry32(seed: number): Prng {
 }
 
 export function generateSeed(): number {
-  return (Math.random() * 0xffffffff) >>> 0;
+  return crypto.getRandomValues(new Uint32Array(1))[0];
 }
