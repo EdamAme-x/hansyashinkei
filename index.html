@@ -240,10 +240,11 @@
       /* Version */
       #app-version {
         position: fixed; bottom: 1rem; left: 1.2rem; z-index: 30;
-        font-size: 0.7rem; font-weight: 400; opacity: 0.25;
+        font-size: 0.75rem; font-weight: 700; opacity: 0.4;
         color: #fff; letter-spacing: 0.05em;
-        pointer-events: none;
+        pointer-events: none; transition: bottom 0.2s;
       }
+      body:has(#replay-bar:not(.hidden)) #app-version { bottom: 4rem; }
 
       /* Credit */
       #credit {
