@@ -10,7 +10,7 @@ function el(id: string): HTMLElement {
   return e;
 }
 
-const SPEED_OPTIONS = [0.25, 0.5, 1, 2, 4];
+const SPEED_OPTIONS = [0.5, 1, 2];
 
 export class ReplayController {
   private world: GameWorldState;
@@ -225,8 +225,9 @@ export class ReplayController {
 
   private updateBar(): void {
     const total = this.replay.dts.length;
-    const pct = total > 0 ? (this.frameIndex / total) * 100 : 0;
+    const pct = total > 0 ? Math.round((this.frameIndex / total) * 100) : 0;
     this.progressFill.style.width = `${pct}%`;
+    this.progress.setAttribute("aria-valuenow", String(pct));
 
     const elapsed = this.replay.dts.slice(0, this.frameIndex).reduce((a, b) => a + b, 0);
     const totalTime = this.replay.dts.reduce((a, b) => a + b, 0);

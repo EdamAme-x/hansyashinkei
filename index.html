@@ -50,12 +50,6 @@
         0%, 100% { text-shadow: 0 0 15px rgba(255,255,255,0.2), 0 4px 0 rgba(0,0,0,0.5); }
         50% { text-shadow: 0 0 30px rgba(255,255,255,0.4), 0 4px 0 rgba(0,0,0,0.5); }
       }
-      #title-screen .sub {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 0.7rem; font-weight: 400; opacity: 0.3;
-        letter-spacing: 0.5em; margin-top: 0.8rem; margin-bottom: 1.5rem;
-        text-transform: uppercase;
-      }
       .title-best {
         font-size: 0.85rem; font-weight: 700; opacity: 0.45;
         letter-spacing: 0.2em; margin-bottom: 1.5rem;
@@ -79,7 +73,7 @@
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.5em 1.2em; border-radius: 5px; cursor: pointer; opacity: 0.5;
       }
-      .title-buttons button:hover { background: rgba(255,255,255,0.12); opacity: 0.7; }
+      .title-buttons button:hover, .title-buttons button:focus-visible { background: rgba(255,255,255,0.12); opacity: 0.7; }
       .start-btn {
         margin-top: 1.5rem; pointer-events: auto;
         background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35);
@@ -87,7 +81,7 @@
         font-weight: 900; letter-spacing: 0.2em;
         padding: 0.7em 3em; border-radius: 6px; cursor: pointer;
       }
-      .start-btn:hover { background: rgba(255,255,255,0.2); }
+      .start-btn:hover, .start-btn:focus-visible { background: rgba(255,255,255,0.2); }
 
       /* Game Over */
       #gameover-screen h2 {
@@ -153,7 +147,7 @@
         border-radius: 5px; cursor: pointer; font-family: 'Orbitron', sans-serif;
         min-width: 3rem; text-align: center;
       }
-      #replay-bar button:hover { background: rgba(255,255,255,0.12); }
+      #replay-bar button:hover, #replay-bar button:focus-visible { background: rgba(255,255,255,0.12); }
       #replay-progress {
         flex: 1; height: 10px; background: rgba(255,255,255,0.12);
         border-radius: 5px; cursor: pointer; position: relative;
@@ -213,7 +207,7 @@
         padding: 0.35em 0.8em; border-radius: 4px; cursor: pointer;
         margin-left: 0.5rem;
       }
-      .history-btn:hover { background: rgba(255,255,255,0.15); }
+      .history-btn:hover, .history-btn:focus-visible { background: rgba(255,255,255,0.15); }
       .history-actions {
         display: flex; gap: 0.8rem; margin-top: 1.5rem;
       }
@@ -223,7 +217,8 @@
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
       }
-      #history-close:hover, #history-import:hover { background: rgba(255,255,255,0.12); }
+      #history-close:hover, #history-import:hover,
+      #history-close:focus-visible, #history-import:focus-visible { background: rgba(255,255,255,0.12); }
       #replay-file-input { display: none; }
 
       /* Game over buttons */
@@ -236,7 +231,7 @@
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.6em 1.5em; border-radius: 5px; cursor: pointer;
       }
-      .share-btn:hover { background: rgba(255,255,255,0.15); }
+      .share-btn:hover, .share-btn:focus-visible { background: rgba(255,255,255,0.15); }
 
       /* Credit */
       #credit {
@@ -248,7 +243,7 @@
       #credit a {
         color: #fff; text-decoration: none; letter-spacing: 0.08em;
       }
-      #credit a:hover { opacity: 0.7; }
+      #credit a:hover, #credit a:focus-visible { opacity: 0.7; }
       body:has(#replay-bar:not(.hidden)) #credit { bottom: 4rem; }
 
       /* Keybind screen */
@@ -277,7 +272,7 @@
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.4em 1em; border-radius: 4px; cursor: pointer;
       }
-      .keybind-set:hover { background: rgba(255,255,255,0.12); }
+      .keybind-set:hover, .keybind-set:focus-visible { background: rgba(255,255,255,0.12); }
       .keybind-set.listening {
         border-color: #fff; background: rgba(255,255,255,0.15);
         animation: keybind-blink 0.6s ease-in-out infinite alternate;
@@ -290,7 +285,7 @@
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
       }
-      .keybind-actions button:hover { background: rgba(255,255,255,0.12); }
+      .keybind-actions button:hover, .keybind-actions button:focus-visible { background: rgba(255,255,255,0.12); }
 
       /* How to play */
       .how-to-play {
@@ -312,101 +307,119 @@
       /* Touch-friendly gameover hint */
       @media (pointer: coarse) {
         #gameover-screen .hint { display: none; }
-        .history-hint kbd { display: none; }
+      }
+
+      /* Focus visible */
+      :focus-visible {
+        outline: 2px solid rgba(255,255,255,0.6);
+        outline-offset: 2px;
+      }
+
+      /* Reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="app">
-      <div id="title-screen" class="overlay">
+    <a href="#btn-start" class="sr-only">ゲーム開始へスキップ</a>
+
+    <div id="app" role="application" aria-label="反射神経ゲーム">
+      <div id="title-screen" class="overlay" role="dialog" aria-label="タイトル">
         <h1>反射神経</h1>
-        <p id="title-best" class="title-best"></p>
+        <p id="title-best" class="title-best" aria-live="polite"></p>
 
         <p class="how-to-play">迫る壁をよけろ!<br/>左右キーでボールを動かし、壁をかわし続けよう</p>
         <p class="keys"><span id="title-keys">F  J</span></p>
 
         <div class="title-buttons">
-          <button id="btn-history">HISTORY</button>
-          <button id="btn-keybinds">KEYS</button>
+          <button id="btn-history" aria-label="スコア履歴を表示">HISTORY</button>
+          <button id="btn-keybinds" aria-label="キー設定を変更">KEYS</button>
         </div>
 
-        <button id="btn-start" class="start-btn">START</button>
+        <button id="btn-start" class="start-btn" aria-label="ゲームを開始">START</button>
       </div>
 
-      <div id="gameover-screen" class="overlay hidden">
+      <div id="gameover-screen" class="overlay hidden" role="dialog" aria-label="ゲームオーバー">
         <h2>GAME OVER</h2>
-        <p id="new-best" class="new-best hidden">NEW BEST!</p>
-        <p id="final-score">0</p>
-        <p id="best-score">BEST 0</p>
+        <p id="new-best" class="new-best hidden" role="status">NEW BEST!</p>
+        <p id="final-score" aria-label="スコア">0</p>
+        <p id="best-score" aria-label="ベストスコア">BEST 0</p>
         <p class="hint"><kbd>Space</kbd> restart &nbsp; <kbd>⌫</kbd> title</p>
         <div class="gameover-buttons">
-          <button id="share-btn" class="share-btn">SHARE ON 𝕏</button>
-          <button id="back-to-title-btn" class="share-btn">TITLE</button>
+          <button id="share-btn" class="share-btn" aria-label="Xでシェア">SHARE ON 𝕏</button>
+          <button id="back-to-title-btn" class="share-btn" aria-label="タイトルに戻る">TITLE</button>
         </div>
       </div>
 
-      <div id="touch-zone-left" class="touch-zone touch-zone-left"></div>
-      <div id="touch-zone-right" class="touch-zone touch-zone-right"></div>
+      <div id="touch-zone-left" class="touch-zone touch-zone-left" aria-hidden="true"></div>
+      <div id="touch-zone-right" class="touch-zone touch-zone-right" aria-hidden="true"></div>
 
-      <div id="credit">
+      <nav id="credit" aria-label="クレジット">
         <a href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
         <a href="https://github.com/EdamAme-x/hansyashinkei" target="_blank" rel="noopener">GitHub</a>
-      </div>
+      </nav>
 
-      <div id="score-display" class="hidden">0</div>
-      <div id="speedup-display" class="hidden">SPEED UP</div>
-      <div id="replay-indicator" class="hidden">REPLAY</div>
+      <div id="score-display" class="hidden" role="status" aria-live="polite" aria-label="現在のスコア">0</div>
+      <div id="speedup-display" class="hidden" role="alert" aria-live="assertive">SPEED UP</div>
+      <div id="replay-indicator" class="hidden" aria-hidden="true">REPLAY</div>
 
-      <div id="replay-bar" class="hidden">
-        <button id="replay-back-btn">✕</button>
-        <button id="replay-rw-btn">−5s</button>
-        <button id="replay-play-btn">⏸</button>
-        <button id="replay-ff-btn">+5s</button>
-        <div id="replay-progress">
+      <div id="replay-bar" class="hidden" role="toolbar" aria-label="リプレイ操作">
+        <button id="replay-back-btn" aria-label="リプレイを終了">✕</button>
+        <button id="replay-rw-btn" aria-label="5秒戻る">−5s</button>
+        <button id="replay-play-btn" aria-label="再生/一時停止">⏸</button>
+        <button id="replay-ff-btn" aria-label="5秒進む">+5s</button>
+        <div id="replay-progress" role="progressbar" aria-label="再生位置" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div id="replay-progress-fill"></div>
         </div>
-        <button id="replay-speed-btn">1x</button>
-        <span id="replay-time">0:00 / 0:00</span>
+        <button id="replay-speed-btn" aria-label="再生速度を変更">1x</button>
+        <span id="replay-time" aria-label="再生時間">0:00 / 0:00</span>
       </div>
 
-      <div id="history-screen" class="hidden">
+      <div id="history-screen" class="hidden" role="dialog" aria-label="スコア履歴">
         <h2>HISTORY</h2>
-        <ul id="history-list"></ul>
+        <ul id="history-list" aria-label="スコア一覧"></ul>
         <div class="history-actions">
-          <button id="history-close">CLOSE</button>
-          <button id="history-import">IMPORT</button>
+          <button id="history-close" aria-label="履歴を閉じる">CLOSE</button>
+          <button id="history-import" aria-label="リプレイファイルを読み込む">IMPORT</button>
         </div>
-        <input type="file" id="replay-file-input" accept=".hsr" />
+        <input type="file" id="replay-file-input" accept=".hsr" aria-label="リプレイファイルを選択" />
       </div>
 
-      <div id="keybind-screen" class="hidden">
+      <div id="keybind-screen" class="hidden" role="dialog" aria-label="キー設定">
         <h2>KEYBINDS</h2>
         <div class="keybind-row">
-          <span class="keybind-label">LEFT 1</span>
-          <span id="keybind-left-1-key" class="keybind-key">F</span>
-          <button id="keybind-left-1-btn" class="keybind-set">SET</button>
+          <span class="keybind-label" id="lbl-left-1">LEFT 1</span>
+          <span id="keybind-left-1-key" class="keybind-key" aria-labelledby="lbl-left-1">F</span>
+          <button id="keybind-left-1-btn" class="keybind-set" aria-label="左キー1を設定">SET</button>
         </div>
         <div class="keybind-row">
-          <span class="keybind-label">LEFT 2</span>
-          <span id="keybind-left-2-key" class="keybind-key">←</span>
-          <button id="keybind-left-2-btn" class="keybind-set">SET</button>
+          <span class="keybind-label" id="lbl-left-2">LEFT 2</span>
+          <span id="keybind-left-2-key" class="keybind-key" aria-labelledby="lbl-left-2">←</span>
+          <button id="keybind-left-2-btn" class="keybind-set" aria-label="左キー2を設定">SET</button>
         </div>
         <div class="keybind-row">
-          <span class="keybind-label">RIGHT 1</span>
-          <span id="keybind-right-1-key" class="keybind-key">J</span>
-          <button id="keybind-right-1-btn" class="keybind-set">SET</button>
+          <span class="keybind-label" id="lbl-right-1">RIGHT 1</span>
+          <span id="keybind-right-1-key" class="keybind-key" aria-labelledby="lbl-right-1">J</span>
+          <button id="keybind-right-1-btn" class="keybind-set" aria-label="右キー1を設定">SET</button>
         </div>
         <div class="keybind-row">
-          <span class="keybind-label">RIGHT 2</span>
-          <span id="keybind-right-2-key" class="keybind-key">→</span>
-          <button id="keybind-right-2-btn" class="keybind-set">SET</button>
+          <span class="keybind-label" id="lbl-right-2">RIGHT 2</span>
+          <span id="keybind-right-2-key" class="keybind-key" aria-labelledby="lbl-right-2">→</span>
+          <button id="keybind-right-2-btn" class="keybind-set" aria-label="右キー2を設定">SET</button>
         </div>
         <div class="keybind-actions">
-          <button id="keybind-reset">RESET</button>
-          <button id="keybind-close">CLOSE</button>
+          <button id="keybind-reset" aria-label="キー設定をリセット">RESET</button>
+          <button id="keybind-close" aria-label="キー設定を閉じる">CLOSE</button>
         </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
+
+    <style>.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }</style>
   </body>
 </html>
