@@ -133,6 +133,7 @@ export class App {
       this.renderer.clearWalls();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
+      this.audio.playStart();
       this.audio.startBgm();
     }
 
