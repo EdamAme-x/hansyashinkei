@@ -1,7 +1,8 @@
 import { StateMachine, GameState, GameEvent } from "@domain/entities/StateMachine";
-import { BallSide } from "@domain/entities/Lane";
+import type { GameConfig } from "@domain/entities/GameConfig";
 import { createGameWorld, dodge, undodge, tick, type GameWorldState } from "@domain/entities/GameWorld";
 import { ManageScore } from "@application/usecases/ManageScore";
+import type { InputConfig } from "./InputConfig";
 import { GameRenderer } from "./GameRenderer";
 import { HUD } from "./HUD";
 
@@ -10,16 +11,26 @@ export class App {
   private readonly renderer: GameRenderer;
   private readonly hud: HUD;
   private readonly manageScore: ManageScore;
+  private readonly gameConfig: GameConfig;
+  private readonly inputConfig: InputConfig;
 
-  private world: GameWorldState = createGameWorld();
+  private world: GameWorldState;
   private animationId = 0;
   private lastTime = 0;
   private bestScore = 0;
 
-  constructor(container: HTMLElement, manageScore: ManageScore) {
-    this.renderer = new GameRenderer(container);
+  constructor(
+    container: HTMLElement,
+    manageScore: ManageScore,
+    gameConfig: GameConfig,
+    inputConfig: InputConfig,
+  ) {
+    this.gameConfig = gameConfig;
+    this.inputConfig = inputConfig;
+    this.renderer = new GameRenderer(container, gameConfig);
     this.hud = new HUD();
     this.manageScore = manageScore;
+    this.world = createGameWorld(gameConfig);
 
     this.sm.onStateChange((_prev, next) => this.onStateChange(next));
 
@@ -42,7 +53,7 @@ export class App {
     this.hud.show(state);
 
     if (state === GameState.Playing) {
-      this.world = createGameWorld();
+      this.world = createGameWorld(this.gameConfig);
       this.renderer.clearWalls();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
@@ -66,24 +77,28 @@ export class App {
 
   private setupInput(): void {
     const pressed = new Set<string>();
+    const { dodge: dodgeBindings, start: startCodes } = this.inputConfig;
 
     window.addEventListener("keydown", (e) => {
       if (pressed.has(e.code)) return;
       pressed.add(e.code);
 
-      if (this.sm.state === GameState.Title && (e.code === "Space" || e.code === "Enter")) {
+      if (this.sm.state === GameState.Title && startCodes.includes(e.code)) {
         this.sm.dispatch(GameEvent.Start);
         return;
       }
 
-      if (this.sm.state === GameState.GameOver && (e.code === "Space" || e.code === "Enter")) {
+      if (this.sm.state === GameState.GameOver && startCodes.includes(e.code)) {
         this.sm.dispatch(GameEvent.Retry);
         return;
       }
 
       if (this.sm.state === GameState.Playing) {
-        if (e.code === "KeyF") dodge(this.world, BallSide.Left);
-        if (e.code === "KeyJ") dodge(this.world, BallSide.Right);
+        for (const binding of dodgeBindings) {
+          if (e.code === binding.code) {
+            dodge(this.world, binding.ballIndex);
+          }
+        }
       }
     });
 
@@ -91,8 +106,11 @@ export class App {
       pressed.delete(e.code);
 
       if (this.sm.state === GameState.Playing) {
-        if (e.code === "KeyF") undodge(this.world, BallSide.Left);
-        if (e.code === "KeyJ") undodge(this.world, BallSide.Right);
+        for (const binding of dodgeBindings) {
+          if (e.code === binding.code) {
+            undodge(this.world, binding.ballIndex);
+          }
+        }
       }
     });
   }

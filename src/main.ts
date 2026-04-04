@@ -2,6 +2,8 @@ import { App } from "@presentation/App";
 import { ManageScore } from "@application/usecases/ManageScore";
 import { IndexedDbScoreRepository } from "@infrastructure/storage/IndexedDbScoreRepository";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
+import { createDefaultConfig } from "@domain/entities/GameConfig";
+import { createDefaultInputConfig } from "@presentation/InputConfig";
 
 async function main() {
   const container = document.getElementById("app");
@@ -13,7 +15,10 @@ async function main() {
   const scoreRepo = new IndexedDbScoreRepository(deviceKey);
   const manageScore = new ManageScore(scoreRepo);
 
-  new App(container, manageScore);
+  const gameConfig = createDefaultConfig();
+  const inputConfig = createDefaultInputConfig();
+
+  new App(container, manageScore, gameConfig, inputConfig);
 }
 
 main();

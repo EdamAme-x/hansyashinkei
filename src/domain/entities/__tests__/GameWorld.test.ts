@@ -6,14 +6,16 @@ import {
   tick,
   type GameWorldState,
 } from "@domain/entities/GameWorld";
-import { BallSide } from "@domain/entities/Lane";
+import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { createWall } from "@domain/entities/Wall";
+
+const config = createDefaultConfig();
 
 describe("GameWorld", () => {
   let world: GameWorldState;
 
   beforeEach(() => {
-    world = createGameWorld();
+    world = createGameWorld(config);
   });
 
   describe("createGameWorld", () => {
@@ -28,28 +30,28 @@ describe("GameWorld", () => {
   });
 
   describe("dodge / undodge", () => {
-    it("should move left ball to lane 0 on dodge", () => {
-      dodge(world, BallSide.Left);
+    it("should move left ball to dodge lane", () => {
+      dodge(world, 0);
       expect(world.balls[0].lane).toBe(0);
       expect(world.balls[0].dodging).toBe(true);
     });
 
-    it("should move right ball to lane 3 on dodge", () => {
-      dodge(world, BallSide.Right);
+    it("should move right ball to dodge lane", () => {
+      dodge(world, 1);
       expect(world.balls[1].lane).toBe(3);
       expect(world.balls[1].dodging).toBe(true);
     });
 
-    it("should return left ball to lane 1 on undodge", () => {
-      dodge(world, BallSide.Left);
-      undodge(world, BallSide.Left);
+    it("should return left ball to home lane", () => {
+      dodge(world, 0);
+      undodge(world, 0);
       expect(world.balls[0].lane).toBe(1);
       expect(world.balls[0].dodging).toBe(false);
     });
 
-    it("should return right ball to lane 2 on undodge", () => {
-      dodge(world, BallSide.Right);
-      undodge(world, BallSide.Right);
+    it("should return right ball to home lane", () => {
+      dodge(world, 1);
+      undodge(world, 1);
       expect(world.balls[1].lane).toBe(2);
       expect(world.balls[1].dodging).toBe(false);
     });
@@ -72,7 +74,7 @@ describe("GameWorld", () => {
     });
 
     it("should not kill player when ball dodges to different lane", () => {
-      dodge(world, BallSide.Left);
+      dodge(world, 0);
       world.walls.push(createWall(world.wallIdGen, 1, -0.5));
       tick(world, 0.01);
       expect(world.alive).toBe(true);
@@ -116,7 +118,6 @@ describe("GameWorld", () => {
     it("should remove walls past despawn threshold", () => {
       world.walls.push(createWall(world.wallIdGen, 0, 4.9));
       tick(world, 0.02);
-      // speed=24, dt=0.02 → z += 0.48 → 5.38 > 5
       expect(world.walls).toHaveLength(0);
     });
   });
@@ -124,16 +125,15 @@ describe("GameWorld", () => {
   describe("tick - wall spawning", () => {
     it("should spawn walls when timer exceeds interval", () => {
       world.spawnTimer = 0.69;
-      tick(world, 0.02); // timer → 0.71 > 0.7
+      tick(world, 0.02);
       expect(world.walls.length).toBeGreaterThanOrEqual(2);
     });
 
-    it("should never spawn impossible pairs {0,1} or {2,3}", () => {
+    it("should never spawn impossible wall combos", () => {
       for (let i = 0; i < 200; i++) {
         world.spawnTimer = 10;
         tick(world, 0.001);
       }
-      // Group walls by spawn z (same z = same pair)
       const groups = new Map<number, number[]>();
       for (const wall of world.walls) {
         const key = Math.round(wall.z * 100);

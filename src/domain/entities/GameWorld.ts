@@ -1,6 +1,6 @@
+import type { GameConfig } from "./GameConfig";
+import { computeValidWallLanes } from "./GameConfig";
 import {
-  LANE_COUNT,
-  BallSide,
   type BallState,
   createBalls,
   dodgeBall,
@@ -8,86 +8,76 @@ import {
 } from "./Lane";
 import { createWall, createWallIdGen, type Wall, type WallIdGen } from "./Wall";
 
-const BASE_SPEED = 24;
-const SPEED_MULTIPLIER = 1.05;
-const SPEED_UP_INTERVAL = 100;
-const WALL_SPAWN_Z = -120;
 const BALL_Z = 0;
-const WALL_DESPAWN_Z = 5;
-const SPAWN_INTERVAL_BASE = 0.7;
 
 export interface GameWorldState {
-  balls: [BallState, BallState];
+  readonly config: GameConfig;
+  balls: BallState[];
   walls: Wall[];
   score: number;
   speed: number;
   spawnTimer: number;
   alive: boolean;
   wallIdGen: WallIdGen;
+  validWallLanes: number[][];
 }
 
-export function createGameWorld(): GameWorldState {
+export function createGameWorld(config: GameConfig): GameWorldState {
   return {
-    balls: createBalls(),
+    config,
+    balls: createBalls(config),
     walls: [],
     score: 0,
-    speed: BASE_SPEED,
+    speed: config.baseSpeed,
     spawnTimer: 0,
     alive: true,
     wallIdGen: createWallIdGen(),
+    validWallLanes: computeValidWallLanes(config),
   };
 }
 
-export function dodge(world: GameWorldState, side: BallSide): void {
-  const idx = side === BallSide.Left ? 0 : 1;
-  world.balls[idx] = dodgeBall(world.balls[idx], side);
+export function dodge(world: GameWorldState, ballIndex: number): void {
+  world.balls[ballIndex] = dodgeBall(
+    world.balls[ballIndex],
+    ballIndex,
+    world.config,
+  );
 }
 
-export function undodge(world: GameWorldState, side: BallSide): void {
-  const idx = side === BallSide.Left ? 0 : 1;
-  world.balls[idx] = returnBall(world.balls[idx], side);
+export function undodge(world: GameWorldState, ballIndex: number): void {
+  world.balls[ballIndex] = returnBall(
+    world.balls[ballIndex],
+    ballIndex,
+    world.config,
+  );
 }
 
-// Impossible combos: {0,1} blocks left ball, {2,3} blocks right ball
-const IMPOSSIBLE_PAIRS = [[0, 1], [2, 3]];
-
-const VALID_PAIRS = (() => {
-  const all: [number, number][] = [];
-  for (let a = 0; a < LANE_COUNT; a++) {
-    for (let b = a + 1; b < LANE_COUNT; b++) {
-      if (!IMPOSSIBLE_PAIRS.some((p) => p[0] === a && p[1] === b)) {
-        all.push([a, b]);
-      }
-    }
-  }
-  return all;
-})();
-
-function spawnWallPair(world: GameWorldState): void {
-  const pair = VALID_PAIRS[Math.floor(Math.random() * VALID_PAIRS.length)];
-  for (const lane of pair) {
-    world.walls.push(createWall(world.wallIdGen, lane, WALL_SPAWN_Z));
+function spawnWalls(world: GameWorldState): void {
+  const { validWallLanes } = world;
+  const lanes = validWallLanes[Math.floor(Math.random() * validWallLanes.length)];
+  for (const lane of lanes) {
+    world.walls.push(createWall(world.wallIdGen, lane, world.config.spawnZ));
   }
 }
 
-function computeSpeed(score: number): number {
-  const tier = Math.floor(score / SPEED_UP_INTERVAL);
-  return BASE_SPEED * Math.pow(SPEED_MULTIPLIER, tier);
+function computeSpeed(config: GameConfig, score: number): number {
+  const tier = Math.floor(score / config.speedUpInterval);
+  return config.baseSpeed * Math.pow(config.speedMultiplier, tier);
 }
 
 export function tick(world: GameWorldState, dt: number): void {
   if (!world.alive) return;
 
-  // Move walls toward camera
+  const { config } = world;
+
   for (const wall of world.walls) {
     wall.z += world.speed * dt;
   }
 
-  // Collision detection at ball z
-  const hitZone = 0.8;
+  // Collision
   for (const wall of world.walls) {
     if (wall.passed) continue;
-    if (wall.z >= BALL_Z - hitZone && wall.z <= BALL_Z + hitZone) {
+    if (wall.z >= BALL_Z - config.hitZone && wall.z <= BALL_Z + config.hitZone) {
       for (const ball of world.balls) {
         if (ball.lane === wall.lane) {
           world.alive = false;
@@ -97,25 +87,23 @@ export function tick(world: GameWorldState, dt: number): void {
     }
   }
 
-  // Score passed walls
+  // Score
   for (const wall of world.walls) {
-    if (!wall.passed && wall.z > BALL_Z + hitZone) {
+    if (!wall.passed && wall.z > BALL_Z + config.hitZone) {
       wall.passed = true;
       world.score++;
     }
   }
 
-  // Speed update
-  world.speed = computeSpeed(world.score);
+  world.speed = computeSpeed(config, world.score);
 
-  // Despawn walls
-  world.walls = world.walls.filter((w) => w.z < WALL_DESPAWN_Z);
+  world.walls = world.walls.filter((w) => w.z < config.despawnZ);
 
-  // Spawn timer
-  const spawnInterval = SPAWN_INTERVAL_BASE * (BASE_SPEED / world.speed);
+  // Spawn
+  const spawnInterval = config.spawnInterval * (config.baseSpeed / world.speed);
   world.spawnTimer += dt;
   if (world.spawnTimer >= spawnInterval) {
     world.spawnTimer -= spawnInterval;
-    spawnWallPair(world);
+    spawnWalls(world);
   }
 }
