@@ -6,6 +6,7 @@ import { createGameWorld, dodge, undodge, tick, getSpeedTier, type GameWorldStat
 import { mulberry32, generateSeed } from "@domain/entities/Prng";
 import { ManageScore } from "@application/usecases/ManageScore";
 import { ManageReplay } from "@application/usecases/ManageReplay";
+import type { BestScoreRepository } from "@domain/repositories/BestScoreRepository";
 import type { InputConfig } from "./InputConfig";
 import { codeToLabel } from "./InputConfig";
 import { GameRenderer } from "./GameRenderer";
@@ -29,6 +30,7 @@ export class App {
   private readonly keybindUI: KeybindUI;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
+  private readonly bestScoreRepo: BestScoreRepository;
   private readonly gameConfig: GameConfig;
   private inputConfig: InputConfig;
 
@@ -46,6 +48,7 @@ export class App {
     container: HTMLElement,
     manageScore: ManageScore,
     manageReplay: ManageReplay,
+    bestScoreRepo: BestScoreRepository,
     gameConfig: GameConfig,
     inputConfig: InputConfig,
   ) {
@@ -55,6 +58,7 @@ export class App {
     this.hud = new HUD();
     this.manageScore = manageScore;
     this.manageReplay = manageReplay;
+    this.bestScoreRepo = bestScoreRepo;
     this.world = createGameWorld(gameConfig, mulberry32(generateSeed()));
 
     this.historyUI = new HistoryUI(
@@ -84,12 +88,28 @@ export class App {
   }
 
   private async loadBestScore(): Promise<void> {
+    const stored = await this.bestScoreRepo.load();
+    if (stored) {
+      this.bestScore = stored.score;
+      this.bestReplayId = stored.replayId;
+    }
+
+    // Also check current history in case meta store was cleared
     const history = await this.manageScore.getHistory();
-    if (history.bestScore) {
+    if (history.bestScore && history.bestScore.value > this.bestScore) {
       this.bestScore = history.bestScore.value;
       this.bestReplayId = history.bestScore.replayId;
+      this.persistBestScore();
     }
+
     this.hud.updateTitleBest(this.bestScore);
+  }
+
+  private persistBestScore(): void {
+    this.bestScoreRepo.save({
+      score: this.bestScore,
+      replayId: this.bestReplayId,
+    }).catch(() => {});
   }
 
   private onStateChange(state: GameState): void {
@@ -153,6 +173,7 @@ export class App {
 
     if (isNewBest) {
       this.bestReplayId = replayId;
+      this.persistBestScore();
     }
 
     await this.manageReplay.prune(this.bestReplayId);

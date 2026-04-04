@@ -1,5 +1,5 @@
 const DB_NAME = "hansyashinkei";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: IDBDatabase | null = null;
 
@@ -18,6 +18,9 @@ export function openGameDb(): Promise<IDBDatabase> {
       }
       if (oldVersion < 2) {
         db.createObjectStore("replays", { keyPath: "id" });
+      }
+      if (oldVersion < 3) {
+        db.createObjectStore("meta", { keyPath: "id" });
       }
     };
 
