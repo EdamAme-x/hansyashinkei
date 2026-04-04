@@ -14,6 +14,7 @@ import { HUD } from "./HUD";
 import { ReplayController } from "./ReplayController";
 import { HistoryUI } from "./HistoryUI";
 import { KeybindUI } from "./KeybindUI";
+import { AudioManager } from "./AudioManager";
 
 interface RecordingSession {
   seed: number;
@@ -28,6 +29,7 @@ export class App {
   private readonly hud: HUD;
   private readonly historyUI: HistoryUI;
   private readonly keybindUI: KeybindUI;
+  private readonly audio = new AudioManager();
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
@@ -43,6 +45,7 @@ export class App {
   private recording: RecordingSession | null = null;
   private replayController: ReplayController | null = null;
   private renderDirty = true;
+  private lastScoredWaveCount = 0;
 
   constructor(
     container: HTMLElement,
@@ -120,6 +123,7 @@ export class App {
       const seed = generateSeed();
       this.world = createGameWorld(this.gameConfig, mulberry32(seed));
       this.lastTier = 0;
+      this.lastScoredWaveCount = 0;
       this.recording = {
         seed,
         dts: [],
@@ -129,19 +133,24 @@ export class App {
       this.renderer.clearWalls();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
+      this.audio.startBgm();
     }
 
     if (state === GameState.GameOver) {
       this.renderer.showBalls(false);
+      this.audio.stopBgm();
+      this.audio.playDeath();
       const isNewBest = this.world.score > this.bestScore;
       if (isNewBest) {
         this.bestScore = this.world.score;
+        this.audio.playNewBest();
       }
       this.hud.showGameOver(this.world.score, this.bestScore, isNewBest);
       this.saveRecording(isNewBest);
     }
 
     if (state === GameState.Title) {
+      this.audio.stopBgm();
       this.hud.updateTitleBest(this.bestScore);
     }
 
@@ -214,6 +223,20 @@ export class App {
       e.stopPropagation();
       this.sm.dispatch(GameEvent.BackToTitle);
     });
+
+    const soundBtn = document.getElementById("btn-sound");
+    if (soundBtn) {
+      this.updateSoundBtn(soundBtn);
+      soundBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.audio.toggle();
+        this.updateSoundBtn(soundBtn);
+      });
+    }
+  }
+
+  private updateSoundBtn(btn: HTMLElement): void {
+    btn.textContent = this.audio.enabled ? "SOUND ON" : "SOUND OFF";
   }
 
   private setupResize(): void {
@@ -364,6 +387,7 @@ export class App {
 
   private recordDodge(ballIndex: number): void {
     dodge(this.world, ballIndex);
+    this.audio.playDodge();
     if (this.recording) {
       this.recording.events.push({
         frame: this.recording.frameCount,
@@ -405,10 +429,18 @@ export class App {
           this.recording.frameCount++;
         }
 
+        // Wall pass SE
+        const waveCount = this.world.scoredWaves.size;
+        if (waveCount > this.lastScoredWaveCount) {
+          this.lastScoredWaveCount = waveCount;
+          this.audio.playWallPass();
+        }
+
         const tier = getSpeedTier(this.gameConfig, this.world.score);
         if (tier > this.lastTier) {
           this.lastTier = tier;
           this.hud.showSpeedUp();
+          this.audio.playSpeedUp();
         }
 
         if (!this.world.alive) {
