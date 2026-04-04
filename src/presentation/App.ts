@@ -82,8 +82,8 @@ export class App {
       }
 
       if (this.sm.state === GameState.Playing) {
-        if (e.code === "KeyJ") dodge(this.world, BallSide.Left);
-        if (e.code === "KeyK") dodge(this.world, BallSide.Right);
+        if (e.code === "KeyF") dodge(this.world, BallSide.Left);
+        if (e.code === "KeyJ") dodge(this.world, BallSide.Right);
       }
     });
 
@@ -91,8 +91,8 @@ export class App {
       pressed.delete(e.code);
 
       if (this.sm.state === GameState.Playing) {
-        if (e.code === "KeyJ") undodge(this.world, BallSide.Left);
-        if (e.code === "KeyK") undodge(this.world, BallSide.Right);
+        if (e.code === "KeyF") undodge(this.world, BallSide.Left);
+        if (e.code === "KeyJ") undodge(this.world, BallSide.Right);
       }
     });
   }

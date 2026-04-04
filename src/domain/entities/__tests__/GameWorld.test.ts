@@ -22,7 +22,7 @@ describe("GameWorld", () => {
       expect(world.balls[1].lane).toBe(2);
       expect(world.walls).toHaveLength(0);
       expect(world.score).toBe(0);
-      expect(world.speed).toBe(8);
+      expect(world.speed).toBe(24);
       expect(world.alive).toBe(true);
     });
   });
@@ -59,21 +59,22 @@ describe("GameWorld", () => {
     it("should move walls forward by speed * dt", () => {
       world.walls.push(createWall(world.wallIdGen, 0, -10));
       tick(world, 0.5);
-      expect(world.walls[0].z).toBeCloseTo(-6, 1);
+      // speed=24, dt=0.5 → z += 12
+      expect(world.walls[0].z).toBeCloseTo(2, 1);
     });
   });
 
   describe("tick - collision", () => {
     it("should kill player when wall hits ball on same lane", () => {
       world.walls.push(createWall(world.wallIdGen, 1, -0.5));
-      tick(world, 0.1);
+      tick(world, 0.01);
       expect(world.alive).toBe(false);
     });
 
     it("should not kill player when ball dodges to different lane", () => {
       dodge(world, BallSide.Left);
       world.walls.push(createWall(world.wallIdGen, 1, -0.5));
-      tick(world, 0.1);
+      tick(world, 0.01);
       expect(world.alive).toBe(true);
     });
   });
@@ -96,18 +97,18 @@ describe("GameWorld", () => {
   describe("tick - speed scaling", () => {
     it("should increase speed after 100 walls dodged", () => {
       world.score = 99;
-      world.speed = 8;
+      world.speed = 24;
       world.walls.push(createWall(world.wallIdGen, 0, 0.9));
       tick(world, 0.01);
       expect(world.score).toBe(100);
-      expect(world.speed).toBeCloseTo(8 * 1.05, 4);
+      expect(world.speed).toBeCloseTo(24 * 1.05, 4);
     });
 
     it("should scale speed multiple tiers", () => {
       world.score = 200;
       world.walls.push(createWall(world.wallIdGen, 0, 0.9));
       tick(world, 0.01);
-      expect(world.speed).toBeCloseTo(8 * 1.05 ** 2, 4);
+      expect(world.speed).toBeCloseTo(24 * 1.05 ** 2, 4);
     });
   });
 
@@ -115,14 +116,15 @@ describe("GameWorld", () => {
     it("should remove walls past despawn threshold", () => {
       world.walls.push(createWall(world.wallIdGen, 0, 4.9));
       tick(world, 0.02);
+      // speed=24, dt=0.02 → z += 0.48 → 5.38 > 5
       expect(world.walls).toHaveLength(0);
     });
   });
 
   describe("tick - wall spawning", () => {
     it("should spawn walls when timer exceeds interval", () => {
-      world.spawnTimer = 1.19;
-      tick(world, 0.02);
+      world.spawnTimer = 0.69;
+      tick(world, 0.02); // timer → 0.71 > 0.7
       expect(world.walls.length).toBeGreaterThanOrEqual(2);
     });
   });

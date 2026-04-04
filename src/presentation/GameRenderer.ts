@@ -5,6 +5,7 @@ import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
 const LANE_WIDTH = 2.5;
 const LANE_OFFSET = ((LANE_COUNT - 1) / 2) * LANE_WIDTH;
+const LANE_LENGTH = 250;
 
 function laneX(lane: number): number {
   return lane * LANE_WIDTH - LANE_OFFSET;
@@ -14,83 +15,145 @@ export class GameRenderer {
   readonly adapter: ThreeSceneAdapter;
 
   private readonly ballMeshes: [THREE.Mesh, THREE.Mesh];
+  private readonly ballGlows: [THREE.PointLight, THREE.PointLight];
   private readonly wallMeshPool: THREE.Mesh[] = [];
   private readonly activeWallMeshes = new Map<number, THREE.Mesh>();
 
   private readonly wallGeometry: THREE.BoxGeometry;
   private readonly wallMaterial: THREE.MeshStandardMaterial;
 
-  private laneMeshes: THREE.Mesh[] = [];
-
   constructor(container: HTMLElement) {
     this.adapter = new ThreeSceneAdapter(container);
 
     // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 15, 10);
-    dirLight.castShadow = true;
+    const ambient = new THREE.AmbientLight(0x8888ff, 0.15);
     this.adapter.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(5, 20, 15);
+    dirLight.castShadow = true;
     this.adapter.add(dirLight);
 
-    // Lane floor
+    // Subtle colored fill lights
+    const fillL = new THREE.PointLight(0x4fc3f7, 0.4, 50);
+    fillL.position.set(-5, 3, 0);
+    this.adapter.add(fillL);
+
+    const fillR = new THREE.PointLight(0xef5350, 0.4, 50);
+    fillR.position.set(5, 3, 0);
+    this.adapter.add(fillR);
+
     this.buildLanes();
 
-    // Balls
-    const ballGeo = new THREE.SphereGeometry(0.4, 32, 32);
-    const ballMatL = new THREE.MeshStandardMaterial({ color: 0x4fc3f7 });
-    const ballMatR = new THREE.MeshStandardMaterial({ color: 0xef5350 });
+    // Balls with emissive glow
+    const ballGeo = new THREE.SphereGeometry(0.45, 32, 32);
+    const ballMatL = new THREE.MeshStandardMaterial({
+      color: 0x4fc3f7,
+      emissive: 0x4fc3f7,
+      emissiveIntensity: 0.5,
+      metalness: 0.3,
+      roughness: 0.4,
+    });
+    const ballMatR = new THREE.MeshStandardMaterial({
+      color: 0xef5350,
+      emissive: 0xef5350,
+      emissiveIntensity: 0.5,
+      metalness: 0.3,
+      roughness: 0.4,
+    });
 
     const leftBall = new THREE.Mesh(ballGeo, ballMatL);
     leftBall.castShadow = true;
-    leftBall.position.set(laneX(1), 0.4, 0);
+    leftBall.position.set(laneX(1), 0.45, 0);
 
     const rightBall = new THREE.Mesh(ballGeo, ballMatR);
     rightBall.castShadow = true;
-    rightBall.position.set(laneX(2), 0.4, 0);
+    rightBall.position.set(laneX(2), 0.45, 0);
+
+    // Ball point lights (glow halos)
+    const glowL = new THREE.PointLight(0x4fc3f7, 1.5, 8);
+    glowL.position.set(laneX(1), 0.8, 0);
+    const glowR = new THREE.PointLight(0xef5350, 1.5, 8);
+    glowR.position.set(laneX(2), 0.8, 0);
 
     this.ballMeshes = [leftBall, rightBall];
+    this.ballGlows = [glowL, glowR];
+
     this.adapter.add(leftBall);
     this.adapter.add(rightBall);
+    this.adapter.add(glowL);
+    this.adapter.add(glowR);
 
-    // Wall geometry pool
-    this.wallGeometry = new THREE.BoxGeometry(LANE_WIDTH * 0.8, 1.5, 0.5);
+    // Wall geometry
+    this.wallGeometry = new THREE.BoxGeometry(LANE_WIDTH * 0.85, 2.0, 0.6);
     this.wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff6f00,
+      color: 0xff3d00,
+      emissive: 0xff6f00,
+      emissiveIntensity: 0.4,
+      metalness: 0.6,
+      roughness: 0.3,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
     });
   }
 
   private buildLanes(): void {
-    const laneGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.9, 120);
-    const laneMat = new THREE.MeshStandardMaterial({
-      color: 0x1a1a3e,
-      side: THREE.DoubleSide,
+    // Ground plane
+    const groundGeo = new THREE.PlaneGeometry(LANE_WIDTH * LANE_COUNT + 2, LANE_LENGTH);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a20,
+      metalness: 0.8,
+      roughness: 0.5,
     });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(0, -0.02, -LANE_LENGTH / 2 + 10);
+    ground.receiveShadow = true;
+    this.adapter.add(ground);
 
+    // Lane strips (subtle bright lines)
     for (let i = 0; i < LANE_COUNT; i++) {
-      const plane = new THREE.Mesh(laneGeo, laneMat);
-      plane.rotation.x = -Math.PI / 2;
-      plane.position.set(laneX(i), -0.01, -30);
-      plane.receiveShadow = true;
-      this.adapter.add(plane);
-      this.laneMeshes.push(plane);
+      const stripGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.92, LANE_LENGTH);
+      const stripMat = new THREE.MeshStandardMaterial({
+        color: 0x0e0e2a,
+        metalness: 0.7,
+        roughness: 0.6,
+      });
+      const strip = new THREE.Mesh(stripGeo, stripMat);
+      strip.rotation.x = -Math.PI / 2;
+      strip.position.set(laneX(i), -0.01, -LANE_LENGTH / 2 + 10);
+      strip.receiveShadow = true;
+      this.adapter.add(strip);
     }
 
-    // Lane dividers
-    const dividerGeo = new THREE.PlaneGeometry(0.05, 120);
-    const dividerMat = new THREE.MeshStandardMaterial({
-      color: 0x3a3a6e,
-      side: THREE.DoubleSide,
-    });
+    // Lane dividers (neon lines)
     for (let i = 0; i <= LANE_COUNT; i++) {
-      const x = (i - 0.5) * LANE_WIDTH - LANE_OFFSET;
-      const div = new THREE.Mesh(dividerGeo, dividerMat);
-      div.rotation.x = -Math.PI / 2;
-      div.position.set(x, 0, -30);
-      this.adapter.add(div);
+      const x = i * LANE_WIDTH - LANE_OFFSET - LANE_WIDTH / 2;
+      const lineGeo = new THREE.PlaneGeometry(0.04, LANE_LENGTH);
+      const lineMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2a6e,
+        emissive: 0x3333aa,
+        emissiveIntensity: 0.6,
+      });
+      const line = new THREE.Mesh(lineGeo, lineMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(x, 0.01, -LANE_LENGTH / 2 + 10);
+      this.adapter.add(line);
     }
+
+    // Ball zone indicator line
+    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * LANE_COUNT + 1, 0.06);
+    const zoneMat = new THREE.MeshStandardMaterial({
+      color: 0x4fc3f7,
+      emissive: 0x4fc3f7,
+      emissiveIntensity: 1.0,
+      transparent: true,
+      opacity: 0.4,
+    });
+    const zoneLine = new THREE.Mesh(zoneGeo, zoneMat);
+    zoneLine.rotation.x = -Math.PI / 2;
+    zoneLine.position.set(0, 0.02, 0);
+    this.adapter.add(zoneLine);
   }
 
   private getWallMesh(): THREE.Mesh {
@@ -111,14 +174,15 @@ export class GameRenderer {
   }
 
   sync(world: GameWorldState): void {
-    // Balls
+    // Balls — snappy lerp
     for (let i = 0; i < 2; i++) {
       const target = laneX(world.balls[i].lane);
       const mesh = this.ballMeshes[i];
-      mesh.position.x += (target - mesh.position.x) * 0.3;
+      mesh.position.x += (target - mesh.position.x) * 0.35;
+      this.ballGlows[i].position.x = mesh.position.x;
     }
 
-    // Walls – add / update
+    // Walls
     const activeIds = new Set<number>();
     for (const wall of world.walls) {
       activeIds.add(wall.id);
@@ -127,10 +191,9 @@ export class GameRenderer {
         mesh = this.getWallMesh();
         this.activeWallMeshes.set(wall.id, mesh);
       }
-      mesh.position.set(laneX(wall.lane), 0.75, wall.z);
+      mesh.position.set(laneX(wall.lane), 1.0, wall.z);
     }
 
-    // Remove stale
     for (const [id, mesh] of this.activeWallMeshes) {
       if (!activeIds.has(id)) {
         this.recycleWallMesh(mesh);
@@ -149,6 +212,7 @@ export class GameRenderer {
 
   showBalls(visible: boolean): void {
     for (const m of this.ballMeshes) m.visible = visible;
+    for (const g of this.ballGlows) g.visible = visible;
   }
 
   clearWalls(): void {

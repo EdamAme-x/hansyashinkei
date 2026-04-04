@@ -8,13 +8,13 @@ import {
 } from "./Lane";
 import { createWall, createWallIdGen, type Wall, type WallIdGen } from "./Wall";
 
-const BASE_SPEED = 8;
+const BASE_SPEED = 24;
 const SPEED_MULTIPLIER = 1.05;
 const SPEED_UP_INTERVAL = 100;
-const WALL_SPAWN_Z = -60;
+const WALL_SPAWN_Z = -120;
 const BALL_Z = 0;
 const WALL_DESPAWN_Z = 5;
-const SPAWN_INTERVAL_BASE = 1.2;
+const SPAWN_INTERVAL_BASE = 0.7;
 
 export interface GameWorldState {
   balls: [BallState, BallState];

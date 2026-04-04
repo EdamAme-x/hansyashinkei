@@ -4,36 +4,84 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>反射神経</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; color: #fff; font-family: 'Segoe UI', sans-serif; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: #05050f; color: #fff; font-family: 'Orbitron', sans-serif; }
       #app { width: 100%; height: 100%; position: relative; }
 
       .overlay {
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         z-index: 10; pointer-events: none;
+        background: radial-gradient(ellipse at center, rgba(5,5,15,0.3) 0%, rgba(5,5,15,0.8) 100%);
       }
       .overlay.hidden { display: none; }
 
-      #title-screen h1 { font-size: 3rem; margin-bottom: 0.5rem; letter-spacing: 0.1em; }
-      #title-screen .sub { font-size: 1.2rem; opacity: 0.7; margin-bottom: 2rem; }
-      #title-screen .keys { font-size: 1rem; opacity: 0.5; }
+      /* Title */
+      #title-screen h1 {
+        font-size: 4rem; font-weight: 900; letter-spacing: 0.15em;
+        background: linear-gradient(135deg, #4fc3f7, #e040fb, #ff5252);
+        background-clip: text; -webkit-background-clip: text; color: transparent;
+        text-shadow: none;
+        filter: drop-shadow(0 0 30px rgba(79,195,247,0.4));
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { filter: drop-shadow(0 0 30px rgba(79,195,247,0.4)); }
+        50% { filter: drop-shadow(0 0 50px rgba(224,64,251,0.6)); }
+      }
+      #title-screen .sub {
+        font-size: 1rem; font-weight: 400; opacity: 0.5;
+        letter-spacing: 0.3em; margin-top: 0.5rem; margin-bottom: 2.5rem;
+        text-transform: uppercase;
+      }
+      #title-screen .keys {
+        font-size: 0.85rem; opacity: 0.4; letter-spacing: 0.05em;
+      }
       #title-screen .keys kbd {
-        display: inline-block; padding: 0.2em 0.6em;
-        border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
-        font-family: monospace; margin: 0 0.15em;
+        display: inline-block; padding: 0.25em 0.7em; margin: 0 0.2em;
+        border: 1px solid rgba(79,195,247,0.4); border-radius: 6px;
+        font-family: 'Orbitron', monospace; font-size: 0.9em;
+        background: rgba(79,195,247,0.08);
+        box-shadow: 0 0 8px rgba(79,195,247,0.15);
       }
 
-      #gameover-screen h2 { font-size: 2.5rem; margin-bottom: 1rem; color: #ef5350; }
-      #final-score { font-size: 1.5rem; margin-bottom: 0.3rem; }
-      #best-score { font-size: 1.2rem; opacity: 0.7; margin-bottom: 1.5rem; }
-      #gameover-screen .hint { font-size: 1rem; opacity: 0.5; }
+      /* Game Over */
+      #gameover-screen h2 {
+        font-size: 3rem; font-weight: 900; letter-spacing: 0.1em;
+        background: linear-gradient(135deg, #ff5252, #ff6f00);
+        background-clip: text; -webkit-background-clip: text; color: transparent;
+        filter: drop-shadow(0 0 20px rgba(255,82,82,0.5));
+        margin-bottom: 1.5rem;
+      }
+      #final-score {
+        font-size: 2rem; font-weight: 700; margin-bottom: 0.4rem;
+        color: #fff;
+      }
+      #best-score {
+        font-size: 1.1rem; font-weight: 400; opacity: 0.5;
+        margin-bottom: 2rem;
+      }
+      #gameover-screen .hint {
+        font-size: 0.85rem; opacity: 0.35;
+      }
+      #gameover-screen .hint kbd {
+        display: inline-block; padding: 0.2em 0.5em;
+        border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
+        font-family: 'Orbitron', monospace; font-size: 0.9em;
+      }
 
+      /* Score HUD */
       #score-display {
-        position: absolute; top: 1.5rem; left: 50%; transform: translateX(-50%);
-        font-size: 2rem; font-weight: bold; z-index: 10;
-        text-shadow: 0 0 10px rgba(79,195,247,0.6);
+        position: absolute; top: 2rem; left: 50%; transform: translateX(-50%);
+        font-size: 2.5rem; font-weight: 900; z-index: 10;
+        letter-spacing: 0.1em;
+        background: linear-gradient(180deg, #fff, #4fc3f7);
+        background-clip: text; -webkit-background-clip: text; color: transparent;
+        filter: drop-shadow(0 0 15px rgba(79,195,247,0.5));
       }
       #score-display.hidden { display: none; }
     </style>
@@ -42,19 +90,19 @@
     <div id="app">
       <div id="title-screen" class="overlay">
         <h1>反射神経</h1>
-        <p class="sub">4-Lane Dodge Game</p>
+        <p class="sub">dodge or die</p>
         <p class="keys">
-          <kbd>J</kbd> dodge left &nbsp;
-          <kbd>K</kbd> dodge right &nbsp;
+          <kbd>F</kbd> left &nbsp;&nbsp;
+          <kbd>J</kbd> right &nbsp;&nbsp;
           <kbd>Space</kbd> start
         </p>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
         <h2>GAME OVER</h2>
-        <p id="final-score">Score: 0</p>
+        <p id="final-score">0</p>
         <p id="best-score">Best: 0</p>
-        <p class="hint">Press <kbd>Space</kbd> to retry</p>
+        <p class="hint"><kbd>Space</kbd> to retry</p>
       </div>
 
       <div id="score-display" class="hidden">0</div>

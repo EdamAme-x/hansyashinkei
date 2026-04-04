@@ -6,8 +6,8 @@ A 4-lane dodge game built with Three.js. Dodge the walls rushing toward you usin
 
 | Key | Action |
 |-----|--------|
-| `J` | Dodge left ball to the left (returns on release) |
-| `K` | Dodge right ball to the right (returns on release) |
+| `F` | Dodge left ball to the left (returns on release) |
+| `J` | Dodge right ball to the right (returns on release) |
 | `Space` / `Enter` | Start game / Retry |
 
 - Walls spawn on 2 random lanes each wave
