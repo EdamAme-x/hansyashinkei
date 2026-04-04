@@ -62,8 +62,9 @@ export function createDefaultConfig(): GameConfig {
     spawnJitter: 0.4,
     hitZone: 0.8,
     warmup: [
-      { until: 20, speedScale: 0.8 },
-      { until: 50, speedScale: 0.9 },
+      { until: 20, speedScale: 0.75 },
+      { until: 50, speedScale: 0.85 },
+      { until: 100, speedScale: 1.0 },
     ],
   };
 }
