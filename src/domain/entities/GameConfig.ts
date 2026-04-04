@@ -13,6 +13,7 @@ export interface GameConfig {
   readonly spawnZ: number;
   readonly despawnZ: number;
   readonly spawnInterval: number;
+  readonly spawnJitter: number;
   readonly hitZone: number;
 }
 
@@ -51,12 +52,13 @@ export function createDefaultConfig(): GameConfig {
       { homeLane: 2, dodgeLane: 3 },
     ],
     wallsPerWave: 2,
-    baseSpeed: 24,
+    baseSpeed: 26.4,
     speedMultiplier: 1.05,
     speedUpInterval: 100,
-    spawnZ: -120,
+    spawnZ: -66,
     despawnZ: 5,
     spawnInterval: 0.7,
+    spawnJitter: 0.4,
     hitZone: 0.8,
   };
 }

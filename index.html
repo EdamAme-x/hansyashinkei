@@ -6,7 +6,7 @@
     <title>反射神経</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@900&display=swap" rel="stylesheet" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 100%; height: 100%; overflow: hidden; background: #05050f; color: #fff; font-family: 'Orbitron', sans-serif; }
@@ -16,45 +16,46 @@
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         z-index: 10; pointer-events: none;
-        background: radial-gradient(ellipse at center, rgba(5,5,15,0.3) 0%, rgba(5,5,15,0.8) 100%);
+        background: radial-gradient(ellipse at center, rgba(5,5,15,0.2) 0%, rgba(5,5,15,0.85) 100%);
       }
       .overlay.hidden { display: none; }
 
       /* Title */
       #title-screen h1 {
-        font-size: 4rem; font-weight: 900; letter-spacing: 0.15em;
-        background: linear-gradient(135deg, #4fc3f7, #e040fb, #ff5252);
-        background-clip: text; -webkit-background-clip: text; color: transparent;
-        text-shadow: none;
-        filter: drop-shadow(0 0 30px rgba(79,195,247,0.4));
-        animation: pulse 2s ease-in-out infinite;
+        font-family: 'Noto Sans JP', sans-serif;
+        font-size: 5rem; font-weight: 900; letter-spacing: 0.2em;
+        color: #fff;
+        text-shadow:
+          0 0 10px rgba(255,255,255,0.3),
+          0 0 40px rgba(79,195,247,0.15),
+          0 4px 0 rgba(0,0,0,0.4);
+        animation: title-glow 3s ease-in-out infinite;
       }
-      @keyframes pulse {
-        0%, 100% { filter: drop-shadow(0 0 30px rgba(79,195,247,0.4)); }
-        50% { filter: drop-shadow(0 0 50px rgba(224,64,251,0.6)); }
+      @keyframes title-glow {
+        0%, 100% { text-shadow: 0 0 10px rgba(255,255,255,0.3), 0 0 40px rgba(79,195,247,0.15), 0 4px 0 rgba(0,0,0,0.4); }
+        50% { text-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 60px rgba(79,195,247,0.3), 0 4px 0 rgba(0,0,0,0.4); }
       }
       #title-screen .sub {
-        font-size: 1rem; font-weight: 400; opacity: 0.5;
-        letter-spacing: 0.3em; margin-top: 0.5rem; margin-bottom: 2.5rem;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.75rem; font-weight: 400; opacity: 0.35;
+        letter-spacing: 0.5em; margin-top: 0.8rem; margin-bottom: 3rem;
         text-transform: uppercase;
       }
       #title-screen .keys {
-        font-size: 0.85rem; opacity: 0.4; letter-spacing: 0.05em;
+        font-size: 0.8rem; opacity: 0.3; letter-spacing: 0.05em;
       }
       #title-screen .keys kbd {
-        display: inline-block; padding: 0.25em 0.7em; margin: 0 0.2em;
-        border: 1px solid rgba(79,195,247,0.4); border-radius: 6px;
-        font-family: 'Orbitron', monospace; font-size: 0.9em;
-        background: rgba(79,195,247,0.08);
-        box-shadow: 0 0 8px rgba(79,195,247,0.15);
+        display: inline-block; padding: 0.3em 0.8em; margin: 0 0.25em;
+        border: 1px solid rgba(255,255,255,0.15); border-radius: 5px;
+        font-family: 'Orbitron', monospace; font-size: 0.85em;
+        background: rgba(255,255,255,0.04);
       }
 
       /* Game Over */
       #gameover-screen h2 {
-        font-size: 3rem; font-weight: 900; letter-spacing: 0.1em;
-        background: linear-gradient(135deg, #ff5252, #ff6f00);
-        background-clip: text; -webkit-background-clip: text; color: transparent;
-        filter: drop-shadow(0 0 20px rgba(255,82,82,0.5));
+        font-size: 2.5rem; font-weight: 900; letter-spacing: 0.15em;
+        color: #ff5252;
+        text-shadow: 0 0 30px rgba(255,82,82,0.4), 0 3px 0 rgba(0,0,0,0.4);
         margin-bottom: 1.5rem;
       }
       #final-score {
@@ -62,16 +63,16 @@
         color: #fff;
       }
       #best-score {
-        font-size: 1.1rem; font-weight: 400; opacity: 0.5;
+        font-size: 1rem; font-weight: 400; opacity: 0.4;
         margin-bottom: 2rem;
       }
       #gameover-screen .hint {
-        font-size: 0.85rem; opacity: 0.35;
+        font-size: 0.8rem; opacity: 0.3;
       }
       #gameover-screen .hint kbd {
         display: inline-block; padding: 0.2em 0.5em;
-        border: 1px solid rgba(255,255,255,0.2); border-radius: 4px;
-        font-family: 'Orbitron', monospace; font-size: 0.9em;
+        border: 1px solid rgba(255,255,255,0.15); border-radius: 4px;
+        font-family: 'Orbitron', monospace; font-size: 0.85em;
       }
 
       /* Score HUD */
@@ -79,9 +80,8 @@
         position: absolute; top: 2rem; left: 50%; transform: translateX(-50%);
         font-size: 2.5rem; font-weight: 900; z-index: 10;
         letter-spacing: 0.1em;
-        background: linear-gradient(180deg, #fff, #4fc3f7);
-        background-clip: text; -webkit-background-clip: text; color: transparent;
-        filter: drop-shadow(0 0 15px rgba(79,195,247,0.5));
+        color: #fff;
+        text-shadow: 0 0 20px rgba(79,195,247,0.4);
       }
       #score-display.hidden { display: none; }
     </style>

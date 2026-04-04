@@ -10,6 +10,7 @@ import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { createWall } from "@domain/entities/Wall";
 
 const config = createDefaultConfig();
+const BASE = config.baseSpeed; // 26.4
 
 describe("GameWorld", () => {
   let world: GameWorldState;
@@ -24,7 +25,7 @@ describe("GameWorld", () => {
       expect(world.balls[1].lane).toBe(2);
       expect(world.walls).toHaveLength(0);
       expect(world.score).toBe(0);
-      expect(world.speed).toBe(24);
+      expect(world.speed).toBe(BASE);
       expect(world.alive).toBe(true);
     });
   });
@@ -59,37 +60,46 @@ describe("GameWorld", () => {
 
   describe("tick - wall movement", () => {
     it("should move walls forward by speed * dt", () => {
-      world.walls.push(createWall(world.wallIdGen, 0, -10));
+      world.walls.push(createWall(world.wallIdGen, 0, 0, -10));
       tick(world, 0.5);
-      // speed=24, dt=0.5 → z += 12
-      expect(world.walls[0].z).toBeCloseTo(2, 1);
+      expect(world.walls[0].z).toBeCloseTo(-10 + BASE * 0.5, 1);
     });
   });
 
   describe("tick - collision", () => {
     it("should kill player when wall hits ball on same lane", () => {
-      world.walls.push(createWall(world.wallIdGen, 1, -0.5));
+      world.walls.push(createWall(world.wallIdGen, 0, 1, -0.5));
       tick(world, 0.01);
       expect(world.alive).toBe(false);
     });
 
     it("should not kill player when ball dodges to different lane", () => {
       dodge(world, 0);
-      world.walls.push(createWall(world.wallIdGen, 1, -0.5));
+      world.walls.push(createWall(world.wallIdGen, 0, 1, -0.5));
       tick(world, 0.01);
       expect(world.alive).toBe(true);
     });
   });
 
-  describe("tick - scoring", () => {
-    it("should score walls that pass the ball", () => {
-      world.walls.push(createWall(world.wallIdGen, 0, 0.9));
+  describe("tick - scoring per wave", () => {
+    it("should score once per wave, not per wall", () => {
+      // Two walls same wave
+      world.walls.push(createWall(world.wallIdGen, 0, 0, 0.9));
+      world.walls.push(createWall(world.wallIdGen, 0, 3, 0.9));
       tick(world, 0.01);
       expect(world.score).toBe(1);
     });
 
-    it("should not double-score passed walls", () => {
-      world.walls.push(createWall(world.wallIdGen, 0, 0.9));
+    it("should score separate waves separately", () => {
+      world.walls.push(createWall(world.wallIdGen, 0, 0, 0.9));
+      world.walls.push(createWall(world.wallIdGen, 1, 3, 0.9));
+      tick(world, 0.01);
+      expect(world.score).toBe(2);
+    });
+
+    it("should not double-score same wave", () => {
+      world.walls.push(createWall(world.wallIdGen, 0, 0, 0.9));
+      world.walls.push(createWall(world.wallIdGen, 0, 3, 0.85));
       tick(world, 0.01);
       tick(world, 0.01);
       expect(world.score).toBe(1);
@@ -97,35 +107,30 @@ describe("GameWorld", () => {
   });
 
   describe("tick - speed scaling", () => {
-    it("should increase speed after 100 walls dodged", () => {
+    it("should increase speed after 100 waves dodged", () => {
       world.score = 99;
-      world.speed = 24;
-      world.walls.push(createWall(world.wallIdGen, 0, 0.9));
+      world.speed = BASE;
+      world.walls.push(createWall(world.wallIdGen, 99, 0, 0.9));
       tick(world, 0.01);
       expect(world.score).toBe(100);
-      expect(world.speed).toBeCloseTo(24 * 1.05, 4);
-    });
-
-    it("should scale speed multiple tiers", () => {
-      world.score = 200;
-      world.walls.push(createWall(world.wallIdGen, 0, 0.9));
-      tick(world, 0.01);
-      expect(world.speed).toBeCloseTo(24 * 1.05 ** 2, 4);
+      expect(world.speed).toBeCloseTo(BASE * 1.05, 4);
     });
   });
 
   describe("tick - wall despawn", () => {
     it("should remove walls past despawn threshold", () => {
-      world.walls.push(createWall(world.wallIdGen, 0, 4.9));
+      world.spawnTimer = 0; // prevent new spawns interfering
+      world.walls.push(createWall(world.wallIdGen, 0, 0, 4.8));
       tick(world, 0.02);
+      // 4.8 + 26.4*0.02 = 5.328 > despawnZ(5) → removed
       expect(world.walls).toHaveLength(0);
     });
   });
 
   describe("tick - wall spawning", () => {
-    it("should spawn walls when timer exceeds interval", () => {
-      world.spawnTimer = 0.69;
-      tick(world, 0.02);
+    it("should spawn walls immediately (spawnTimer starts at spawnInterval)", () => {
+      // spawnTimer starts at config.spawnInterval, so first tick should spawn
+      tick(world, 0.01);
       expect(world.walls.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -136,10 +141,9 @@ describe("GameWorld", () => {
       }
       const groups = new Map<number, number[]>();
       for (const wall of world.walls) {
-        const key = Math.round(wall.z * 100);
-        const arr = groups.get(key) ?? [];
+        const arr = groups.get(wall.waveId) ?? [];
         arr.push(wall.lane);
-        groups.set(key, arr);
+        groups.set(wall.waveId, arr);
       }
       for (const lanes of groups.values()) {
         if (lanes.length === 2) {
@@ -154,7 +158,7 @@ describe("GameWorld", () => {
   describe("tick - dead world", () => {
     it("should not tick when alive is false", () => {
       world.alive = false;
-      world.walls.push(createWall(world.wallIdGen, 0, -10));
+      world.walls.push(createWall(world.wallIdGen, 0, 0, -10));
       tick(world, 1);
       expect(world.walls[0].z).toBe(-10);
     });

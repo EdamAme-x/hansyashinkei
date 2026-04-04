@@ -1,5 +1,6 @@
 export interface Wall {
   readonly id: number;
+  readonly waveId: number;
   readonly lane: number;
   z: number;
   passed: boolean;
@@ -18,6 +19,6 @@ export function createWallIdGen(): WallIdGen {
   };
 }
 
-export function createWall(idGen: WallIdGen, lane: number, z: number): Wall {
-  return { id: idGen.next(), lane, z, passed: false };
+export function createWall(idGen: WallIdGen, waveId: number, lane: number, z: number): Wall {
+  return { id: idGen.next(), waveId, lane, z, passed: false };
 }

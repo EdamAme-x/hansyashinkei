@@ -20,20 +20,25 @@ export interface GameWorldState {
   alive: boolean;
   wallIdGen: WallIdGen;
   validWallLanes: number[][];
+  nextWaveId: number;
+  scoredWaves: Set<number>;
 }
 
 export function createGameWorld(config: GameConfig): GameWorldState {
-  return {
+  const world: GameWorldState = {
     config,
     balls: createBalls(config),
     walls: [],
     score: 0,
     speed: config.baseSpeed,
-    spawnTimer: 0,
+    spawnTimer: config.spawnInterval,
     alive: true,
     wallIdGen: createWallIdGen(),
     validWallLanes: computeValidWallLanes(config),
+    nextWaveId: 0,
+    scoredWaves: new Set(),
   };
+  return world;
 }
 
 export function dodge(world: GameWorldState, ballIndex: number): void {
@@ -55,8 +60,9 @@ export function undodge(world: GameWorldState, ballIndex: number): void {
 function spawnWalls(world: GameWorldState): void {
   const { validWallLanes } = world;
   const lanes = validWallLanes[Math.floor(Math.random() * validWallLanes.length)];
+  const waveId = world.nextWaveId++;
   for (const lane of lanes) {
-    world.walls.push(createWall(world.wallIdGen, lane, world.config.spawnZ));
+    world.walls.push(createWall(world.wallIdGen, waveId, lane, world.config.spawnZ));
   }
 }
 
@@ -87,11 +93,14 @@ export function tick(world: GameWorldState, dt: number): void {
     }
   }
 
-  // Score
+  // Score — per wave, not per wall
   for (const wall of world.walls) {
     if (!wall.passed && wall.z > BALL_Z + config.hitZone) {
       wall.passed = true;
-      world.score++;
+      if (!world.scoredWaves.has(wall.waveId)) {
+        world.scoredWaves.add(wall.waveId);
+        world.score++;
+      }
     }
   }
 
@@ -99,11 +108,12 @@ export function tick(world: GameWorldState, dt: number): void {
 
   world.walls = world.walls.filter((w) => w.z < config.despawnZ);
 
-  // Spawn
-  const spawnInterval = config.spawnInterval * (config.baseSpeed / world.speed);
+  // Spawn with jitter
+  const baseInterval = config.spawnInterval * (config.baseSpeed / world.speed);
   world.spawnTimer += dt;
-  if (world.spawnTimer >= spawnInterval) {
-    world.spawnTimer -= spawnInterval;
+  if (world.spawnTimer >= baseInterval) {
+    const jitter = (Math.random() - 0.5) * 2 * config.spawnJitter * baseInterval;
+    world.spawnTimer = jitter;
     spawnWalls(world);
   }
 }
