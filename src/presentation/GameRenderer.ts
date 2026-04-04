@@ -176,20 +176,18 @@ export class GameRenderer {
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
 
-    // Horizon glow — gradient fade at the far end of lanes so the floor
-    // blends smoothly into darkness rather than cutting off abruptly.
-    // A canvas-based alpha gradient goes from opaque (near side) to
-    // fully transparent (far side), sitting just above the floor plane.
-    const glowDepth = 30;
+    // Horizon glow — gradient fade at the far end of lanes.
+    // Gradient: near camera = transparent, far = opaque black.
+    const glowDepth = 25;
     const glowCanvas = document.createElement("canvas");
-    glowCanvas.width = 4;   // single-column gradient; width doesn't matter
+    glowCanvas.width = 4;
     glowCanvas.height = 64;
     const glowCtx = glowCanvas.getContext("2d");
     if (glowCtx) {
       const grad = glowCtx.createLinearGradient(0, 0, 0, 64);
-      // near end (bottom of canvas → near camera): transparent
+      // UV y=0 maps to the +Z edge (near camera) of the rotated plane
       grad.addColorStop(0, "rgba(0,0,0,0)");
-      // far end (top of canvas → far from camera): fully opaque dark
+      // UV y=1 maps to the -Z edge (far from camera)
       grad.addColorStop(1, "rgba(0,0,0,1)");
       glowCtx.fillStyle = grad;
       glowCtx.fillRect(0, 0, 4, 64);
@@ -201,12 +199,14 @@ export class GameRenderer {
       transparent: true,
       depthWrite: false,
     });
-    const glow = new Mesh(glowGeo, glowMat);
-    glow.rotation.x = -Math.PI / 2;
-    // Place so the near edge aligns with the far end of the visible lane area
-    // and the gradient sweeps forward toward the player for a smooth horizon.
-    glow.position.set(0, 0.03, -LANE_LENGTH / 2 + 10 - glowDepth / 2);
-    this.adapter.add(glow);
+    const glow2 = new Mesh(glowGeo, glowMat);
+    glow2.rotation.x = -Math.PI / 2;
+    // Ground far edge is at z = -LANE_LENGTH/2 + 10 - LANE_LENGTH/2 = -115
+    // Place glow so its far edge (-Z) aligns with ground far edge
+    // and it extends glowDepth toward camera (+Z)
+    const groundFarZ = -LANE_LENGTH / 2 + 10 - LANE_LENGTH / 2;
+    glow2.position.set(0, 0.04, groundFarZ + glowDepth / 2);
+    this.adapter.add(glow2);
   }
 
   private getWallGroup(): Group {

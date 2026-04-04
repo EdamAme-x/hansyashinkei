@@ -28,33 +28,20 @@ function createLetterboxCanvas(
   const imgAspect = imgW / imgH;
   const viewAspect = viewW / viewH;
 
-  // 1. Cover fill (dim backdrop) — fill entire canvas
+  // Black background
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, viewW, viewH);
-  ctx.globalAlpha = 0.15;
 
-  if (imgAspect > viewAspect) {
-    // Image wider: fit height, crop sides
-    const drawW = viewH * imgAspect;
-    ctx.drawImage(img, (viewW - drawW) / 2, 0, drawW, viewH);
-  } else {
-    // Image taller: fit width, crop top/bottom
-    const drawH = viewW / imgAspect;
-    ctx.drawImage(img, 0, (viewH - drawH) / 2, viewW, drawH);
-  }
-
-  // 2. Contain (letterbox, correct aspect ratio) — brighter
-  ctx.globalAlpha = 0.45;
+  // Draw image preserving aspect ratio (contain), dimmed
+  ctx.globalAlpha = 0.5;
 
   let dx: number, dy: number, dw: number, dh: number;
   if (imgAspect > viewAspect) {
-    // Image wider: fit width, letterbox top/bottom
     dw = viewW;
     dh = viewW / imgAspect;
     dx = 0;
     dy = (viewH - dh) / 2;
   } else {
-    // Image taller: fit height, pillarbox left/right
     dh = viewH;
     dw = viewH * imgAspect;
     dx = (viewW - dw) / 2;
