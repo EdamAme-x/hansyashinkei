@@ -19,9 +19,15 @@ describe("StateMachine", () => {
     expect(sm.state).toBe(GameState.GameOver);
   });
 
-  it("should transition GameOver -> Title on Retry", () => {
+  it("should transition GameOver -> Playing on Restart", () => {
     const sm = new StateMachine(GameState.GameOver);
-    expect(sm.dispatch(GameEvent.Retry)).toBe(true);
+    expect(sm.dispatch(GameEvent.Restart)).toBe(true);
+    expect(sm.state).toBe(GameState.Playing);
+  });
+
+  it("should transition GameOver -> Title on BackToTitle", () => {
+    const sm = new StateMachine(GameState.GameOver);
+    expect(sm.dispatch(GameEvent.BackToTitle)).toBe(true);
     expect(sm.state).toBe(GameState.Title);
   });
 

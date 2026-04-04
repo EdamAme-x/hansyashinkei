@@ -1,6 +1,6 @@
 import { StateMachine, GameState, GameEvent } from "@domain/entities/StateMachine";
 import type { GameConfig } from "@domain/entities/GameConfig";
-import { createGameWorld, dodge, undodge, tick, type GameWorldState } from "@domain/entities/GameWorld";
+import { createGameWorld, dodge, undodge, tick, getSpeedTier, type GameWorldState } from "@domain/entities/GameWorld";
 import { ManageScore } from "@application/usecases/ManageScore";
 import type { InputConfig } from "./InputConfig";
 import { GameRenderer } from "./GameRenderer";
@@ -18,6 +18,7 @@ export class App {
   private animationId = 0;
   private lastTime = 0;
   private bestScore = 0;
+  private lastTier = 0;
 
   constructor(
     container: HTMLElement,
@@ -47,6 +48,7 @@ export class App {
     if (history.bestScore) {
       this.bestScore = history.bestScore.value;
     }
+    this.hud.updateTitleBest(this.bestScore);
   }
 
   private onStateChange(state: GameState): void {
@@ -54,6 +56,7 @@ export class App {
 
     if (state === GameState.Playing) {
       this.world = createGameWorld(this.gameConfig);
+      this.lastTier = 0;
       this.renderer.clearWalls();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
@@ -61,11 +64,16 @@ export class App {
 
     if (state === GameState.GameOver) {
       this.renderer.showBalls(false);
-      if (this.world.score > this.bestScore) {
+      const isNewBest = this.world.score > this.bestScore;
+      if (isNewBest) {
         this.bestScore = this.world.score;
       }
-      this.hud.showGameOver(this.world.score, this.bestScore);
+      this.hud.showGameOver(this.world.score, this.bestScore, isNewBest);
       this.manageScore.record(this.world.score).catch(() => {});
+    }
+
+    if (state === GameState.Title) {
+      this.hud.updateTitleBest(this.bestScore);
     }
   }
 
@@ -88,9 +96,15 @@ export class App {
         return;
       }
 
-      if (this.sm.state === GameState.GameOver && startCodes.includes(e.code)) {
-        this.sm.dispatch(GameEvent.Retry);
-        return;
+      if (this.sm.state === GameState.GameOver) {
+        if (startCodes.includes(e.code)) {
+          this.sm.dispatch(GameEvent.Restart);
+          return;
+        }
+        if (e.code === "Backspace") {
+          this.sm.dispatch(GameEvent.BackToTitle);
+          return;
+        }
       }
 
       if (this.sm.state === GameState.Playing) {
@@ -125,6 +139,12 @@ export class App {
       if (this.sm.state === GameState.Playing) {
         tick(this.world, dt);
         this.hud.updateScore(this.world.score);
+
+        const tier = getSpeedTier(this.gameConfig, this.world.score);
+        if (tier > this.lastTier) {
+          this.lastTier = tier;
+          this.hud.showSpeedUp();
+        }
 
         if (!this.world.alive) {
           this.sm.dispatch(GameEvent.Die);

@@ -9,7 +9,8 @@ export type GameState = (typeof GameState)[keyof typeof GameState];
 export const GameEvent = {
   Start: "start",
   Die: "die",
-  Retry: "retry",
+  Restart: "restart",
+  BackToTitle: "backToTitle",
 } as const;
 
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
@@ -23,7 +24,8 @@ type Transition = {
 const transitions: Transition[] = [
   { from: GameState.Title, event: GameEvent.Start, to: GameState.Playing },
   { from: GameState.Playing, event: GameEvent.Die, to: GameState.GameOver },
-  { from: GameState.GameOver, event: GameEvent.Retry, to: GameState.Title },
+  { from: GameState.GameOver, event: GameEvent.Restart, to: GameState.Playing },
+  { from: GameState.GameOver, event: GameEvent.BackToTitle, to: GameState.Title },
 ];
 
 export type StateChangeListener = (

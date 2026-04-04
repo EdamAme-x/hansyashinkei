@@ -60,9 +60,11 @@ describe("GameWorld", () => {
 
   describe("tick - wall movement", () => {
     it("should move walls forward by speed * dt", () => {
+      world.spawnTimer = 0;
       world.walls.push(createWall(world.wallIdGen, 0, 0, -10));
-      tick(world, 0.5);
-      expect(world.walls[0].z).toBeCloseTo(-10 + BASE * 0.5, 1);
+      tick(world, 0.1);
+      // -10 + 31.68 * 0.1 = -6.832
+      expect(world.walls[0].z).toBeCloseTo(-10 + BASE * 0.1, 1);
     });
   });
 
@@ -106,14 +108,23 @@ describe("GameWorld", () => {
     });
   });
 
-  describe("tick - speed scaling", () => {
+  describe("tick - speed scaling (diminishing)", () => {
     it("should increase speed after 100 waves dodged", () => {
       world.score = 99;
       world.speed = BASE;
       world.walls.push(createWall(world.wallIdGen, 99, 0, 0.9));
       tick(world, 0.01);
       expect(world.score).toBe(100);
-      expect(world.speed).toBeCloseTo(BASE * 1.05, 4);
+      // tier 1: BASE * 1.15
+      expect(world.speed).toBeCloseTo(BASE * 1.15, 2);
+    });
+
+    it("should diminish speed increase each tier", () => {
+      world.score = 199;
+      world.walls.push(createWall(world.wallIdGen, 199, 0, 0.9));
+      tick(world, 0.01);
+      // tier 2: BASE * 1.15 * 1.075
+      expect(world.speed).toBeCloseTo(BASE * 1.15 * 1.075, 2);
     });
   });
 

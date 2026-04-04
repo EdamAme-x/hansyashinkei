@@ -7,8 +7,8 @@ export class ThreeSceneAdapter {
 
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x05050f);
-    this.scene.fog = new THREE.Fog(0x05050f, 40, 130);
+    this.scene.background = new THREE.Color(0x000000);
+    this.scene.fog = new THREE.Fog(0x000000, 30, 80);
 
     this.camera = new THREE.PerspectiveCamera(
       70,
@@ -24,7 +24,7 @@ export class ThreeSceneAdapter {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.0;
     container.appendChild(this.renderer.domElement);
   }
 

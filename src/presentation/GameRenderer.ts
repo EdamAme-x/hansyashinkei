@@ -13,47 +13,44 @@ export class GameRenderer {
   private readonly laneOffset: number;
   private readonly ballMeshes: THREE.Mesh[] = [];
   private readonly ballGlows: THREE.PointLight[] = [];
-  private readonly wallMeshPool: THREE.Mesh[] = [];
-  private readonly activeWallMeshes = new Map<number, THREE.Mesh>();
+  private readonly wallMeshPool: THREE.Group[] = [];
+  private readonly activeWallMeshes = new Map<number, THREE.Group>();
 
   private readonly wallGeometry: THREE.BoxGeometry;
   private readonly wallMaterial: THREE.MeshStandardMaterial;
+  private readonly wallEdgesMaterial: THREE.LineBasicMaterial;
 
   constructor(container: HTMLElement, config: GameConfig) {
     this.config = config;
     this.laneOffset = ((config.laneCount - 1) / 2) * LANE_WIDTH;
     this.adapter = new ThreeSceneAdapter(container);
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0x8888ff, 0.15);
+    // Lighting — white only
+    const ambient = new THREE.AmbientLight(0xffffff, 0.25);
     this.adapter.add(ambient);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(5, 20, 15);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(3, 20, 10);
     dirLight.castShadow = true;
     this.adapter.add(dirLight);
 
-    const fillL = new THREE.PointLight(0x4fc3f7, 0.4, 50);
-    fillL.position.set(-5, 3, 0);
-    this.adapter.add(fillL);
-
-    const fillR = new THREE.PointLight(0xef5350, 0.4, 50);
-    fillR.position.set(5, 3, 0);
-    this.adapter.add(fillR);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.15);
+    backLight.position.set(0, 5, -30);
+    this.adapter.add(backLight);
 
     this.buildLanes();
     this.buildBalls();
 
-    // Wall geometry
-    this.wallGeometry = new THREE.BoxGeometry(LANE_WIDTH * 0.85, 2.0, 0.6);
+    // Wall — tall, white edges
+    this.wallGeometry = new THREE.BoxGeometry(LANE_WIDTH * 0.88, 3.5, 0.5);
     this.wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff3d00,
-      emissive: 0xff6f00,
-      emissiveIntensity: 0.4,
-      metalness: 0.6,
+      color: 0x111111,
+      metalness: 0.9,
       roughness: 0.3,
-      transparent: true,
-      opacity: 0.9,
+    });
+    this.wallEdgesMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      linewidth: 1,
     });
   }
 
@@ -63,16 +60,14 @@ export class GameRenderer {
 
   private buildBalls(): void {
     const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
-    const colors = [0x4fc3f7, 0xef5350, 0x66bb6a, 0xffa726, 0xab47bc];
 
     for (let i = 0; i < this.config.balls.length; i++) {
-      const color = colors[i % colors.length];
       const mat = new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity: 0.5,
-        metalness: 0.3,
-        roughness: 0.4,
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.3,
+        metalness: 0.1,
+        roughness: 0.5,
       });
 
       const mesh = new THREE.Mesh(ballGeo, mat);
@@ -81,7 +76,7 @@ export class GameRenderer {
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
-      const glow = new THREE.PointLight(color, 2.0, 12);
+      const glow = new THREE.PointLight(0xffffff, 1.5, 10);
       glow.position.set(this.laneX(this.config.balls[i].homeLane), 1.2, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
@@ -91,10 +86,10 @@ export class GameRenderer {
   private buildLanes(): void {
     const { laneCount } = this.config;
 
-    // Ground
+    // Ground — dark
     const groundGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 2, LANE_LENGTH);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a20, metalness: 0.8, roughness: 0.5,
+      color: 0x080808, metalness: 0.9, roughness: 0.4,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -102,11 +97,11 @@ export class GameRenderer {
     ground.receiveShadow = true;
     this.adapter.add(ground);
 
-    // Lane strips
+    // Lane strips — slightly lighter
     for (let i = 0; i < laneCount; i++) {
       const stripGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.92, LANE_LENGTH);
       const stripMat = new THREE.MeshStandardMaterial({
-        color: 0x0e0e2a, metalness: 0.7, roughness: 0.6,
+        color: 0x0c0c0c, metalness: 0.8, roughness: 0.5,
       });
       const strip = new THREE.Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -115,12 +110,14 @@ export class GameRenderer {
       this.adapter.add(strip);
     }
 
-    // Dividers
+    // Dividers — white lines
     for (let i = 0; i <= laneCount; i++) {
       const x = i * LANE_WIDTH - this.laneOffset - LANE_WIDTH / 2;
-      const lineGeo = new THREE.PlaneGeometry(0.04, LANE_LENGTH);
+      const lineGeo = new THREE.PlaneGeometry(0.03, LANE_LENGTH);
       const lineMat = new THREE.MeshStandardMaterial({
-        color: 0x2a2a6e, emissive: 0x3333aa, emissiveIntensity: 0.6,
+        color: 0x333333,
+        emissive: 0x222222,
+        emissiveIntensity: 0.5,
       });
       const line = new THREE.Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
@@ -128,11 +125,14 @@ export class GameRenderer {
       this.adapter.add(line);
     }
 
-    // Ball zone line
-    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 1, 0.06);
+    // Ball zone line — white
+    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 1, 0.04);
     const zoneMat = new THREE.MeshStandardMaterial({
-      color: 0x4fc3f7, emissive: 0x4fc3f7, emissiveIntensity: 1.0,
-      transparent: true, opacity: 0.4,
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.8,
+      transparent: true,
+      opacity: 0.25,
     });
     const zoneLine = new THREE.Mesh(zoneGeo, zoneMat);
     zoneLine.rotation.x = -Math.PI / 2;
@@ -140,21 +140,28 @@ export class GameRenderer {
     this.adapter.add(zoneLine);
   }
 
-  private getWallMesh(): THREE.Mesh {
+  private getWallGroup(): THREE.Group {
     const recycled = this.wallMeshPool.pop();
     if (recycled) {
       recycled.visible = true;
       return recycled;
     }
+    const group = new THREE.Group();
     const mesh = new THREE.Mesh(this.wallGeometry, this.wallMaterial);
     mesh.castShadow = true;
-    this.adapter.add(mesh);
-    return mesh;
+    group.add(mesh);
+
+    const edges = new THREE.EdgesGeometry(this.wallGeometry);
+    const line = new THREE.LineSegments(edges, this.wallEdgesMaterial);
+    group.add(line);
+
+    this.adapter.add(group);
+    return group;
   }
 
-  private recycleWallMesh(mesh: THREE.Mesh): void {
-    mesh.visible = false;
-    this.wallMeshPool.push(mesh);
+  private recycleWallGroup(group: THREE.Group): void {
+    group.visible = false;
+    this.wallMeshPool.push(group);
   }
 
   sync(world: GameWorldState): void {
@@ -168,17 +175,17 @@ export class GameRenderer {
     const activeIds = new Set<number>();
     for (const wall of world.walls) {
       activeIds.add(wall.id);
-      let mesh = this.activeWallMeshes.get(wall.id);
-      if (!mesh) {
-        mesh = this.getWallMesh();
-        this.activeWallMeshes.set(wall.id, mesh);
+      let group = this.activeWallMeshes.get(wall.id);
+      if (!group) {
+        group = this.getWallGroup();
+        this.activeWallMeshes.set(wall.id, group);
       }
-      mesh.position.set(this.laneX(wall.lane), 1.0, wall.z);
+      group.position.set(this.laneX(wall.lane), 1.75, wall.z);
     }
 
-    for (const [id, mesh] of this.activeWallMeshes) {
+    for (const [id, group] of this.activeWallMeshes) {
       if (!activeIds.has(id)) {
-        this.recycleWallMesh(mesh);
+        this.recycleWallGroup(group);
         this.activeWallMeshes.delete(id);
       }
     }
@@ -198,8 +205,8 @@ export class GameRenderer {
   }
 
   clearWalls(): void {
-    for (const [, mesh] of this.activeWallMeshes) {
-      this.recycleWallMesh(mesh);
+    for (const [, group] of this.activeWallMeshes) {
+      this.recycleWallGroup(group);
     }
     this.activeWallMeshes.clear();
   }
@@ -207,6 +214,7 @@ export class GameRenderer {
   dispose(): void {
     this.wallGeometry.dispose();
     this.wallMaterial.dispose();
+    this.wallEdgesMaterial.dispose();
     this.adapter.dispose();
   }
 }

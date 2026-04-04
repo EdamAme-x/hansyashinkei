@@ -13,19 +13,43 @@ export class HUD {
   private readonly scoreDisplay = el("score-display");
   private readonly finalScore = el("final-score");
   private readonly bestScore = el("best-score");
+  private readonly newBestLabel = el("new-best");
+  private readonly speedUpDisplay = el("speedup-display");
+  private readonly titleBest = el("title-best");
+  private speedUpTimer = 0;
 
   show(state: GameState): void {
     this.titleScreen.classList.toggle("hidden", state !== GS.Title);
     this.gameOverScreen.classList.toggle("hidden", state !== GS.GameOver);
     this.scoreDisplay.classList.toggle("hidden", state !== GS.Playing);
+    if (state !== GS.Playing) {
+      this.speedUpDisplay.classList.add("hidden");
+    }
   }
 
   updateScore(score: number): void {
     this.scoreDisplay.textContent = `${score}`;
   }
 
-  showGameOver(score: number, best: number): void {
-    this.finalScore.textContent = `Score: ${score}`;
-    this.bestScore.textContent = `Best: ${best}`;
+  updateTitleBest(best: number): void {
+    this.titleBest.textContent = best > 0 ? `BEST ${best}` : "";
+  }
+
+  showSpeedUp(): void {
+    this.speedUpDisplay.classList.remove("hidden");
+    this.speedUpDisplay.style.animation = "none";
+    void this.speedUpDisplay.offsetWidth;
+    this.speedUpDisplay.style.animation = "speedup-fade 1.5s ease-out forwards";
+    this.speedUpTimer = window.setTimeout(() => {
+      this.speedUpDisplay.classList.add("hidden");
+    }, 1500);
+  }
+
+  showGameOver(score: number, best: number, isNewBest: boolean): void {
+    this.finalScore.textContent = `${score}`;
+    this.bestScore.textContent = `BEST ${best}`;
+    this.newBestLabel.classList.toggle("hidden", !isNewBest);
+    clearTimeout(this.speedUpTimer);
+    this.speedUpDisplay.classList.add("hidden");
   }
 }

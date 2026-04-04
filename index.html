@@ -9,14 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@900&display=swap" rel="stylesheet" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; background: #05050f; color: #fff; font-family: 'Orbitron', sans-serif; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: 'Orbitron', sans-serif; }
       #app { width: 100%; height: 100%; position: relative; }
 
       .overlay {
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         z-index: 10; pointer-events: none;
-        background: radial-gradient(ellipse at center, rgba(5,5,15,0.2) 0%, rgba(5,5,15,0.85) 100%);
+        background: radial-gradient(ellipse at center, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%);
       }
       .overlay.hidden { display: none; }
 
@@ -25,54 +25,70 @@
         font-family: 'Noto Sans JP', sans-serif;
         font-size: 5rem; font-weight: 900; letter-spacing: 0.2em;
         color: #fff;
-        text-shadow:
-          0 0 10px rgba(255,255,255,0.3),
-          0 0 40px rgba(79,195,247,0.15),
-          0 4px 0 rgba(0,0,0,0.4);
+        text-shadow: 0 0 15px rgba(255,255,255,0.2), 0 4px 0 rgba(0,0,0,0.5);
         animation: title-glow 3s ease-in-out infinite;
       }
       @keyframes title-glow {
-        0%, 100% { text-shadow: 0 0 10px rgba(255,255,255,0.3), 0 0 40px rgba(79,195,247,0.15), 0 4px 0 rgba(0,0,0,0.4); }
-        50% { text-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 60px rgba(79,195,247,0.3), 0 4px 0 rgba(0,0,0,0.4); }
+        0%, 100% { text-shadow: 0 0 15px rgba(255,255,255,0.2), 0 4px 0 rgba(0,0,0,0.5); }
+        50% { text-shadow: 0 0 30px rgba(255,255,255,0.4), 0 4px 0 rgba(0,0,0,0.5); }
       }
       #title-screen .sub {
         font-family: 'Orbitron', sans-serif;
-        font-size: 0.75rem; font-weight: 400; opacity: 0.35;
+        font-size: 0.7rem; font-weight: 400; opacity: 0.3;
         letter-spacing: 0.5em; margin-top: 0.8rem; margin-bottom: 3rem;
         text-transform: uppercase;
       }
       #title-screen .keys {
-        font-size: 0.8rem; opacity: 0.3; letter-spacing: 0.05em;
+        font-size: 0.75rem; opacity: 0.25; letter-spacing: 0.05em;
       }
       #title-screen .keys kbd {
         display: inline-block; padding: 0.3em 0.8em; margin: 0 0.25em;
-        border: 1px solid rgba(255,255,255,0.15); border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 4px;
         font-family: 'Orbitron', monospace; font-size: 0.85em;
-        background: rgba(255,255,255,0.04);
+        background: rgba(255,255,255,0.03);
       }
 
       /* Game Over */
       #gameover-screen h2 {
         font-size: 2.5rem; font-weight: 900; letter-spacing: 0.15em;
-        color: #ff5252;
-        text-shadow: 0 0 30px rgba(255,82,82,0.4), 0 3px 0 rgba(0,0,0,0.4);
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 3px 0 rgba(0,0,0,0.5);
         margin-bottom: 1.5rem;
       }
       #final-score {
         font-size: 2rem; font-weight: 700; margin-bottom: 0.4rem;
-        color: #fff;
       }
       #best-score {
-        font-size: 1rem; font-weight: 400; opacity: 0.4;
+        font-size: 1rem; font-weight: 400; opacity: 0.35;
         margin-bottom: 2rem;
       }
       #gameover-screen .hint {
-        font-size: 0.8rem; opacity: 0.3;
+        font-size: 0.75rem; opacity: 0.2;
       }
       #gameover-screen .hint kbd {
         display: inline-block; padding: 0.2em 0.5em;
-        border: 1px solid rgba(255,255,255,0.15); border-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
         font-family: 'Orbitron', monospace; font-size: 0.85em;
+      }
+
+      /* New Best */
+      .new-best {
+        font-size: 1.2rem; font-weight: 900; letter-spacing: 0.3em;
+        color: #fff;
+        text-shadow: 0 0 25px rgba(255,255,255,0.6);
+        margin-bottom: 1rem;
+        animation: new-best-pulse 0.8s ease-in-out infinite alternate;
+      }
+      .new-best.hidden { display: none; }
+      @keyframes new-best-pulse {
+        0% { opacity: 0.7; }
+        100% { opacity: 1; }
+      }
+
+      /* Title Best */
+      .title-best {
+        font-size: 0.85rem; font-weight: 700; opacity: 0.25;
+        letter-spacing: 0.2em; margin-bottom: 2rem;
       }
 
       /* Score HUD */
@@ -81,9 +97,25 @@
         font-size: 2.5rem; font-weight: 900; z-index: 10;
         letter-spacing: 0.1em;
         color: #fff;
-        text-shadow: 0 0 20px rgba(79,195,247,0.4);
+        text-shadow: 0 0 15px rgba(255,255,255,0.3);
       }
       #score-display.hidden { display: none; }
+
+      /* Speed Up */
+      #speedup-display {
+        position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 1.8rem; font-weight: 900; z-index: 15;
+        letter-spacing: 0.2em;
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        opacity: 0;
+        pointer-events: none;
+      }
+      #speedup-display.hidden { display: none; }
+      @keyframes speedup-fade {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
+      }
     </style>
   </head>
   <body>
@@ -91,21 +123,24 @@
       <div id="title-screen" class="overlay">
         <h1>反射神経</h1>
         <p class="sub">dodge or die</p>
+        <p id="title-best" class="title-best"></p>
         <p class="keys">
-          <kbd>F</kbd> left &nbsp;&nbsp;
-          <kbd>J</kbd> right &nbsp;&nbsp;
-          <kbd>Space</kbd> start
+          <kbd>F</kbd> &nbsp;
+          <kbd>J</kbd> &nbsp;&nbsp;
+          <kbd>Space</kbd>
         </p>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
         <h2>GAME OVER</h2>
+        <p id="new-best" class="new-best hidden">NEW BEST!</p>
         <p id="final-score">0</p>
-        <p id="best-score">Best: 0</p>
-        <p class="hint"><kbd>Space</kbd> to retry</p>
+        <p id="best-score">BEST 0</p>
+        <p class="hint"><kbd>Space</kbd> restart &nbsp; <kbd>⌫</kbd> title</p>
       </div>
 
       <div id="score-display" class="hidden">0</div>
+      <div id="speedup-display" class="hidden">SPEED UP</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
