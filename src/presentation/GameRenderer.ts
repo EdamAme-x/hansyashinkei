@@ -2,14 +2,22 @@ import {
   AmbientLight, DirectionalLight, PointLight,
   Mesh, Group, LineSegments,
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
-  MeshStandardMaterial, LineBasicMaterial,
-  Color,
+  MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
+  Color, AdditiveBlending, Vector3,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
 import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
 const LANE_LENGTH = 250;
+const SHARD_COUNT = 24;
+const SHARD_LIFETIME = 1.2;
+
+interface Shard {
+  mesh: Mesh;
+  velocity: Vector3;
+  life: number;
+}
 
 export class GameRenderer {
   readonly adapter: ThreeSceneAdapter;
@@ -19,6 +27,10 @@ export class GameRenderer {
   private readonly laneOffset: number;
   private readonly ballMeshes: Mesh[] = [];
   private readonly ballGlows: PointLight[] = [];
+  private readonly shards: Shard[] = [];
+  private readonly shardGeometry: BoxGeometry;
+  private readonly shardMaterial: MeshBasicMaterial;
+  private deathAnimId = 0;
   private readonly wallMeshPool: Group[] = [];
   private readonly activeWallMeshes = new Map<number, Group>();
 
@@ -55,6 +67,13 @@ export class GameRenderer {
       color: 0x111111,
       metalness: 0.9,
       roughness: 0.3,
+    });
+    this.shardGeometry = new BoxGeometry(0.12, 0.12, 0.12);
+    this.shardMaterial = new MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      blending: AdditiveBlending,
+      depthWrite: false,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: 0xffffff,
@@ -205,6 +224,83 @@ export class GameRenderer {
     for (const g of this.ballGlows) g.visible = visible;
   }
 
+  explodeBall(ballIndex: number): void {
+    const ball = this.ballMeshes[ballIndex];
+    if (!ball) return;
+
+    const origin = ball.position.clone();
+    ball.visible = false;
+    this.ballGlows[ballIndex].visible = false;
+
+    for (let i = 0; i < SHARD_COUNT; i++) {
+      const mesh = new Mesh(this.shardGeometry, this.shardMaterial.clone());
+      mesh.position.copy(origin);
+
+      const scale = 0.5 + Math.random() * 1.5;
+      mesh.scale.setScalar(scale);
+      mesh.rotation.set(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+      );
+
+      const speed = 3 + Math.random() * 6;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+      const velocity = new Vector3(
+        Math.sin(phi) * Math.cos(theta) * speed,
+        Math.abs(Math.sin(phi) * Math.sin(theta)) * speed * 0.8 + 1,
+        Math.cos(phi) * speed * 0.5,
+      );
+
+      this.adapter.add(mesh);
+      this.shards.push({ mesh, velocity, life: SHARD_LIFETIME });
+    }
+
+    // Animate shards
+    let lastTime = performance.now();
+    const animate = () => {
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      let alive = false;
+      for (const shard of this.shards) {
+        if (shard.life <= 0) continue;
+        alive = true;
+
+        shard.life -= dt;
+        shard.velocity.y -= 12 * dt; // gravity
+        shard.mesh.position.addScaledVector(shard.velocity, dt);
+        shard.mesh.rotation.x += dt * 5;
+        shard.mesh.rotation.z += dt * 3;
+
+        const t = Math.max(0, shard.life / SHARD_LIFETIME);
+        (shard.mesh.material as MeshBasicMaterial).opacity = t * 0.8;
+        shard.mesh.scale.setScalar(shard.mesh.scale.x * (0.98 + 0.02 * t));
+      }
+
+      this.adapter.render();
+
+      if (alive) {
+        this.deathAnimId = requestAnimationFrame(animate);
+      } else {
+        this.clearShards();
+      }
+    };
+
+    this.deathAnimId = requestAnimationFrame(animate);
+  }
+
+  clearShards(): void {
+    cancelAnimationFrame(this.deathAnimId);
+    for (const shard of this.shards) {
+      this.adapter.remove(shard.mesh);
+      (shard.mesh.material as MeshBasicMaterial).dispose();
+    }
+    this.shards.length = 0;
+  }
+
   clearWalls(): void {
     for (const [, group] of this.activeWallMeshes) {
       this.recycleWallGroup(group);
@@ -213,6 +309,9 @@ export class GameRenderer {
   }
 
   dispose(): void {
+    this.clearShards();
+    this.shardGeometry.dispose();
+    this.shardMaterial.dispose();
     this.wallGeometry.dispose();
     this.wallEdgesGeometry.dispose();
     this.wallMaterial.dispose();

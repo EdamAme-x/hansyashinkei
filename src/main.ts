@@ -24,6 +24,14 @@ async function main() {
   const manageReplay = new ManageReplay(replayRepo, replaySerializer, 20);
 
   const gameConfig = createDefaultConfig();
+
+  // Dev speed multiplier: ?__dev__speed=N (1-20)
+  const devSpeed = new URLSearchParams(location.search).get("__dev__speed");
+  if (devSpeed) {
+    const mult = Math.max(1, Math.min(20, parseFloat(devSpeed) || 1));
+    (gameConfig as { baseSpeed: number }).baseSpeed *= mult;
+  }
+
   const inputConfig = loadInputConfig();
 
   new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig);

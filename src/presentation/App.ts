@@ -131,6 +131,7 @@ export class App {
         frameCount: 0,
       };
       this.renderer.clearWalls();
+      this.renderer.clearShards();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
       this.audio.playStart();
@@ -138,7 +139,15 @@ export class App {
     }
 
     if (state === GameState.GameOver) {
-      this.renderer.showBalls(false);
+      // Explode the ball(s) that collided
+      for (let i = 0; i < this.world.balls.length; i++) {
+        for (const wall of this.world.walls) {
+          if (this.world.balls[i].lane === wall.lane) {
+            this.renderer.explodeBall(i);
+            break;
+          }
+        }
+      }
       this.audio.stopBgm();
       this.audio.playDeath();
       const isNewBest = this.world.score > this.bestScore;
