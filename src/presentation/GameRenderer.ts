@@ -25,14 +25,19 @@ export class GameRenderer {
     this.laneOffset = ((config.laneCount - 1) / 2) * LANE_WIDTH;
     this.adapter = new ThreeSceneAdapter(container);
 
-    // Lighting — white only
-    const ambient = new THREE.AmbientLight(0xffffff, 0.25);
+    // Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.2);
     this.adapter.add(ambient);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
     dirLight.position.set(3, 20, 10);
     dirLight.castShadow = true;
     this.adapter.add(dirLight);
+
+    // Rim light from behind for ball highlights
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    rimLight.position.set(-2, 8, -10);
+    this.adapter.add(rimLight);
 
     const backLight = new THREE.DirectionalLight(0xffffff, 0.15);
     backLight.position.set(0, 5, -30);
@@ -62,12 +67,16 @@ export class GameRenderer {
     const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
 
     for (let i = 0; i < this.config.balls.length; i++) {
-      const mat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xffffff,
-        emissiveIntensity: 0.3,
-        metalness: 0.1,
-        roughness: 0.5,
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: 0xdddddd,
+        metalness: 0.05,
+        roughness: 0.15,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        sheen: 0.5,
+        sheenRoughness: 0.3,
+        sheenColor: new THREE.Color(0xffffff),
+        reflectivity: 0.9,
       });
 
       const mesh = new THREE.Mesh(ballGeo, mat);
@@ -76,7 +85,7 @@ export class GameRenderer {
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
-      const glow = new THREE.PointLight(0xffffff, 1.5, 10);
+      const glow = new THREE.PointLight(0xffffff, 1.0, 8);
       glow.position.set(this.laneX(this.config.balls[i].homeLane), 1.2, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
