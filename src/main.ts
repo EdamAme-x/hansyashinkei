@@ -48,8 +48,8 @@ async function main() {
       removeImage: (key) => imageStore.remove(key),
       loadKeybinds: () => loadInputConfig().dodge.map((b) => ({ code: b.code, ballIndex: b.ballIndex })),
       saveKeybinds: (binds) => saveInputConfig({ dodge: binds, start: ["Space", "Enter"] }),
-      loadAudioEnabled: () => localStorage.getItem("hansyashinkei-audio") !== "0",
-      saveAudioEnabled: (v) => localStorage.setItem("hansyashinkei-audio", v ? "1" : "0"),
+      loadAudioEnabled: () => localStorage.getItem("hs-audio") !== "0",
+      saveAudioEnabled: (v) => localStorage.setItem("hs-audio", v ? "1" : "0"),
     },
     new SaveFileSerializer(),
   );

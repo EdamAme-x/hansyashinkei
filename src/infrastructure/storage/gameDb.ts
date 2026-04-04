@@ -1,4 +1,4 @@
-const DB_NAME = "hansyashinkei";
+const DB_NAME = "hs";
 const DB_VERSION = 4;
 
 let dbInstance: IDBDatabase | null = null;

@@ -6,7 +6,7 @@ Thanks for your interest in contributing!
 
 ```bash
 git clone https://github.com/EdamAme-x/hansyashinkei.git
-cd hansyashinkei
+cd hs
 pnpm install
 pnpm dev
 ```

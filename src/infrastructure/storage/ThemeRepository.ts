@@ -2,8 +2,8 @@ import type { ThemeConfig, CustomThemeOverrides } from "@domain/entities/ThemeCo
 import { createDefaultTheme, getBuiltinThemes, createEmptyOverrides, applyOverrides } from "@domain/entities/ThemeConfig";
 import type { IThemeRepository } from "@domain/repositories/ThemeRepository";
 
-const THEME_KEY = "hansyashinkei-theme";
-const OVERRIDES_KEY = "hansyashinkei-theme-overrides";
+const THEME_KEY = "hs-theme";
+const OVERRIDES_KEY = "hs-theme-overrides";
 
 export class ThemeRepository implements IThemeRepository {
   loadThemeId(): string {

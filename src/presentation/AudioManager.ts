@@ -1,6 +1,6 @@
 import type { AudioTheme } from "@domain/entities/ThemeConfig";
 
-const STORAGE_KEY = "hansyashinkei-audio";
+const STORAGE_KEY = "hs-audio";
 
 export class AudioManager {
   private readonly audio: AudioTheme;

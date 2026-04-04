@@ -1,7 +1,7 @@
 export type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
 import type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
 
-const STORAGE_KEY = "hansyashinkei-keybinds";
+const STORAGE_KEY = "hs-keybinds";
 
 const DEFAULT_DODGE: InputBinding[] = [
   { code: "KeyF", ballIndex: 0 },

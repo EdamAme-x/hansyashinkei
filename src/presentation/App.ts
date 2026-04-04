@@ -287,7 +287,7 @@ export class App {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hansyashinkei-${Date.now()}.hss`;
+      a.download = `hs-${Date.now()}.hss`;
       a.click();
       URL.revokeObjectURL(url);
     });
