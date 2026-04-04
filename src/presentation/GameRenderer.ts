@@ -80,11 +80,16 @@ export class GameRenderer {
     });
     // Load initial wall texture if set
     if (this.scene.wallTextureUrl) {
-      new TextureLoader().load(this.scene.wallTextureUrl, (tex) => {
-        tex.colorSpace = SRGBColorSpace;
-        this.wallMaterial.map = tex;
-        this.wallMaterial.needsUpdate = true;
-      });
+      new TextureLoader().load(
+        this.scene.wallTextureUrl,
+        (tex) => {
+          tex.colorSpace = SRGBColorSpace;
+          this.wallMaterial.map = tex;
+          this.wallMaterial.needsUpdate = true;
+        },
+        undefined,
+        (err) => { console.warn("Failed to load wall texture:", err); },
+      );
     }
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: this.scene.wallEdgeColor,
@@ -128,11 +133,10 @@ export class GameRenderer {
     const pos = geo.attributes.position;
     const halfLen = length / 2;
     for (let i = 0; i < pos.count; i++) {
-      // After rotation -PI/2, local Y becomes world Z.
-      // Y > 0 = near camera, Y < 0 = far from camera.
+      // After rotation -PI/2: local Y+ → world Z- (far from camera)
       const y = pos.getY(i);
-      // Scale X based on distance: 1.0 at near, ~0.01 at far end
-      const t = (y + halfLen) / length; // 0 at far, 1 at near
+      // t = 1 at near (Y < 0), t = 0 at far (Y > 0)
+      const t = (-y + halfLen) / length;
       const scale = 0.01 + 0.99 * t;
       pos.setX(i, pos.getX(i) * scale);
     }
@@ -256,11 +260,16 @@ export class GameRenderer {
 
     // Wall texture
     if (s.wallTextureUrl) {
-      new TextureLoader().load(s.wallTextureUrl, (tex) => {
-        tex.colorSpace = SRGBColorSpace;
-        this.wallMaterial.map = tex;
-        this.wallMaterial.needsUpdate = true;
-      });
+      new TextureLoader().load(
+        s.wallTextureUrl,
+        (tex) => {
+          tex.colorSpace = SRGBColorSpace;
+          this.wallMaterial.map = tex;
+          this.wallMaterial.needsUpdate = true;
+        },
+        undefined,
+        (err) => { console.warn("Failed to load wall texture:", err); },
+      );
     } else if (this.wallMaterial.map) {
       this.wallMaterial.map.dispose();
       this.wallMaterial.map = null;
