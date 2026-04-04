@@ -12,11 +12,7 @@ export class ThreeSceneAdapter {
 
   constructor(container: HTMLElement, sceneTheme: SceneTheme) {
     this.scene = new Scene();
-    this.scene.background = new Color(sceneTheme.fogColor);
     this.scene.fog = new Fog(sceneTheme.fogColor, sceneTheme.fogNear, sceneTheme.fogFar);
-
-    // Background image → CSS layer (not Three.js texture)
-    this.applyBackgroundImage(sceneTheme);
 
     this.camera = new PerspectiveCamera(
       70,
@@ -32,6 +28,8 @@ export class ThreeSceneAdapter {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = NoToneMapping;
     container.appendChild(this.renderer.domElement);
+
+    this.applySceneTheme(sceneTheme);
   }
 
   add(obj: Object3D): void {
@@ -53,32 +51,42 @@ export class ThreeSceneAdapter {
   }
 
   applySceneTheme(sceneTheme: SceneTheme): void {
-    this.scene.background = new Color(sceneTheme.fogColor);
+    const hasImage = sceneTheme.background.type === "texture";
+
+    if (hasImage) {
+      // Let CSS background show through
+      this.scene.background = null;
+      this.renderer.setClearColor(0x000000, 0);
+    } else {
+      this.scene.background = new Color(
+        sceneTheme.background.type === "color" ? sceneTheme.background.hex : 0x000000,
+      );
+    }
+
     if (this.scene.fog) {
       const fog = this.scene.fog as Fog;
       fog.color.set(sceneTheme.fogColor);
       fog.near = sceneTheme.fogNear;
       fog.far = sceneTheme.fogFar;
     }
-    this.applyBackgroundImage(sceneTheme);
-  }
 
-  private applyBackgroundImage(sceneTheme: SceneTheme): void {
+    // CSS background layer
     const bgBlur = document.getElementById("bg-blur");
     const bgImage = document.getElementById("bg-image");
-    if (!bgBlur || !bgImage) return;
-
-    if (sceneTheme.background.type === "texture") {
-      const url = sceneTheme.background.url;
-      bgBlur.style.backgroundImage = `url(${url})`;
-      bgImage.style.backgroundImage = `url(${url})`;
-      bgBlur.style.display = "";
-      bgImage.style.display = "";
-    } else {
-      bgBlur.style.backgroundImage = "";
-      bgImage.style.backgroundImage = "";
-      bgBlur.style.display = "none";
-      bgImage.style.display = "none";
+    const bgMask = document.getElementById("bg-mask");
+    if (bgBlur && bgImage && bgMask) {
+      if (hasImage) {
+        const url = (sceneTheme.background as { url: string }).url;
+        bgBlur.style.backgroundImage = `url(${url})`;
+        bgImage.style.backgroundImage = `url(${url})`;
+        bgBlur.style.display = "";
+        bgImage.style.display = "";
+        bgMask.style.display = "";
+      } else {
+        bgBlur.style.display = "none";
+        bgImage.style.display = "none";
+        bgMask.style.display = "none";
+      }
     }
   }
 
