@@ -209,11 +209,15 @@ export class App {
       if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
       if (hintEl) hintEl.textContent = "tap to start";
     } else {
-      const left = this.inputConfig.dodge.find((b) => b.ballIndex === 0);
-      const right = this.inputConfig.dodge.find((b) => b.ballIndex === 1);
-      const leftLabel = left ? codeToLabel(left.code) : "?";
-      const rightLabel = right ? codeToLabel(right.code) : "?";
-      if (keysEl) keysEl.textContent = `${leftLabel}  ${rightLabel}`;
+      const leftCodes = this.inputConfig.dodge
+        .filter((b) => b.ballIndex === 0)
+        .map((b) => codeToLabel(b.code));
+      const rightCodes = this.inputConfig.dodge
+        .filter((b) => b.ballIndex === 1)
+        .map((b) => codeToLabel(b.code));
+      const left = leftCodes.join("/") || "?";
+      const right = rightCodes.join("/") || "?";
+      if (keysEl) keysEl.textContent = `${left}  ${right}`;
     }
   }
 
