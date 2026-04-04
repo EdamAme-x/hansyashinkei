@@ -15,6 +15,7 @@ export interface GameConfig {
   readonly spawnInterval: number;
   readonly spawnJitter: number;
   readonly hitZone: number;
+  readonly warmup: readonly { readonly until: number; readonly speedScale: number }[];
 }
 
 export function computeValidWallLanes(config: GameConfig): number[][] {
@@ -57,8 +58,12 @@ export function createDefaultConfig(): GameConfig {
     speedUpInterval: 100,
     spawnZ: -39.6,
     despawnZ: 5,
-    spawnInterval: 0.442,
+    spawnInterval: 0.45084,
     spawnJitter: 0.4,
     hitZone: 0.8,
+    warmup: [
+      { until: 20, speedScale: 0.8 },
+      { until: 50, speedScale: 0.9 },
+    ],
   };
 }

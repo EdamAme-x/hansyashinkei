@@ -197,7 +197,7 @@ export class App {
     const keysEl = document.getElementById("title-keys");
     const hintEl = document.getElementById("title-hint-line");
 
-    if (this.isTouchDevice) {
+    if (this.isTouchOnly) {
       if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
       if (hintEl) hintEl.textContent = "tap to start";
     } else {
@@ -209,8 +209,8 @@ export class App {
     }
   }
 
-  private get isTouchDevice(): boolean {
-    return navigator.maxTouchPoints > 0;
+  private get isTouchOnly(): boolean {
+    return navigator.maxTouchPoints > 0 && matchMedia("(pointer: coarse)").matches;
   }
 
   private setupInput(): void {

@@ -92,6 +92,34 @@ function computeSpeed(config: GameConfig, score: number): number {
     speed *= 1 + mult;
     mult /= 2;
   }
+
+  // Warmup: smoothly ramp from reduced speed to full speed
+  // warmup entries define checkpoints: [{until:20, scale:0.8}, {until:50, scale:0.9}]
+  // score 0→20: lerp 0.8→0.9, score 20→50: lerp 0.9→1.0, score 50+: 1.0
+  const { warmup } = config;
+  if (warmup.length > 0) {
+    const lastWarmup = warmup[warmup.length - 1].until;
+    if (score < lastWarmup) {
+      let fromScore = 0;
+      let fromScale = warmup[0].speedScale;
+      let toScore = warmup[0].until;
+      let toScale = warmup.length > 1 ? warmup[1].speedScale : 1;
+
+      for (let i = 0; i < warmup.length; i++) {
+        if (score < warmup[i].until) {
+          fromScore = i === 0 ? 0 : warmup[i - 1].until;
+          fromScale = warmup[i].speedScale;
+          toScore = warmup[i].until;
+          toScale = i + 1 < warmup.length ? warmup[i + 1].speedScale : 1;
+          break;
+        }
+      }
+
+      const t = (score - fromScore) / (toScore - fromScore);
+      speed *= fromScale + (toScale - fromScale) * t;
+    }
+  }
+
   return speed;
 }
 
