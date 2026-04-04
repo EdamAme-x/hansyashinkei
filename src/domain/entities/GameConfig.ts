@@ -82,3 +82,35 @@ export function createDefaultConfig(): GameConfig {
     },
   };
 }
+
+export function createTripleConfig(): GameConfig {
+  return {
+    laneCount: 6,
+    balls: [
+      { homeLane: 1, dodgeLane: 0 },
+      { homeLane: 3, dodgeLane: 2 },
+      { homeLane: 4, dodgeLane: 5 },
+    ],
+    wallsPerWave: 3,
+    baseSpeed: 32.472,
+    speedMultiplier: 1.15,
+    speedUpInterval: 100,
+    spawnZ: -80,
+    despawnZ: 5,
+    spawnInterval: 0.5,
+    spawnJitter: 0.4,
+    hitZone: 0.55,
+    warmup: [
+      { until: 20, speedScale: 0.75 },
+      { until: 50, speedScale: 0.85 },
+      { until: 100, speedScale: 1.0 },
+    ],
+    render: {
+      laneWidth: 2.5,
+      ballRadius: 1.056,
+      ballY: 1.0,
+      wallHeight: 3.5,
+      wallDepth: 0.5,
+    },
+  };
+}

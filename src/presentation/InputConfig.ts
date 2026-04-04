@@ -8,6 +8,8 @@ const DEFAULT_DODGE: InputBinding[] = [
   { code: "KeyJ", ballIndex: 1 },
   { code: "ArrowLeft", ballIndex: 0 },
   { code: "ArrowRight", ballIndex: 1 },
+  { code: "KeyB", ballIndex: 2 },
+  { code: "ArrowDown", ballIndex: 2 },
 ];
 
 const DEFAULT_START = ["Space", "Enter"];

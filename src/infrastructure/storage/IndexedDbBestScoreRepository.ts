@@ -1,8 +1,7 @@
+import type { GameMode } from "@domain/entities/GameMode";
 import type { BestScoreRecord, BestScoreRepository } from "@domain/repositories/BestScoreRepository";
 import type { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { EncryptedStore } from "./EncryptedStore";
-
-const BEST_SCORE_ID = "best";
 
 export class IndexedDbBestScoreRepository implements BestScoreRepository {
   private readonly store: EncryptedStore;
@@ -11,15 +10,26 @@ export class IndexedDbBestScoreRepository implements BestScoreRepository {
     this.store = new EncryptedStore("meta", crypto);
   }
 
-  async load(): Promise<BestScoreRecord | null> {
+  async load(mode: GameMode): Promise<BestScoreRecord | null> {
     try {
-      return await this.store.get<BestScoreRecord & { id: string }>(BEST_SCORE_ID);
+      const record = await this.store.get<BestScoreRecord & { id: string }>(`best-${mode}`);
+      if (record) return record;
+
+      // Legacy migration: old "best" key → classic
+      if (mode === "classic") {
+        const legacy = await this.store.get<BestScoreRecord & { id: string }>("best");
+        if (legacy) {
+          await this.save("classic", legacy);
+          return legacy;
+        }
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
-  async save(record: BestScoreRecord): Promise<void> {
-    await this.store.put({ id: BEST_SCORE_ID, ...record });
+  async save(mode: GameMode, record: BestScoreRecord): Promise<void> {
+    await this.store.put({ id: `best-${mode}`, ...record });
   }
 }

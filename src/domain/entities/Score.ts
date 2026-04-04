@@ -1,8 +1,11 @@
+import type { GameMode } from "./GameMode";
+
 export interface Score {
   readonly id: string;
   readonly value: number;
   readonly timestamp: number;
   readonly replayId: string | null;
+  readonly mode?: GameMode;
 }
 
 export interface ScoreHistory {
@@ -13,9 +16,10 @@ export interface ScoreHistory {
 export function createScore(
   id: string,
   value: number,
+  mode: GameMode,
   replayId: string | null = null,
 ): Score {
-  return { id, value, timestamp: Date.now(), replayId };
+  return { id, value, timestamp: Date.now(), replayId, mode };
 }
 
 export function buildHistory(scores: Score[]): ScoreHistory {

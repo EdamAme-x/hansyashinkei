@@ -5,6 +5,7 @@ import type { SaveData } from "@domain/entities/SaveData";
 import { SAVE_VERSION, isSaveData, canMigrate, migrate } from "@domain/entities/SaveData";
 import type { CustomThemeOverrides } from "@domain/entities/ThemeConfig";
 import { createEmptyOverrides } from "@domain/entities/ThemeConfig";
+import type { GameMode } from "@domain/entities/GameMode";
 
 export interface SaveSerializer {
   encode(data: SaveData): Uint8Array;
@@ -26,6 +27,8 @@ export interface SaveExternals {
   saveAudioEnabled(v: boolean): void;
 }
 
+const ALL_MODES: GameMode[] = ["classic", "triple"];
+
 export class ManageSave {
   constructor(
     private readonly ext: SaveExternals,
@@ -35,7 +38,12 @@ export class ManageSave {
   async exportSave(): Promise<Uint8Array> {
     const scores = await this.ext.scoreRepo.getAll();
     const replays = await this.ext.replayRepo.getAll();
-    const bestScore = await this.ext.bestScoreRepo.load();
+
+    const bestScores: Partial<Record<GameMode, import("@domain/repositories/BestScoreRepository").BestScoreRecord | null>> = {};
+    for (const mode of ALL_MODES) {
+      bestScores[mode] = await this.ext.bestScoreRepo.load(mode);
+    }
+
     const themeOverrides = this.ext.loadThemeOverrides();
     const images = await this.ext.loadImages();
     const keybinds = this.ext.loadKeybinds();
@@ -46,7 +54,7 @@ export class ManageSave {
       exportedAt: Date.now(),
       scores,
       replays,
-      bestScore,
+      bestScores,
       themeOverrides,
       images,
       keybinds,
@@ -77,9 +85,12 @@ export class ManageSave {
       await this.ext.replayRepo.save(replay);
     }
 
-    // Best score
-    if (data.bestScore) {
-      await this.ext.bestScoreRepo.save(data.bestScore);
+    // Best scores (per-mode)
+    for (const mode of ALL_MODES) {
+      const record = data.bestScores?.[mode];
+      if (record) {
+        await this.ext.bestScoreRepo.save(mode, record);
+      }
     }
 
     // Theme overrides

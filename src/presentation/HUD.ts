@@ -44,8 +44,12 @@ export class HUD {
     this.scoreDisplay.textContent = `${score}`;
   }
 
-  updateTitleBest(best: number): void {
-    this.titleBest.textContent = best > 0 ? `BEST ${best}` : "";
+  updateTitleBest(best: number, modeLabel?: string): void {
+    if (best > 0) {
+      this.titleBest.textContent = modeLabel ? `BEST ${best} (${modeLabel})` : `BEST ${best}`;
+    } else {
+      this.titleBest.textContent = "";
+    }
   }
 
   showSpeedUp(): void {

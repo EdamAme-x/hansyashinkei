@@ -391,6 +391,72 @@
         font-size: 0.65rem; opacity: 0.4; min-width: 2.5rem;
       }
 
+      /* Mode selector */
+      .mode-selector {
+        display: flex; gap: 0.5rem; margin-top: 1.2rem; pointer-events: auto;
+      }
+      .mode-btn {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.12em;
+        padding: 0.45em 1.1em; border-radius: 5px; cursor: pointer; opacity: 0.45;
+        transition: background 0.15s, opacity 0.15s, border-color 0.15s;
+      }
+      .mode-btn:hover, .mode-btn:focus-visible {
+        background: rgba(255,255,255,0.1); opacity: 0.65;
+      }
+      .mode-btn.active {
+        background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5);
+        opacity: 1;
+      }
+
+      /* History tabs */
+      .history-tabs {
+        display: flex; gap: 0.4rem; margin-bottom: 1rem;
+        width: 100%; max-width: 500px;
+      }
+      .history-tab-btn {
+        flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.45em 0.5em; border-radius: 4px; cursor: pointer; opacity: 0.45;
+        transition: background 0.15s, opacity 0.15s;
+      }
+      .history-tab-btn:hover, .history-tab-btn:focus-visible {
+        background: rgba(255,255,255,0.1); opacity: 0.65;
+      }
+      .history-tab-btn.active {
+        background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.4);
+        opacity: 1;
+      }
+
+      /* History stats */
+      .history-stats {
+        display: flex; gap: 1.2rem; margin-bottom: 1.2rem;
+        width: 100%; max-width: 500px;
+        padding: 0.7rem 1rem;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+      }
+      .history-stat-item {
+        display: flex; flex-direction: column; align-items: center; flex: 1;
+      }
+      .history-stat-label {
+        font-size: 0.6rem; letter-spacing: 0.15em; opacity: 0.4; margin-bottom: 0.2rem;
+      }
+      .history-stat-value {
+        font-size: 1rem; font-weight: 900; letter-spacing: 0.05em;
+      }
+
+      /* Mode badge in history */
+      .history-mode-badge {
+        font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em;
+        opacity: 0.45; min-width: 1.8rem; text-align: center;
+        border: 1px solid rgba(255,255,255,0.15); border-radius: 3px;
+        padding: 0.1em 0.35em;
+      }
+
       /* How to play */
       .how-to-play {
         font-family: 'Noto Sans JP', sans-serif;
@@ -465,6 +531,12 @@
         <p id="title-best" class="title-best" aria-live="polite"></p>
 
         <p class="how-to-play">迫る壁をよけろ!<br/>左右キーでボールを動かし、壁をかわし続けよう</p>
+
+        <div id="mode-selector" class="mode-selector">
+          <button id="mode-classic" class="mode-btn active">2 BALLS</button>
+          <button id="mode-triple" class="mode-btn">3 BALLS</button>
+        </div>
+
         <p class="keys"><span id="title-keys">F  J</span></p>
 
         <div class="title-buttons">

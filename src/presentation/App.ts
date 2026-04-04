@@ -1,5 +1,7 @@
 import { StateMachine, GameState, GameEvent } from "@domain/entities/StateMachine";
 import type { GameConfig } from "@domain/entities/GameConfig";
+import { createTripleConfig } from "@domain/entities/GameConfig";
+import type { GameMode } from "@domain/entities/GameMode";
 import type { Replay, ReplayEvent } from "@domain/entities/Replay";
 import { createReplay } from "@domain/entities/Replay";
 import { createGameWorld, dodge, undodge, tick, getSpeedTier, type GameWorldState } from "@domain/entities/GameWorld";
@@ -29,7 +31,7 @@ interface RecordingSession {
 
 export class App {
   private readonly sm = new StateMachine();
-  private readonly renderer: GameRenderer;
+  private renderer: GameRenderer;
   private readonly hud: HUD;
   private readonly historyUI: HistoryUI;
   private readonly keybindUI: KeybindUI;
@@ -39,8 +41,15 @@ export class App {
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
-  private readonly gameConfig: GameConfig;
+  private readonly _classicConfig: GameConfig;
+  private readonly container: HTMLElement;
+  private readonly themeManager: ThemeManager;
+  private activeMode: GameMode = "classic";
   private inputConfig: InputConfig;
+
+  private get gameConfig(): GameConfig {
+    return this.activeMode === "triple" ? createTripleConfig() : this._classicConfig;
+  }
 
   private world: GameWorldState;
   private animationId = 0;
@@ -64,7 +73,9 @@ export class App {
     manageSave: ManageSave,
   ) {
     const theme = themeManager.current;
-    this.gameConfig = gameConfig;
+    this._classicConfig = gameConfig;
+    this.container = container;
+    this.themeManager = themeManager;
     this.inputConfig = inputConfig;
     this.renderer = new GameRenderer(container, gameConfig, theme);
     this.audio = new AudioManager(theme.audio);
@@ -106,29 +117,46 @@ export class App {
     this.hud.show(GameState.Title);
     this.updateKeyHints();
     this.startLoop();
-    this.loadBestScore().catch(() => {});
+    this.loadBestScore(this.activeMode).catch(() => {});
   }
 
-  private async loadBestScore(): Promise<void> {
-    const stored = await this.bestScoreRepo.load();
+  private async loadBestScore(mode: GameMode): Promise<void> {
+    // Load the given mode's best score
+    const stored = await this.bestScoreRepo.load(mode);
     if (stored) {
       this.bestScore = stored.score;
       this.bestReplayId = stored.replayId;
+    } else {
+      this.bestScore = 0;
+      this.bestReplayId = null;
     }
 
     // Also check current history in case meta store was cleared
-    const history = await this.manageScore.getHistory();
+    const history = await this.manageScore.getHistory(mode);
     if (history.bestScore && history.bestScore.value > this.bestScore) {
       this.bestScore = history.bestScore.value;
       this.bestReplayId = history.bestScore.replayId;
       this.persistBestScore();
     }
 
-    this.hud.updateTitleBest(this.bestScore);
+    // Show highest best score across both modes with its mode label
+    const classicRecord = await this.bestScoreRepo.load("classic");
+    const tripleRecord = await this.bestScoreRepo.load("triple");
+
+    const classicBest = classicRecord?.score ?? 0;
+    const tripleBest = tripleRecord?.score ?? 0;
+
+    if (classicBest === 0 && tripleBest === 0) {
+      this.hud.updateTitleBest(0);
+    } else if (classicBest >= tripleBest) {
+      this.hud.updateTitleBest(classicBest, classicBest > 0 ? "CLASSIC" : undefined);
+    } else {
+      this.hud.updateTitleBest(tripleBest, "TRIPLE");
+    }
   }
 
   private persistBestScore(): void {
-    this.bestScoreRepo.save({
+    this.bestScoreRepo.save(this.activeMode, {
       score: this.bestScore,
       replayId: this.bestReplayId,
     }).catch(() => {});
@@ -180,7 +208,7 @@ export class App {
 
     if (state === GameState.Title) {
       this.audio.stopBgm();
-      this.hud.updateTitleBest(this.bestScore);
+      this.loadBestScore(this.activeMode).catch(() => {});
     }
 
     if (state === GameState.Watching) {
@@ -200,6 +228,7 @@ export class App {
     const replayId = crypto.randomUUID();
     const scoreId = await this.manageScore.record(
       finalScore,
+      this.activeMode,
       replayId,
     );
 
@@ -240,6 +269,33 @@ export class App {
     this.replayController.start();
   }
 
+  setMode(mode: GameMode): void {
+    if (this.activeMode === mode) return;
+    this.activeMode = mode;
+
+    // Rebuild renderer for new lane count
+    this.renderer.dispose();
+    const theme = this.themeManager.current;
+    this.renderer = new GameRenderer(this.container, this.gameConfig, theme);
+
+    // Re-register theme listener — it captures the renderer reference via closure,
+    // but since we replaced this.renderer, new events will use the new instance.
+    // (The old listener registered in constructor still fires but updates the replaced renderer)
+    // We re-apply theme immediately for the new renderer.
+    this.renderer.applyTheme(theme);
+
+    // Reset world for new config
+    this.world = createGameWorld(this.gameConfig, mulberry32(generateSeed()));
+
+    // Update mode button active states
+    document.getElementById("mode-classic")?.classList.toggle("active", mode === "classic");
+    document.getElementById("mode-triple")?.classList.toggle("active", mode === "triple");
+
+    this.loadBestScore(mode).catch(() => {});
+    this.updateKeyHints();
+    this.renderDirty = true;
+  }
+
   private setupTitleButtons(): void {
     document.getElementById("btn-start")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -252,6 +308,16 @@ export class App {
     document.getElementById("back-to-title-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.sm.dispatch(GameEvent.BackToTitle);
+    });
+
+    // Mode selector buttons
+    document.getElementById("mode-classic")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.setMode("classic");
+    });
+    document.getElementById("mode-triple")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.setMode("triple");
     });
 
     // Settings screen
@@ -328,6 +394,20 @@ export class App {
 
     if (this.isTouchOnly) {
       if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
+    } else if (this.activeMode === "triple") {
+      const leftCodes = this.inputConfig.dodge
+        .filter((b) => b.ballIndex === 0)
+        .map((b) => codeToLabel(b.code));
+      const midCodes = this.inputConfig.dodge
+        .filter((b) => b.ballIndex === 2)
+        .map((b) => codeToLabel(b.code));
+      const rightCodes = this.inputConfig.dodge
+        .filter((b) => b.ballIndex === 1)
+        .map((b) => codeToLabel(b.code));
+      const left = leftCodes.join("/") || "?";
+      const mid = midCodes.join("/") || "?";
+      const right = rightCodes.join("/") || "?";
+      if (keysEl) keysEl.textContent = `${left}  ${mid}  ${right}`;
     } else {
       const leftCodes = this.inputConfig.dodge
         .filter((b) => b.ballIndex === 0)
@@ -482,8 +562,8 @@ export class App {
   }
 
   private async showHistory(): Promise<void> {
-    const history = await this.manageScore.getHistory();
-    await this.historyUI.show(history);
+    const history = await this.manageScore.getHistory(this.activeMode);
+    await this.historyUI.show(history, this.manageScore);
   }
 
   private startLoop(): void {

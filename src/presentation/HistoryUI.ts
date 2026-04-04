@@ -1,12 +1,16 @@
 import type { ScoreHistory } from "@domain/entities/Score";
+import type { GameMode } from "@domain/entities/GameMode";
 import type { Replay } from "@domain/entities/Replay";
 import type { ManageReplay } from "@application/usecases/ManageReplay";
+import type { ManageScore } from "@application/usecases/ManageScore";
 
 function el(id: string): HTMLElement {
   const e = document.getElementById(id);
   if (!e) throw new Error(`Missing element #${id}`);
   return e;
 }
+
+type HistoryTab = GameMode | "all";
 
 export class HistoryUI {
   private readonly screen = el("history-screen");
@@ -18,6 +22,9 @@ export class HistoryUI {
   private readonly manageReplay: ManageReplay;
   private readonly onWatch: (replay: Replay) => void;
   private readonly onClose: () => void;
+
+  private manageScore: ManageScore | null = null;
+  private currentTab: HistoryTab = "classic";
 
   constructor(
     manageReplay: ManageReplay,
@@ -33,7 +40,82 @@ export class HistoryUI {
     this.fileInput.addEventListener("change", () => this.handleImport());
   }
 
-  async show(history: ScoreHistory): Promise<void> {
+  async show(_history: ScoreHistory, manageScore?: ManageScore): Promise<void> {
+    if (manageScore) this.manageScore = manageScore;
+
+    // Inject tabs + stats container above history-list if not yet present
+    this.ensureTabsAndStats();
+
+    await this.renderTab(this.currentTab);
+
+    this.screen.classList.remove("hidden");
+  }
+
+  private ensureTabsAndStats(): void {
+    if (document.getElementById("history-tabs")) return;
+
+    const tabsEl = document.createElement("div");
+    tabsEl.id = "history-tabs";
+    tabsEl.className = "history-tabs";
+
+    const tabs: { id: HistoryTab; label: string }[] = [
+      { id: "classic", label: "2 BALLS" },
+      { id: "triple", label: "3 BALLS" },
+      { id: "all", label: "ALL" },
+    ];
+
+    for (const tab of tabs) {
+      const btn = document.createElement("button");
+      btn.className = "history-tab-btn" + (tab.id === this.currentTab ? " active" : "");
+      btn.textContent = tab.label;
+      btn.dataset["tab"] = tab.id;
+      btn.addEventListener("click", () => {
+        this.currentTab = tab.id;
+        document.querySelectorAll(".history-tab-btn").forEach((b) => {
+          (b as HTMLElement).classList.toggle("active", (b as HTMLElement).dataset["tab"] === tab.id);
+        });
+        this.renderTab(tab.id).catch(() => {});
+      });
+      tabsEl.appendChild(btn);
+    }
+
+    const statsEl = document.createElement("div");
+    statsEl.id = "history-stats";
+    statsEl.className = "history-stats";
+
+    this.list.insertAdjacentElement("beforebegin", tabsEl);
+    tabsEl.insertAdjacentElement("afterend", statsEl);
+  }
+
+  private async renderTab(tab: HistoryTab): Promise<void> {
+    const mode: GameMode | undefined = tab === "all" ? undefined : tab;
+
+    // Render stats
+    const statsEl = document.getElementById("history-stats");
+    if (statsEl && this.manageScore) {
+      const stats = await this.manageScore.getStats(mode);
+      statsEl.innerHTML = "";
+
+      const items = [
+        { label: "PLAYS", value: `${stats.totalPlays}` },
+        { label: "BEST", value: `${stats.bestScore}` },
+        { label: "AVG", value: `${stats.avgScore}` },
+        { label: "TOTAL", value: `${stats.totalScore}` },
+      ];
+
+      for (const item of items) {
+        const stat = document.createElement("div");
+        stat.className = "history-stat-item";
+        stat.innerHTML = `<span class="history-stat-label">${item.label}</span><span class="history-stat-value">${item.value}</span>`;
+        statsEl.appendChild(stat);
+      }
+    }
+
+    // Render list
+    const history = this.manageScore
+      ? await this.manageScore.getHistory(mode)
+      : { scores: [], bestScore: null };
+
     while (this.list.firstChild) this.list.removeChild(this.list.firstChild);
 
     const best = history.bestScore;
@@ -49,6 +131,14 @@ export class HistoryUI {
         scoreEl.className += " history-best";
       }
       li.appendChild(scoreEl);
+
+      // Mode badge in "all" tab
+      if (tab === "all" && score.mode) {
+        const modeEl = document.createElement("span");
+        modeEl.className = "history-mode-badge";
+        modeEl.textContent = score.mode === "triple" ? "3B" : "2B";
+        li.appendChild(modeEl);
+      }
 
       const date = new Date(score.timestamp);
       const dateEl = document.createElement("span");
@@ -85,8 +175,6 @@ export class HistoryUI {
       li.appendChild(btns);
       this.list.appendChild(li);
     }
-
-    this.screen.classList.remove("hidden");
   }
 
   hide(): void {

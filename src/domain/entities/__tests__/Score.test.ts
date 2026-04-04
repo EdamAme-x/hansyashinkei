@@ -3,11 +3,12 @@ import { createScore, buildHistory } from "@domain/entities/Score";
 
 describe("createScore", () => {
   it("should create a score with the given value", () => {
-    const score = createScore("s-1", 150);
+    const score = createScore("s-1", 150, "classic");
 
     expect(score.id).toBe("s-1");
     expect(score.value).toBe(150);
     expect(score.timestamp).toBeGreaterThan(0);
+    expect(score.mode).toBe("classic");
   });
 });
 
@@ -21,9 +22,9 @@ describe("buildHistory", () => {
 
   it("should identify the best score", () => {
     const scores = [
-      createScore("a", 100),
-      createScore("b", 300),
-      createScore("c", 200),
+      createScore("a", 100, "classic"),
+      createScore("b", 300, "classic"),
+      createScore("c", 200, "classic"),
     ];
     const history = buildHistory(scores);
 
