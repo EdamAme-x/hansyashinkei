@@ -25,7 +25,15 @@ export function loadInputConfig(): InputConfig {
     if (raw) {
       const saved = JSON.parse(raw) as { dodge?: InputBinding[] };
       if (Array.isArray(saved.dodge) && saved.dodge.length > 0) {
-        return { dodge: saved.dodge, start: DEFAULT_START };
+        // Merge: keep saved bindings, add default ones that aren't present
+        const codes = new Set(saved.dodge.map((b) => b.code));
+        const merged = [...saved.dodge];
+        for (const def of DEFAULT_DODGE) {
+          if (!codes.has(def.code)) {
+            merged.push({ ...def });
+          }
+        }
+        return { dodge: merged, start: DEFAULT_START };
       }
     }
   } catch {
