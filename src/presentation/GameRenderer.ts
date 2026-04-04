@@ -89,7 +89,7 @@ export class GameRenderer {
     // Ground — dark
     const groundGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 2, LANE_LENGTH);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x080808, metalness: 0.9, roughness: 0.4,
+      color: 0x101018, metalness: 0.7, roughness: 0.5,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -101,7 +101,7 @@ export class GameRenderer {
     for (let i = 0; i < laneCount; i++) {
       const stripGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.92, LANE_LENGTH);
       const stripMat = new THREE.MeshStandardMaterial({
-        color: 0x141414, metalness: 0.7, roughness: 0.5,
+        color: 0x1a1a24, metalness: 0.6, roughness: 0.5,
       });
       const strip = new THREE.Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
