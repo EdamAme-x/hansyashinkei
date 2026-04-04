@@ -1,26 +1,45 @@
-import type { ThemeConfig } from "@domain/entities/ThemeConfig";
-import { createDefaultTheme, getBuiltinThemes } from "@domain/entities/ThemeConfig";
+import type { ThemeConfig, CustomThemeOverrides } from "@domain/entities/ThemeConfig";
+import { createDefaultTheme, getBuiltinThemes, createEmptyOverrides, applyOverrides } from "@domain/entities/ThemeConfig";
 
-const STORAGE_KEY = "hansyashinkei-theme";
+const THEME_KEY = "hansyashinkei-theme";
+const OVERRIDES_KEY = "hansyashinkei-theme-overrides";
 
 export class ThemeRepository {
-  load(): ThemeConfig {
+  loadThemeId(): string {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(THEME_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as { id?: string };
-        if (typeof parsed.id === "string") {
-          const found = getBuiltinThemes().find((t) => t.id === parsed.id);
-          if (found) return found;
-        }
+        if (typeof parsed.id === "string") return parsed.id;
       }
-    } catch {
-      // ignore
-    }
-    return createDefaultTheme();
+    } catch { /* ignore */ }
+    return "default";
+  }
+
+  load(): ThemeConfig {
+    const id = this.loadThemeId();
+    const base = getBuiltinThemes().find((t) => t.id === id) ?? createDefaultTheme();
+    const overrides = this.loadOverrides();
+    return applyOverrides(base, overrides);
+  }
+
+  saveThemeId(id: string): void {
+    localStorage.setItem(THEME_KEY, JSON.stringify({ id }));
   }
 
   save(theme: ThemeConfig): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: theme.id }));
+    this.saveThemeId(theme.id);
+  }
+
+  loadOverrides(): CustomThemeOverrides {
+    try {
+      const raw = localStorage.getItem(OVERRIDES_KEY);
+      if (raw) return { ...createEmptyOverrides(), ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    return createEmptyOverrides();
+  }
+
+  saveOverrides(overrides: CustomThemeOverrides): void {
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
   }
 }

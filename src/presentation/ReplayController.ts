@@ -113,10 +113,10 @@ export class ReplayController {
 
       if (this.paused) return;
       if (this.frameIndex >= this.replay.dts.length || !this.world.alive) {
-        this.renderer.showBalls(false);
-        this.bar.classList.add("hidden");
-        this.onDone();
-        cancelAnimationFrame(this.animationId);
+        // Pause at end — user can seek back or close via ✕
+        this.paused = true;
+        this.playBtn.textContent = "▶";
+        this.updateBar();
         return;
       }
 

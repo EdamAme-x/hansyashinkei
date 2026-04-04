@@ -17,6 +17,7 @@ import { KeybindUI } from "./KeybindUI";
 import { AudioManager } from "./AudioManager";
 import type { ThemeManager } from "./ThemeManager";
 import { ThemeUI } from "./ThemeUI";
+import type { ImageStore } from "@infrastructure/storage/ImageStore";
 
 interface RecordingSession {
   seed: number;
@@ -58,6 +59,7 @@ export class App {
     gameConfig: GameConfig,
     inputConfig: InputConfig,
     themeManager: ThemeManager,
+    imageStore: ImageStore,
   ) {
     const theme = themeManager.current;
     this.gameConfig = gameConfig;
@@ -85,9 +87,12 @@ export class App {
       () => {},
     );
 
-    this.themeUI = new ThemeUI(themeManager, () => {
-      // Theme changed — reload page to apply
-      location.reload();
+    this.themeUI = new ThemeUI(themeManager, imageStore);
+
+    // Real-time theme update
+    themeManager.onChange((newTheme) => {
+      this.renderer.applyTheme(newTheme);
+      this.renderDirty = true;
     });
 
     this.sm.onStateChange((_prev, next) => this.onStateChange(next));

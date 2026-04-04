@@ -29,6 +29,7 @@ export interface SceneTheme {
   readonly wallMetalness: number;
   readonly wallRoughness: number;
   readonly wallEdgeColor: number;
+  readonly wallTextureUrl: string | null;
   readonly shardColor: number;
   readonly ballSkins: readonly BallSkin[];
 }
@@ -50,6 +51,42 @@ export interface ThemeConfig {
   readonly label: string;
   readonly scene: SceneTheme;
   readonly audio: AudioTheme;
+}
+
+/** Serializable user customizations (stored in localStorage). */
+export interface CustomThemeOverrides {
+  backgroundUrl: string | null;
+  wallTextureUrl: string | null;
+  wallEdgeColor: number | null;
+  wallColor: number | null;
+}
+
+export function createEmptyOverrides(): CustomThemeOverrides {
+  return {
+    backgroundUrl: null,
+    wallTextureUrl: null,
+    wallEdgeColor: null,
+    wallColor: null,
+  };
+}
+
+export function applyOverrides(theme: ThemeConfig, overrides: CustomThemeOverrides): ThemeConfig {
+  const scene = { ...theme.scene };
+
+  if (overrides.backgroundUrl) {
+    (scene as { background: BackgroundMode }).background = { type: "texture", url: overrides.backgroundUrl };
+  }
+  if (overrides.wallTextureUrl !== null) {
+    (scene as { wallTextureUrl: string | null }).wallTextureUrl = overrides.wallTextureUrl;
+  }
+  if (overrides.wallEdgeColor !== null) {
+    (scene as { wallEdgeColor: number }).wallEdgeColor = overrides.wallEdgeColor;
+  }
+  if (overrides.wallColor !== null) {
+    (scene as { wallColor: number }).wallColor = overrides.wallColor;
+  }
+
+  return { ...theme, scene };
 }
 
 const DEFAULT_BALL_SKIN: BallSkin = {
@@ -83,6 +120,7 @@ export function createDefaultTheme(): ThemeConfig {
       wallMetalness: 0.9,
       wallRoughness: 0.3,
       wallEdgeColor: 0xffffff,
+      wallTextureUrl: null,
       shardColor: 0xffffff,
       ballSkins: [DEFAULT_BALL_SKIN],
     },
@@ -121,6 +159,7 @@ function createNeonTheme(): ThemeConfig {
       wallMetalness: 0.7,
       wallRoughness: 0.3,
       wallEdgeColor: 0xff00ff,
+      wallTextureUrl: null,
       shardColor: 0x00ffff,
       ballSkins: [
         {
@@ -169,6 +208,7 @@ function createSunsetTheme(): ThemeConfig {
       wallMetalness: 0.8,
       wallRoughness: 0.3,
       wallEdgeColor: 0xff6633,
+      wallTextureUrl: null,
       shardColor: 0xff8844,
       ballSkins: [
         {

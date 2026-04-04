@@ -7,6 +7,7 @@ import { IndexedDbBestScoreRepository } from "@infrastructure/storage/IndexedDbB
 import { ReplayFileSerializer } from "@infrastructure/storage/ReplayFileSerializer";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
+import { ImageStore } from "@infrastructure/storage/ImageStore";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { applyDevParams } from "@infrastructure/dev/DevParams";
 import { loadInputConfig } from "@presentation/InputConfig";
@@ -28,12 +29,13 @@ async function main() {
 
   const themeRepo = new ThemeRepository();
   const themeManager = new ThemeManager(themeRepo);
+  const imageStore = new ImageStore();
 
   const gameConfig = createDefaultConfig();
   const inputConfig = loadInputConfig();
   applyDevParams(gameConfig, inputConfig);
 
-  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager);
+  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore);
 }
 
 // Version display — runs immediately, independent of async init

@@ -4,6 +4,7 @@ import {
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
+  TextureLoader, SRGBColorSpace,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
@@ -215,6 +216,38 @@ export class GameRenderer {
         this.activeWallMeshes.delete(id);
       }
     }
+  }
+
+  applyTheme(theme: ThemeConfig): void {
+    const s = theme.scene;
+
+    // Wall material
+    this.wallMaterial.color.set(s.wallColor);
+    this.wallMaterial.metalness = s.wallMetalness;
+    this.wallMaterial.roughness = s.wallRoughness;
+    this.wallEdgesMaterial.color.set(s.wallEdgeColor);
+
+    // Wall texture
+    if (s.wallTextureUrl) {
+      new TextureLoader().load(s.wallTextureUrl, (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        this.wallMaterial.map = tex;
+        this.wallMaterial.needsUpdate = true;
+      });
+    } else if (this.wallMaterial.map) {
+      this.wallMaterial.map.dispose();
+      this.wallMaterial.map = null;
+      this.wallMaterial.needsUpdate = true;
+    }
+
+    // Shard
+    this.shardMaterial.color.set(s.shardColor);
+
+    // Scene background + fog
+    this.adapter.applySceneTheme(s);
+
+    // Force a render
+    this.adapter.render();
   }
 
   render(): void {

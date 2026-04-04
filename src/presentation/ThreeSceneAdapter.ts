@@ -58,6 +58,19 @@ export class ThreeSceneAdapter {
     this.renderer.setSize(width, height);
   }
 
+  applySceneTheme(sceneTheme: SceneTheme): void {
+    if (sceneTheme.background.type === "color") {
+      this.scene.background = new Color(sceneTheme.background.hex);
+    } else {
+      new TextureLoader().load(sceneTheme.background.url, (tex) => {
+        this.scene.background = tex;
+      });
+    }
+    if (this.scene.fog) {
+      (this.scene.fog as Fog).color.set(sceneTheme.fogColor);
+    }
+  }
+
   dispose(): void {
     this.renderer.dispose();
   }

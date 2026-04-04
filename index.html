@@ -340,9 +340,32 @@
         padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
       }
       #theme-close:hover { background: rgba(255,255,255,0.12); }
-      .theme-hint {
-        font-family: 'Noto Sans JP', sans-serif;
-        font-size: 0.7rem; opacity: 0.25; margin-top: 1rem;
+      .theme-custom {
+        width: 100%; max-width: 360px; margin-top: 1.5rem;
+        border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;
+      }
+      .theme-row {
+        display: flex; align-items: center; gap: 0.8rem;
+        margin-bottom: 0.8rem; font-size: 0.8rem;
+      }
+      .theme-row-label { opacity: 0.5; min-width: 6rem; font-size: 0.7rem; letter-spacing: 0.1em; }
+      .theme-file-btn {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.65rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.35em 0.8em; border-radius: 4px; cursor: pointer;
+      }
+      .theme-file-btn:hover { background: rgba(255,255,255,0.12); }
+      .theme-file-btn input { display: none; }
+      .theme-clear-btn {
+        background: none; border: 1px solid rgba(255,255,255,0.1);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+        padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; opacity: 0.4;
+      }
+      .theme-clear-btn:hover { opacity: 0.7; }
+      .theme-row input[type="color"] {
+        width: 2rem; height: 2rem; border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 4px; background: none; cursor: pointer; padding: 0;
       }
 
       /* How to play */
@@ -495,11 +518,39 @@
         </div>
       </div>
 
-      <div id="theme-screen" class="hidden" role="dialog" aria-label="テーマ選択">
+      <div id="theme-screen" class="hidden" role="dialog" aria-label="テーマ設定">
         <h2>THEME</h2>
+
         <div id="theme-list"></div>
+
+        <div class="theme-custom">
+          <div class="theme-row">
+            <span class="theme-row-label">BACKGROUND</span>
+            <label class="theme-file-btn">
+              SELECT
+              <input type="file" id="theme-bg-file" accept="image/*" />
+            </label>
+            <button id="theme-bg-clear" class="theme-clear-btn">CLEAR</button>
+          </div>
+          <div class="theme-row">
+            <span class="theme-row-label">WALL IMAGE</span>
+            <label class="theme-file-btn">
+              SELECT
+              <input type="file" id="theme-wall-file" accept="image/*" />
+            </label>
+            <button id="theme-wall-clear" class="theme-clear-btn">CLEAR</button>
+          </div>
+          <div class="theme-row">
+            <span class="theme-row-label">WALL EDGE</span>
+            <input type="color" id="theme-wall-edge-color" value="#ffffff" />
+          </div>
+          <div class="theme-row">
+            <span class="theme-row-label">WALL COLOR</span>
+            <input type="color" id="theme-wall-color" value="#111111" />
+          </div>
+        </div>
+
         <button id="theme-close" aria-label="閉じる">CLOSE</button>
-        <p class="theme-hint">テーマ変更後はページ再読み込みで反映</p>
       </div>
     </div>
 
