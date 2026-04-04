@@ -177,6 +177,10 @@ export class App {
   }
 
   private setupTitleButtons(): void {
+    document.getElementById("btn-start")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.sm.dispatch(GameEvent.Start);
+    });
     document.getElementById("btn-history")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.showHistory();
@@ -298,22 +302,8 @@ export class App {
     };
 
     window.addEventListener("touchstart", (e) => {
+      if (this.sm.state !== GameState.Playing) return;
       e.preventDefault();
-
-      if (this.sm.state === GameState.Title) {
-        this.sm.dispatch(GameEvent.Start);
-        return;
-      }
-      if (this.sm.state === GameState.GameOver) {
-        this.sm.dispatch(GameEvent.Restart);
-        return;
-      }
-      if (this.sm.state === GameState.Watching) {
-        this.replayController?.stop();
-        this.replayController = null;
-        this.sm.dispatch(GameEvent.BackToTitle);
-        return;
-      }
 
       if (this.sm.state === GameState.Playing) {
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -354,13 +344,9 @@ export class App {
       updateZones();
     });
 
-    // Mouse click on canvas — for non-touch, non-keyboard navigation
+    // Canvas click — only for exiting replay
     this.renderer.adapter.renderer.domElement.addEventListener("click", () => {
-      if (this.sm.state === GameState.Title) {
-        this.sm.dispatch(GameEvent.Start);
-      } else if (this.sm.state === GameState.GameOver) {
-        this.sm.dispatch(GameEvent.Restart);
-      } else if (this.sm.state === GameState.Watching) {
+      if (this.sm.state === GameState.Watching) {
         this.replayController?.stop();
         this.replayController = null;
         this.sm.dispatch(GameEvent.BackToTitle);

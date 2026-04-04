@@ -62,6 +62,14 @@
         padding: 0.5em 1.2em; border-radius: 5px; cursor: pointer; opacity: 0.5;
       }
       .title-buttons button:hover { background: rgba(255,255,255,0.12); opacity: 0.7; }
+      .start-btn {
+        margin-top: 1.5rem; pointer-events: auto;
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 1.1rem;
+        font-weight: 900; letter-spacing: 0.2em;
+        padding: 0.7em 3em; border-radius: 6px; cursor: pointer;
+      }
+      .start-btn:hover { background: rgba(255,255,255,0.2); }
 
       /* Game Over */
       #gameover-screen h2 {
@@ -261,14 +269,16 @@
       <div id="title-screen" class="overlay">
         <h1>反射神経</h1>
         <p id="title-best" class="title-best"></p>
-        <p class="keys">
-          <span id="title-keys">F  J</span> &nbsp;&nbsp; <kbd>Space</kbd>
-        </p>
-        <div id="title-hint-line" class="title-buttons">
+
+        <p class="how-to-play">迫る壁をよけろ!<br/>左右キーでボールを動かし、壁をかわし続けよう</p>
+        <p class="keys"><span id="title-keys">F  J</span></p>
+
+        <div class="title-buttons">
           <button id="btn-history">HISTORY</button>
           <button id="btn-keybinds">KEYS</button>
         </div>
-        <p class="how-to-play">迫る壁をよけろ!<br/>左右キーでボールを動かし、壁をかわし続けよう</p>
+
+        <button id="btn-start" class="start-btn">START</button>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
