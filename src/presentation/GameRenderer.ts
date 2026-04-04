@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { LANE_COUNT } from "@domain/entities/Lane";
 import type { GameWorldState } from "@domain/entities/GameWorld";
-import { ThreeSceneAdapter } from "@infrastructure/threejs/ThreeSceneAdapter";
+import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
 const LANE_WIDTH = 2.5;
 const LANE_OFFSET = ((LANE_COUNT - 1) / 2) * LANE_WIDTH;

@@ -47,10 +47,10 @@ src/
 │   └── usecases/     # ManageScore
 ├── infrastructure/   # External implementations (domain + browser APIs)
 │   ├── crypto/       # DeviceKeyStore (Web Crypto + IndexedDB)
-│   ├── storage/      # IndexedDbScoreRepository (CBOR + AES-GCM)
-│   └── threejs/      # ThreeSceneAdapter
-└── presentation/     # UI (depends on all layers)
+│   └── storage/      # IndexedDbScoreRepository (CBOR + AES-GCM)
+└── presentation/     # UI (depends on domain + application only)
     ├── App.ts        # Game loop + State Machine integration
+    ├── ThreeSceneAdapter.ts
     ├── GameRenderer.ts
     └── HUD.ts
 ```
