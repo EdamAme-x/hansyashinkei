@@ -48,14 +48,24 @@ export function undodge(world: GameWorldState, side: BallSide): void {
   world.balls[idx] = returnBall(world.balls[idx], side);
 }
 
-function spawnWallPair(world: GameWorldState): void {
-  const lanes: number[] = [];
-  while (lanes.length < 2) {
-    const lane = Math.floor(Math.random() * LANE_COUNT);
-    if (!lanes.includes(lane)) lanes.push(lane);
-  }
+// Impossible combos: {0,1} blocks left ball, {2,3} blocks right ball
+const IMPOSSIBLE_PAIRS = [[0, 1], [2, 3]];
 
-  for (const lane of lanes) {
+const VALID_PAIRS = (() => {
+  const all: [number, number][] = [];
+  for (let a = 0; a < LANE_COUNT; a++) {
+    for (let b = a + 1; b < LANE_COUNT; b++) {
+      if (!IMPOSSIBLE_PAIRS.some((p) => p[0] === a && p[1] === b)) {
+        all.push([a, b]);
+      }
+    }
+  }
+  return all;
+})();
+
+function spawnWallPair(world: GameWorldState): void {
+  const pair = VALID_PAIRS[Math.floor(Math.random() * VALID_PAIRS.length)];
+  for (const lane of pair) {
     world.walls.push(createWall(world.wallIdGen, lane, WALL_SPAWN_Z));
   }
 }

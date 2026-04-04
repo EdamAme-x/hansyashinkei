@@ -127,6 +127,28 @@ describe("GameWorld", () => {
       tick(world, 0.02); // timer → 0.71 > 0.7
       expect(world.walls.length).toBeGreaterThanOrEqual(2);
     });
+
+    it("should never spawn impossible pairs {0,1} or {2,3}", () => {
+      for (let i = 0; i < 200; i++) {
+        world.spawnTimer = 10;
+        tick(world, 0.001);
+      }
+      // Group walls by spawn z (same z = same pair)
+      const groups = new Map<number, number[]>();
+      for (const wall of world.walls) {
+        const key = Math.round(wall.z * 100);
+        const arr = groups.get(key) ?? [];
+        arr.push(wall.lane);
+        groups.set(key, arr);
+      }
+      for (const lanes of groups.values()) {
+        if (lanes.length === 2) {
+          const sorted = [...lanes].sort();
+          expect(sorted).not.toEqual([0, 1]);
+          expect(sorted).not.toEqual([2, 3]);
+        }
+      }
+    });
   });
 
   describe("tick - dead world", () => {
