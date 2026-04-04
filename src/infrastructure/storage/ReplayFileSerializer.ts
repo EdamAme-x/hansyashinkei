@@ -1,7 +1,7 @@
 import { encode, decode } from "cbor-x";
 import { deflate, inflate } from "pako";
 import type { Replay } from "@domain/entities/Replay";
-import type { ReplaySerializer } from "@application/usecases/ManageReplay";
+import type { ReplaySerializer } from "@domain/repositories/ReplaySerializer";
 
 export class ReplayFileSerializer implements ReplaySerializer {
   encode(replay: Replay): Uint8Array {

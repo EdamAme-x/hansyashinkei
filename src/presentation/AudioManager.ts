@@ -3,7 +3,6 @@ const STORAGE_KEY = "hansyashinkei-audio";
 const BGM_URL = "/audio/bgm.mp3";
 const SE = {
   dodge: ["/audio/dodge1.mp3", "/audio/dodge2.mp3"],
-  wallPass: "/audio/bell-accent.mp3",
   speedUp: "/audio/bell-accent.mp3",
   death: "/audio/death.mp3",
   newBest: "/audio/new-best.mp3",

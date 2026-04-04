@@ -72,9 +72,13 @@ export class EncryptedStore {
     );
 
     if (!record) return null;
-    const pipe = this.pipeline();
-    const decrypted = await this.crypto.decrypt(toBytes(record.data));
-    return pipe.decode(decrypted) as T;
+    try {
+      const pipe = this.pipeline();
+      const decrypted = await this.crypto.decrypt(toBytes(record.data));
+      return pipe.decode(decrypted) as T;
+    } catch {
+      return null;
+    }
   }
 
   async getAll<T>(): Promise<T[]> {
@@ -92,8 +96,12 @@ export class EncryptedStore {
     const pipe = this.pipeline();
     const items: T[] = [];
     for (const record of records) {
-      const decrypted = await this.crypto.decrypt(toBytes(record.data));
-      items.push(pipe.decode(decrypted) as T);
+      try {
+        const decrypted = await this.crypto.decrypt(toBytes(record.data));
+        items.push(pipe.decode(decrypted) as T);
+      } catch {
+        // Skip records that can't be decrypted (e.g., corrupted or from a different key)
+      }
     }
     return items;
   }

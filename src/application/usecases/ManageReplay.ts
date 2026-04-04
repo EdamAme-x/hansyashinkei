@@ -2,8 +2,6 @@ import type { Replay } from "@domain/entities/Replay";
 import type { ReplayRepository } from "@domain/repositories/ReplayRepository";
 import type { ReplaySerializer } from "@domain/repositories/ReplaySerializer";
 
-export type { ReplaySerializer };
-
 export class ManageReplay {
   constructor(
     private readonly repository: ReplayRepository,
