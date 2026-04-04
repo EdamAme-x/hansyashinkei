@@ -257,15 +257,6 @@ export class App {
         }
       }
 
-      if (this.sm.state === GameState.Watching) {
-        if (e.code === "Escape" || e.code === "Backspace") {
-          this.replayController?.stop();
-          this.replayController = null;
-          this.sm.dispatch(GameEvent.BackToTitle);
-          return;
-        }
-      }
-
       if (this.sm.state === GameState.Playing) {
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {

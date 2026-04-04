@@ -13,6 +13,8 @@ const STORAGE_KEY = "hansyashinkei-keybinds";
 const DEFAULT_DODGE: InputBinding[] = [
   { code: "KeyF", ballIndex: 0 },
   { code: "KeyJ", ballIndex: 1 },
+  { code: "ArrowLeft", ballIndex: 0 },
+  { code: "ArrowRight", ballIndex: 1 },
 ];
 
 const DEFAULT_START = ["Space", "Enter"];
