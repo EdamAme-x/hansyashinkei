@@ -62,7 +62,7 @@ export class GameRenderer {
   }
 
   private buildBalls(): void {
-    const ballGeo = new THREE.SphereGeometry(0.45, 32, 32);
+    const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
     const colors = [0x4fc3f7, 0xef5350, 0x66bb6a, 0xffa726, 0xab47bc];
 
     for (let i = 0; i < this.config.balls.length; i++) {
@@ -77,12 +77,12 @@ export class GameRenderer {
 
       const mesh = new THREE.Mesh(ballGeo, mat);
       mesh.castShadow = true;
-      mesh.position.set(this.laneX(this.config.balls[i].homeLane), 0.45, 0);
+      mesh.position.set(this.laneX(this.config.balls[i].homeLane), 0.8, 0);
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
-      const glow = new THREE.PointLight(color, 1.5, 8);
-      glow.position.set(this.laneX(this.config.balls[i].homeLane), 0.8, 0);
+      const glow = new THREE.PointLight(color, 2.0, 12);
+      glow.position.set(this.laneX(this.config.balls[i].homeLane), 1.2, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
     }
