@@ -185,6 +185,10 @@ export class App {
       e.stopPropagation();
       this.keybindUI.show();
     });
+    document.getElementById("back-to-title-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.sm.dispatch(GameEvent.BackToTitle);
+    });
   }
 
   private setupResize(): void {

@@ -170,9 +170,11 @@
       #history-close:hover, #history-import:hover { background: rgba(255,255,255,0.12); }
       #replay-file-input { display: none; }
 
-      /* Share button */
+      /* Game over buttons */
+      .gameover-buttons {
+        display: flex; gap: 0.8rem; margin-top: 1.5rem; pointer-events: auto;
+      }
       .share-btn {
-        margin-top: 1.5rem; pointer-events: auto;
         background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
         color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
         font-weight: 700; letter-spacing: 0.1em;
@@ -182,9 +184,10 @@
 
       /* Credit */
       #credit {
-        position: fixed; bottom: 1rem; right: 1.2rem; z-index: 5;
+        position: fixed; bottom: 1rem; right: 1.2rem; z-index: 30;
         font-size: 0.8rem; font-weight: 700; opacity: 0.4;
         color: #fff; text-decoration: none; letter-spacing: 0.08em;
+        pointer-events: auto;
       }
       #credit:hover { opacity: 0.7; }
 
@@ -274,7 +277,10 @@
         <p id="final-score">0</p>
         <p id="best-score">BEST 0</p>
         <p class="hint"><kbd>Space</kbd> restart &nbsp; <kbd>⌫</kbd> title</p>
-        <button id="share-btn" class="share-btn">SHARE ON 𝕏</button>
+        <div class="gameover-buttons">
+          <button id="share-btn" class="share-btn">SHARE ON 𝕏</button>
+          <button id="back-to-title-btn" class="share-btn">TITLE</button>
+        </div>
       </div>
 
       <div id="touch-zone-left" class="touch-zone touch-zone-left"></div>
