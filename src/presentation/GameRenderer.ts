@@ -97,11 +97,11 @@ export class GameRenderer {
     ground.receiveShadow = true;
     this.adapter.add(ground);
 
-    // Lane strips — slightly lighter
+    // Lane strips
     for (let i = 0; i < laneCount; i++) {
       const stripGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.92, LANE_LENGTH);
       const stripMat = new THREE.MeshStandardMaterial({
-        color: 0x0c0c0c, metalness: 0.8, roughness: 0.5,
+        color: 0x141414, metalness: 0.7, roughness: 0.5,
       });
       const strip = new THREE.Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -110,14 +110,14 @@ export class GameRenderer {
       this.adapter.add(strip);
     }
 
-    // Dividers — white lines
+    // Dividers
     for (let i = 0; i <= laneCount; i++) {
       const x = i * LANE_WIDTH - this.laneOffset - LANE_WIDTH / 2;
-      const lineGeo = new THREE.PlaneGeometry(0.03, LANE_LENGTH);
+      const lineGeo = new THREE.PlaneGeometry(0.06, LANE_LENGTH);
       const lineMat = new THREE.MeshStandardMaterial({
-        color: 0x333333,
-        emissive: 0x222222,
-        emissiveIntensity: 0.5,
+        color: 0x555555,
+        emissive: 0x333333,
+        emissiveIntensity: 0.6,
       });
       const line = new THREE.Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
@@ -125,14 +125,14 @@ export class GameRenderer {
       this.adapter.add(line);
     }
 
-    // Ball zone line — white
-    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 1, 0.04);
+    // Ball zone line
+    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 1, 0.1);
     const zoneMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       emissive: 0xffffff,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 1.0,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.35,
     });
     const zoneLine = new THREE.Mesh(zoneGeo, zoneMat);
     zoneLine.rotation.x = -Math.PI / 2;
