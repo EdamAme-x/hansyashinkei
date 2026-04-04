@@ -2,8 +2,8 @@ import {
   AmbientLight, DirectionalLight, PointLight,
   Mesh, Group, LineSegments,
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
-  MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
-  Color, AdditiveBlending,
+  MeshStandardMaterial, LineBasicMaterial,
+  Color,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
@@ -25,8 +25,6 @@ export class GameRenderer {
   private readonly wallGeometry: BoxGeometry;
   private readonly wallEdgesGeometry: EdgesGeometry;
   private readonly wallMaterial: MeshStandardMaterial;
-  private readonly wallReflectionGeometry: PlaneGeometry;
-  private readonly wallReflectionMaterial: MeshBasicMaterial;
   private readonly wallEdgesMaterial: LineBasicMaterial;
 
   constructor(container: HTMLElement, config: GameConfig) {
@@ -57,16 +55,6 @@ export class GameRenderer {
       color: 0x111111,
       metalness: 0.9,
       roughness: 0.3,
-    });
-    // Flat plane sized to the wall footprint, elongated along Z for a glow trail effect.
-    this.wallReflectionGeometry = new PlaneGeometry(laneWidth * 0.88 * 1.15, wallDepth * 2.5);
-    this.wallReflectionMaterial = new MeshBasicMaterial({
-      color: new Color(0xffffff),
-      transparent: true,
-      opacity: 0.2,
-      depthWrite: false,
-      depthTest: false,
-      blending: AdditiveBlending,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: 0xffffff,
@@ -166,16 +154,6 @@ export class GameRenderer {
     const line = new LineSegments(this.wallEdgesGeometry, this.wallEdgesMaterial);
     group.add(line);
 
-    // Reflection: flat horizontal plane glowing on the floor directly beneath the wall.
-    // group.position.y is set to wallHeight/2 in sync(), so to reach world Y=0.03
-    // the local offset must be: 0.03 - wallHeight/2.
-    const wallHalf = this.config.render.wallHeight / 2;
-    const reflection = new Mesh(this.wallReflectionGeometry, this.wallReflectionMaterial);
-    reflection.rotation.x = -Math.PI / 2;   // lay flat on the floor
-    reflection.position.y = 0.03 - wallHalf; // world Y ≈ 0.03, above the ground plane
-    reflection.renderOrder = -1;
-    group.add(reflection);
-
     this.adapter.add(group);
     return group;
   }
@@ -238,8 +216,6 @@ export class GameRenderer {
     this.wallGeometry.dispose();
     this.wallEdgesGeometry.dispose();
     this.wallMaterial.dispose();
-    this.wallReflectionGeometry.dispose();
-    this.wallReflectionMaterial.dispose();
     this.wallEdgesMaterial.dispose();
     this.adapter.dispose();
   }
