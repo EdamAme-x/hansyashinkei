@@ -58,11 +58,11 @@ export class GameRenderer {
       roughness: 0.3,
     });
     this.wallReflectionMaterial = new MeshStandardMaterial({
-      color: 0x222222,
-      metalness: 0.9,
-      roughness: 0.3,
+      color: 0xffffff,
+      emissive: new Color(0xffffff),
+      emissiveIntensity: 0.15,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.08,
       depthWrite: false,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
@@ -163,13 +163,14 @@ export class GameRenderer {
     const line = new LineSegments(this.wallEdgesGeometry, this.wallEdgesMaterial);
     group.add(line);
 
-    // Reflection: mirrored across floor (y=0).
-    // Group is at world y=wallHeight/2. Reflection local y=-wallHeight
-    // puts its center at world y = wallHeight/2 - wallHeight = -wallHeight/2.
+    // Reflection: squashed glow on floor surface
+    // Group y = wallHeight/2. We want reflection at world y ≈ 0.02.
+    // Local y = 0.02 - wallHeight/2
+    const wallHalf = this.config.render.wallHeight / 2;
     const reflection = new Mesh(this.wallGeometry, this.wallReflectionMaterial);
-    reflection.scale.y = -1;
-    reflection.position.y = -this.config.render.wallHeight;
-    reflection.renderOrder = -1;
+    reflection.scale.set(1.1, 0.15, 1.2);
+    reflection.position.y = 0.03 - wallHalf;
+    reflection.renderOrder = 1;
     group.add(reflection);
 
     this.adapter.add(group);
