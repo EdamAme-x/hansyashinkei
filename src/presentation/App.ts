@@ -18,6 +18,7 @@ import { AudioManager } from "./AudioManager";
 import type { ThemeManager } from "./ThemeManager";
 import { ThemeUI } from "./ThemeUI";
 import type { ImageStore } from "@infrastructure/storage/ImageStore";
+import type { ManageSave } from "@application/usecases/ManageSave";
 
 interface RecordingSession {
   seed: number;
@@ -34,6 +35,7 @@ export class App {
   private readonly keybindUI: KeybindUI;
   private readonly themeUI: ThemeUI;
   private readonly audio: AudioManager;
+  private readonly manageSave: ManageSave;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
@@ -60,6 +62,7 @@ export class App {
     inputConfig: InputConfig,
     themeManager: ThemeManager,
     imageStore: ImageStore,
+    manageSave: ManageSave,
   ) {
     const theme = themeManager.current;
     this.gameConfig = gameConfig;
@@ -67,6 +70,7 @@ export class App {
     this.renderer = new GameRenderer(container, gameConfig, theme);
     this.audio = new AudioManager(theme.audio);
     this.hud = new HUD();
+    this.manageSave = manageSave;
     this.manageScore = manageScore;
     this.manageReplay = manageReplay;
     this.bestScoreRepo = bestScoreRepo;
@@ -263,6 +267,35 @@ export class App {
     document.getElementById("btn-theme")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.themeUI.show();
+    });
+
+    document.getElementById("btn-export")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const data = await this.manageSave.exportSave();
+      const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hansyashinkei-${Date.now()}.hss`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    const importInput = document.getElementById("save-import-file") as HTMLInputElement | null;
+    importInput?.addEventListener("change", async () => {
+      const file = importInput.files?.[0];
+      if (!file) return;
+      const buf = await file.arrayBuffer();
+      const result = await this.manageSave.importSave(new Uint8Array(buf));
+      if (result.success) {
+        location.reload();
+      }
+      importInput.value = "";
+    });
+
+    document.getElementById("btn-import")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      importInput?.click();
     });
   }
 

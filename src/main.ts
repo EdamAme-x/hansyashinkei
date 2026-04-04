@@ -1,16 +1,18 @@
 import { App } from "@presentation/App";
 import { ManageScore } from "@application/usecases/ManageScore";
 import { ManageReplay } from "@application/usecases/ManageReplay";
+import { ManageSave } from "@application/usecases/ManageSave";
 import { IndexedDbScoreRepository } from "@infrastructure/storage/IndexedDbScoreRepository";
 import { IndexedDbReplayRepository } from "@infrastructure/storage/IndexedDbReplayRepository";
 import { IndexedDbBestScoreRepository } from "@infrastructure/storage/IndexedDbBestScoreRepository";
 import { ReplayFileSerializer } from "@infrastructure/storage/ReplayFileSerializer";
+import { SaveFileSerializer } from "@infrastructure/storage/SaveFileSerializer";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
 import { ImageStore } from "@infrastructure/storage/ImageStore";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { applyDevParams } from "@infrastructure/dev/DevParams";
-import { loadInputConfig } from "@presentation/InputConfig";
+import { loadInputConfig, saveInputConfig } from "@presentation/InputConfig";
 import { ThemeManager } from "@presentation/ThemeManager";
 
 async function main() {
@@ -31,14 +33,44 @@ async function main() {
   const themeManager = new ThemeManager(themeRepo);
   const imageStore = new ImageStore();
 
+  const manageSave = new ManageSave(
+    {
+      scoreRepo,
+      replayRepo,
+      bestScoreRepo,
+      loadThemeOverrides: () => themeRepo.loadOverrides(),
+      saveThemeOverrides: (o) => themeRepo.saveOverrides(o),
+      loadImages: async () => ({
+        bg: await imageStore.load("bg"),
+        wall: await imageStore.load("wall"),
+      }),
+      saveImage: async (key, url) => { await imageStore.save(key, dataUrlToFile(url)); },
+      removeImage: (key) => imageStore.remove(key),
+      loadKeybinds: () => loadInputConfig().dodge.map((b) => ({ code: b.code, ballIndex: b.ballIndex })),
+      saveKeybinds: (binds) => saveInputConfig({ dodge: binds, start: ["Space", "Enter"] }),
+      loadAudioEnabled: () => localStorage.getItem("hansyashinkei-audio") !== "0",
+      saveAudioEnabled: (v) => localStorage.setItem("hansyashinkei-audio", v ? "1" : "0"),
+    },
+    new SaveFileSerializer(),
+  );
+
   const gameConfig = createDefaultConfig();
   const inputConfig = loadInputConfig();
   applyDevParams(gameConfig, inputConfig);
 
-  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore);
+  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore, manageSave);
 }
 
-// Version display — runs immediately, independent of async init
+function dataUrlToFile(dataUrl: string): File {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], "image", { type: mime });
+}
+
+// Version display
 const versionEl = document.getElementById("app-version");
 if (versionEl) versionEl.textContent = `v${__APP_VERSION__}`;
 

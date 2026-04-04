@@ -57,21 +57,20 @@ export interface ThemeConfig {
 export interface CustomThemeOverrides {
   backgroundUrl: string | null;
   wallTextureUrl: string | null;
-  wallEdgeColor: number | null;
-  wallColor: number | null;
+  bgmUrl: string | null;
 }
 
 export function createEmptyOverrides(): CustomThemeOverrides {
   return {
     backgroundUrl: null,
     wallTextureUrl: null,
-    wallEdgeColor: null,
-    wallColor: null,
+    bgmUrl: null,
   };
 }
 
 export function applyOverrides(theme: ThemeConfig, overrides: CustomThemeOverrides): ThemeConfig {
   const scene = { ...theme.scene };
+  const audio = { ...theme.audio };
 
   if (overrides.backgroundUrl) {
     (scene as { background: BackgroundMode }).background = { type: "texture", url: overrides.backgroundUrl };
@@ -79,14 +78,11 @@ export function applyOverrides(theme: ThemeConfig, overrides: CustomThemeOverrid
   if (overrides.wallTextureUrl !== null) {
     (scene as { wallTextureUrl: string | null }).wallTextureUrl = overrides.wallTextureUrl;
   }
-  if (overrides.wallEdgeColor !== null) {
-    (scene as { wallEdgeColor: number }).wallEdgeColor = overrides.wallEdgeColor;
-  }
-  if (overrides.wallColor !== null) {
-    (scene as { wallColor: number }).wallColor = overrides.wallColor;
+  if (overrides.bgmUrl) {
+    (audio as { bgmUrl: string }).bgmUrl = overrides.bgmUrl;
   }
 
-  return { ...theme, scene };
+  return { ...theme, scene, audio };
 }
 
 const DEFAULT_BALL_SKIN: BallSkin = {
@@ -138,104 +134,6 @@ export function createDefaultTheme(): ThemeConfig {
   };
 }
 
-function createNeonTheme(): ThemeConfig {
-  return {
-    id: "neon",
-    label: "NEON",
-    scene: {
-      background: { type: "color", hex: 0x050510 },
-      fogColor: 0x050510,
-      fogNear: 20,
-      fogFar: 110,
-      groundColor: 0x08081a,
-      groundMetalness: 0.8,
-      groundRoughness: 0.4,
-      laneStripColor: 0x0a0a22,
-      laneDividerColor: 0x00ccff,
-      laneDividerEmissive: 0x00ccff,
-      laneDividerEmissiveIntensity: 0.8,
-      hitZoneColor: 0x00ffcc,
-      wallColor: 0x1a0030,
-      wallMetalness: 0.7,
-      wallRoughness: 0.3,
-      wallEdgeColor: 0xff00ff,
-      wallTextureUrl: null,
-      shardColor: 0x00ffff,
-      ballSkins: [
-        {
-          id: "neon-cyan",
-          label: "CYAN",
-          color: 0x00ccff,
-          metalness: 0.3,
-          roughness: 0.2,
-          glowColor: 0x00ccff,
-          glowIntensity: 1.5,
-        },
-      ],
-    },
-    audio: {
-      bgmUrl: "/audio/bgm.mp3",
-      bgmVolume: 0.25,
-      se: {
-        dodge: ["/audio/dodge1.mp3", "/audio/dodge2.mp3"],
-        speedUp: "/audio/bell-accent.mp3",
-        death: "/audio/death.mp3",
-        newBest: "/audio/new-best.mp3",
-        start: "/audio/start.mp3",
-      },
-    },
-  };
-}
-
-function createSunsetTheme(): ThemeConfig {
-  return {
-    id: "sunset",
-    label: "SUNSET",
-    scene: {
-      background: { type: "color", hex: 0x1a0a0a },
-      fogColor: 0x1a0a0a,
-      fogNear: 20,
-      fogFar: 110,
-      groundColor: 0x1a0e0e,
-      groundMetalness: 0.6,
-      groundRoughness: 0.5,
-      laneStripColor: 0x221414,
-      laneDividerColor: 0xff6633,
-      laneDividerEmissive: 0xff4400,
-      laneDividerEmissiveIntensity: 0.5,
-      hitZoneColor: 0xffaa44,
-      wallColor: 0x220808,
-      wallMetalness: 0.8,
-      wallRoughness: 0.3,
-      wallEdgeColor: 0xff6633,
-      wallTextureUrl: null,
-      shardColor: 0xff8844,
-      ballSkins: [
-        {
-          id: "sunset-gold",
-          label: "GOLD",
-          color: 0xffcc66,
-          metalness: 0.5,
-          roughness: 0.2,
-          glowColor: 0xff8833,
-          glowIntensity: 1.2,
-        },
-      ],
-    },
-    audio: {
-      bgmUrl: "/audio/bgm.mp3",
-      bgmVolume: 0.25,
-      se: {
-        dodge: ["/audio/dodge1.mp3", "/audio/dodge2.mp3"],
-        speedUp: "/audio/bell-accent.mp3",
-        death: "/audio/death.mp3",
-        newBest: "/audio/new-best.mp3",
-        start: "/audio/start.mp3",
-      },
-    },
-  };
-}
-
 export function getBuiltinThemes(): readonly ThemeConfig[] {
-  return [createDefaultTheme(), createNeonTheme(), createSunsetTheme()];
+  return [createDefaultTheme()];
 }
