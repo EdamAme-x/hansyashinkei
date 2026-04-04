@@ -1,8 +1,14 @@
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+
+const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname!, "package.json"), "utf-8"));
 
 export default defineConfig({
   base: "/",
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       "@domain": resolve(import.meta.dirname!, "src/domain"),

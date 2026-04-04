@@ -27,6 +27,9 @@ async function main() {
   const inputConfig = loadInputConfig();
 
   new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig);
+
+  const versionEl = document.getElementById("app-version");
+  if (versionEl) versionEl.textContent = `v${__APP_VERSION__}`;
 }
 
 main();

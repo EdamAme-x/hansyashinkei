@@ -237,6 +237,14 @@
       }
       .share-btn:hover, .share-btn:focus-visible { background: rgba(255,255,255,0.15); }
 
+      /* Version */
+      #app-version {
+        position: fixed; bottom: 1rem; left: 1.2rem; z-index: 30;
+        font-size: 0.7rem; font-weight: 400; opacity: 0.25;
+        color: #fff; letter-spacing: 0.05em;
+        pointer-events: none;
+      }
+
       /* Credit */
       #credit {
         position: fixed; bottom: 1rem; right: 1.2rem; z-index: 30;
@@ -439,6 +447,8 @@
         </div>
       </div>
     </div>
+
+    <span id="app-version" aria-label="バージョン"></span>
 
     <nav id="credit" aria-label="クレジット">
       <a href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
