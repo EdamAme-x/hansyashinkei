@@ -60,9 +60,17 @@ export class ReplayController {
       this.stop();
       this.onDone();
     });
+    el("replay-rw-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.skip(-5);
+    });
     this.playBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.togglePause();
+    });
+    el("replay-ff-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.skip(5);
     });
     this.speedBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -157,12 +165,9 @@ export class ReplayController {
     this.speedBtn.textContent = `${this.playbackSpeed}x`;
   }
 
-  private seek(e: MouseEvent): void {
-    const rect = this.progress.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const targetFrame = Math.floor(ratio * this.replay.dts.length);
+  private seekToFrame(targetFrame: number): void {
+    targetFrame = Math.max(0, Math.min(targetFrame, this.replay.dts.length));
 
-    // Rebuild world from scratch up to target frame
     this.world = createGameWorld(this.replay.config, mulberry32(this.replay.seed));
     this.lastTier = 0;
 
@@ -188,6 +193,34 @@ export class ReplayController {
     }
     this.renderer.render();
     this.updateBar();
+  }
+
+  private seek(e: MouseEvent): void {
+    const rect = this.progress.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    this.seekToFrame(Math.floor(ratio * this.replay.dts.length));
+  }
+
+  private skip(seconds: number): void {
+    const dts = this.replay.dts;
+    let elapsed = 0;
+    let target = this.frameIndex;
+
+    if (seconds > 0) {
+      while (target < dts.length && elapsed < seconds) {
+        elapsed += dts[target];
+        target++;
+      }
+    } else {
+      target--;
+      while (target >= 0 && elapsed < -seconds) {
+        elapsed += dts[target];
+        target--;
+      }
+      target = Math.max(0, target);
+    }
+
+    this.seekToFrame(target);
   }
 
   private updateBar(): void {

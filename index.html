@@ -123,29 +123,29 @@
       #replay-bar {
         position: absolute; bottom: 0; left: 0; right: 0;
         z-index: 25; pointer-events: auto;
-        display: flex; align-items: center; gap: 0.6rem;
-        padding: 0.6rem 1rem;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(4px);
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem 1.5rem;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(6px);
       }
       #replay-bar.hidden { display: none; }
       #replay-bar button {
-        background: none; border: 1px solid rgba(255,255,255,0.2);
-        color: #fff; font-size: 0.9rem; padding: 0.3em 0.6em;
-        border-radius: 4px; cursor: pointer; font-family: 'Orbitron', sans-serif;
-        min-width: 2.5rem; text-align: center;
+        background: none; border: 1px solid rgba(255,255,255,0.25);
+        color: #fff; font-size: 1.1rem; padding: 0.4em 0.8em;
+        border-radius: 5px; cursor: pointer; font-family: 'Orbitron', sans-serif;
+        min-width: 3rem; text-align: center;
       }
-      #replay-bar button:hover { background: rgba(255,255,255,0.1); }
+      #replay-bar button:hover { background: rgba(255,255,255,0.12); }
       #replay-progress {
-        flex: 1; height: 6px; background: rgba(255,255,255,0.1);
-        border-radius: 3px; cursor: pointer; position: relative;
+        flex: 1; height: 10px; background: rgba(255,255,255,0.12);
+        border-radius: 5px; cursor: pointer; position: relative;
       }
       #replay-progress-fill {
-        height: 100%; background: #fff; border-radius: 3px;
+        height: 100%; background: #fff; border-radius: 5px;
         width: 0; transition: width 0.1s linear;
       }
       #replay-time {
-        font-size: 0.7rem; opacity: 0.5; min-width: 5rem; text-align: right;
+        font-size: 0.85rem; opacity: 0.5; min-width: 6rem; text-align: right;
         letter-spacing: 0.05em;
       }
 
@@ -225,9 +225,11 @@
         position: fixed; bottom: 1rem; right: 1.2rem; z-index: 30;
         font-size: 0.8rem; font-weight: 700; opacity: 0.4;
         color: #fff; text-decoration: none; letter-spacing: 0.08em;
-        pointer-events: auto;
+        pointer-events: auto; transition: bottom 0.2s;
       }
       #credit:hover { opacity: 0.7; }
+      #replay-bar:not(.hidden) ~ #credit,
+      body:has(#replay-bar:not(.hidden)) #credit { bottom: 4rem; }
 
       /* Keybind screen */
       #keybind-screen {
@@ -334,7 +336,9 @@
 
       <div id="replay-bar" class="hidden">
         <button id="replay-back-btn">✕</button>
+        <button id="replay-rw-btn">−5s</button>
         <button id="replay-play-btn">⏸</button>
+        <button id="replay-ff-btn">+5s</button>
         <div id="replay-progress">
           <div id="replay-progress-fill"></div>
         </div>
