@@ -1,19 +1,14 @@
+import type { AudioTheme } from "@domain/entities/ThemeConfig";
+
 const STORAGE_KEY = "hansyashinkei-audio";
 
-const BGM_URL = "/audio/bgm.mp3";
-const SE = {
-  dodge: ["/audio/dodge1.mp3", "/audio/dodge2.mp3"],
-  speedUp: "/audio/bell-accent.mp3",
-  death: "/audio/death.mp3",
-  newBest: "/audio/new-best.mp3",
-  start: "/audio/start.mp3",
-} as const;
-
 export class AudioManager {
+  private readonly audio: AudioTheme;
   private bgm: HTMLAudioElement | null = null;
   private _enabled: boolean;
 
-  constructor() {
+  constructor(audioTheme: AudioTheme) {
+    this.audio = audioTheme;
     this._enabled = this.loadPref();
   }
 
@@ -35,9 +30,9 @@ export class AudioManager {
     if (!this._enabled) return;
     this.stopBgm();
 
-    this.bgm = new Audio(BGM_URL);
+    this.bgm = new Audio(this.audio.bgmUrl);
     this.bgm.loop = true;
-    this.bgm.volume = 0.25;
+    this.bgm.volume = this.audio.bgmVolume;
     this.bgm.play().catch(() => {});
   }
 
@@ -50,31 +45,31 @@ export class AudioManager {
   }
 
   playDodge(): void {
-    const urls = SE.dodge;
+    const urls = this.audio.se.dodge;
     this.playSe(urls[Math.floor(Math.random() * urls.length)], 0.04);
   }
 
   playSpeedUp(): void {
-    this.playSe(SE.speedUp, 0.1);
+    this.playSe(this.audio.se.speedUp, 0.1);
   }
 
   playDeath(): void {
-    this.playSe(SE.death, 0.15);
+    this.playSe(this.audio.se.death, 0.15);
   }
 
   playNewBest(): void {
-    this.playSe(SE.newBest, 0.12);
+    this.playSe(this.audio.se.newBest, 0.12);
   }
 
   playStart(): void {
-    this.playSe(SE.start, 0.1);
+    this.playSe(this.audio.se.start, 0.1);
   }
 
   private playSe(url: string, volume: number): void {
     if (!this._enabled) return;
-    const audio = new Audio(url);
-    audio.volume = volume;
-    audio.play().catch(() => {});
+    const a = new Audio(url);
+    a.volume = volume;
+    a.play().catch(() => {});
   }
 
   private loadPref(): boolean {

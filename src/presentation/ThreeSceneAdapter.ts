@@ -1,18 +1,28 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Fog, Color,
-  NoToneMapping,
+  TextureLoader, NoToneMapping,
   type Object3D,
 } from "three";
+import type { SceneTheme } from "@domain/entities/ThemeConfig";
 
 export class ThreeSceneAdapter {
   readonly scene: Scene;
   readonly camera: PerspectiveCamera;
   readonly renderer: WebGLRenderer;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, sceneTheme: SceneTheme) {
     this.scene = new Scene();
-    this.scene.background = new Color(0x000000);
-    this.scene.fog = new Fog(0x000000, 20, 110);
+
+    if (sceneTheme.background.type === "color") {
+      this.scene.background = new Color(sceneTheme.background.hex);
+    } else {
+      this.scene.background = new Color(sceneTheme.fogColor);
+      new TextureLoader().load(sceneTheme.background.url, (tex) => {
+        this.scene.background = tex;
+      });
+    }
+
+    this.scene.fog = new Fog(sceneTheme.fogColor, sceneTheme.fogNear, sceneTheme.fogFar);
 
     this.camera = new PerspectiveCamera(
       70,

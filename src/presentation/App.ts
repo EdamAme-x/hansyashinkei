@@ -15,6 +15,7 @@ import { ReplayController } from "./ReplayController";
 import { HistoryUI } from "./HistoryUI";
 import { KeybindUI } from "./KeybindUI";
 import { AudioManager } from "./AudioManager";
+import type { ThemeManager } from "./ThemeManager";
 
 interface RecordingSession {
   seed: number;
@@ -29,7 +30,7 @@ export class App {
   private readonly hud: HUD;
   private readonly historyUI: HistoryUI;
   private readonly keybindUI: KeybindUI;
-  private readonly audio = new AudioManager();
+  private readonly audio: AudioManager;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
@@ -54,10 +55,13 @@ export class App {
     bestScoreRepo: BestScoreRepository,
     gameConfig: GameConfig,
     inputConfig: InputConfig,
+    themeManager: ThemeManager,
   ) {
+    const theme = themeManager.current;
     this.gameConfig = gameConfig;
     this.inputConfig = inputConfig;
-    this.renderer = new GameRenderer(container, gameConfig);
+    this.renderer = new GameRenderer(container, gameConfig, theme);
+    this.audio = new AudioManager(theme.audio);
     this.hud = new HUD();
     this.manageScore = manageScore;
     this.manageReplay = manageReplay;

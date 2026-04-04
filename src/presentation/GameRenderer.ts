@@ -6,6 +6,7 @@ import {
   Color, AdditiveBlending, Vector3,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
+import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
 import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
@@ -23,6 +24,7 @@ export class GameRenderer {
   readonly adapter: ThreeSceneAdapter;
 
   private readonly config: GameConfig;
+  private readonly scene: SceneTheme;
   private readonly laneWidth: number;
   private readonly laneOffset: number;
   private readonly ballMeshes: Mesh[] = [];
@@ -39,14 +41,14 @@ export class GameRenderer {
   private readonly wallMaterial: MeshStandardMaterial;
   private readonly wallEdgesMaterial: LineBasicMaterial;
 
-  constructor(container: HTMLElement, config: GameConfig) {
+  constructor(container: HTMLElement, config: GameConfig, theme: ThemeConfig) {
     this.config = config;
+    this.scene = theme.scene;
     const { laneWidth, wallHeight, wallDepth } = config.render;
     this.laneWidth = laneWidth;
     this.laneOffset = ((config.laneCount - 1) / 2) * laneWidth;
-    this.adapter = new ThreeSceneAdapter(container);
+    this.adapter = new ThreeSceneAdapter(container, theme.scene);
 
-    // Lighting — 2 lights only (key + fill)
     const ambient = new AmbientLight(0xffffff, 0.3);
     this.adapter.add(ambient);
 
@@ -64,19 +66,19 @@ export class GameRenderer {
     this.wallGeometry = new BoxGeometry(laneWidth * 0.88, wallHeight, wallDepth);
     this.wallEdgesGeometry = new EdgesGeometry(this.wallGeometry);
     this.wallMaterial = new MeshStandardMaterial({
-      color: 0x111111,
-      metalness: 0.9,
-      roughness: 0.3,
+      color: this.scene.wallColor,
+      metalness: this.scene.wallMetalness,
+      roughness: this.scene.wallRoughness,
     });
     this.shardGeometry = new BoxGeometry(0.12, 0.12, 0.12);
     this.shardMaterial = new MeshBasicMaterial({
-      color: 0xffffff,
+      color: this.scene.shardColor,
       transparent: true,
       blending: AdditiveBlending,
       depthWrite: false,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
-      color: 0xffffff,
+      color: this.scene.wallEdgeColor,
       linewidth: 1,
     });
   }
@@ -88,12 +90,15 @@ export class GameRenderer {
   private buildBalls(): void {
     const { ballRadius, ballY } = this.config.render;
     const ballGeo = new SphereGeometry(ballRadius, 32, 32);
+    const { ballSkins } = this.scene;
 
     for (let i = 0; i < this.config.balls.length; i++) {
+      const skin = ballSkins[i] ?? ballSkins[ballSkins.length - 1];
+
       const mat = new MeshStandardMaterial({
-        color: 0xdddddd,
-        metalness: 0.4,
-        roughness: 0.15,
+        color: skin.color,
+        metalness: skin.metalness,
+        roughness: skin.roughness,
       });
 
       const mesh = new Mesh(ballGeo, mat);
@@ -101,7 +106,7 @@ export class GameRenderer {
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
-      const glow = new PointLight(0xffffff, 1.0, 8);
+      const glow = new PointLight(skin.glowColor, skin.glowIntensity, 8);
       glow.position.set(this.laneX(this.config.balls[i].homeLane), ballY + 0.4, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
@@ -111,10 +116,11 @@ export class GameRenderer {
   private buildLanes(): void {
     const { laneCount } = this.config;
     const { laneWidth } = this;
+    const s = this.scene;
 
     const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH);
     const groundMat = new MeshStandardMaterial({
-      color: 0x101018, metalness: 0.7, roughness: 0.5,
+      color: s.groundColor, metalness: s.groundMetalness, roughness: s.groundRoughness,
     });
     const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -124,7 +130,7 @@ export class GameRenderer {
     for (let i = 0; i < laneCount; i++) {
       const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH);
       const stripMat = new MeshStandardMaterial({
-        color: 0x1a1a24, metalness: 0.6, roughness: 0.5,
+        color: s.laneStripColor, metalness: 0.6, roughness: 0.5,
       });
       const strip = new Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -136,9 +142,9 @@ export class GameRenderer {
       const x = i * laneWidth - this.laneOffset - laneWidth / 2;
       const lineGeo = new PlaneGeometry(0.06, LANE_LENGTH);
       const lineMat = new MeshStandardMaterial({
-        color: 0x555555,
-        emissive: new Color(0x333333),
-        emissiveIntensity: 0.6,
+        color: s.laneDividerColor,
+        emissive: new Color(s.laneDividerEmissive),
+        emissiveIntensity: s.laneDividerEmissiveIntensity,
       });
       const line = new Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
@@ -148,8 +154,8 @@ export class GameRenderer {
 
     const zoneGeo = new PlaneGeometry(laneWidth * laneCount + 1, 0.1);
     const zoneMat = new MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: new Color(0xffffff),
+      color: s.hitZoneColor,
+      emissive: new Color(s.hitZoneColor),
       emissiveIntensity: 1.0,
       transparent: true,
       opacity: 0.35,
@@ -257,7 +263,6 @@ export class GameRenderer {
       this.shards.push({ mesh, velocity, life: SHARD_LIFETIME });
     }
 
-    // Animate shards
     let lastTime = performance.now();
     const animate = () => {
       const now = performance.now();
@@ -270,7 +275,7 @@ export class GameRenderer {
         alive = true;
 
         shard.life -= dt;
-        shard.velocity.y -= 12 * dt; // gravity
+        shard.velocity.y -= 12 * dt;
         shard.mesh.position.addScaledVector(shard.velocity, dt);
         shard.mesh.rotation.x += dt * 5;
         shard.mesh.rotation.z += dt * 3;

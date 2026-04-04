@@ -6,8 +6,11 @@ import { IndexedDbReplayRepository } from "@infrastructure/storage/IndexedDbRepl
 import { IndexedDbBestScoreRepository } from "@infrastructure/storage/IndexedDbBestScoreRepository";
 import { ReplayFileSerializer } from "@infrastructure/storage/ReplayFileSerializer";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
+import { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
+import { applyDevParams } from "@infrastructure/dev/DevParams";
 import { loadInputConfig } from "@presentation/InputConfig";
+import { ThemeManager } from "@presentation/ThemeManager";
 
 async function main() {
   const container = document.getElementById("app");
@@ -23,20 +26,15 @@ async function main() {
   const replaySerializer = new ReplayFileSerializer();
   const manageReplay = new ManageReplay(replayRepo, replaySerializer, 20);
 
-  const gameConfig = createDefaultConfig();
+  const themeRepo = new ThemeRepository();
+  const themeManager = new ThemeManager(themeRepo);
 
-  // Dev speed multiplier: ?__dev__speed=N (1-20)
-  const devSpeed = new URLSearchParams(location.search).get("__dev__speed");
-  if (devSpeed) {
-    const mult = Math.max(1, Math.min(20, parseFloat(devSpeed) || 1));
-    const mutable = gameConfig as { baseSpeed: number; spawnInterval: number };
-    mutable.baseSpeed *= mult;
-    mutable.spawnInterval /= mult;
-  }
+  const gameConfig = createDefaultConfig();
+  applyDevParams(gameConfig);
 
   const inputConfig = loadInputConfig();
 
-  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig);
+  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager);
 }
 
 // Version display — runs immediately, independent of async init
