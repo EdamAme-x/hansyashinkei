@@ -4,7 +4,7 @@ import {
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
-  TextureLoader, SRGBColorSpace,
+  TextureLoader, SRGBColorSpace, CanvasTexture,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
@@ -80,16 +80,14 @@ export class GameRenderer {
     });
     // Load initial wall texture if set
     if (this.scene.wallTextureUrl) {
-      new TextureLoader().load(
-        this.scene.wallTextureUrl,
-        (tex) => {
-          tex.colorSpace = SRGBColorSpace;
-          this.wallMaterial.map = tex;
-          this.wallMaterial.needsUpdate = true;
-        },
-        undefined,
-        (err) => { console.warn("Failed to load wall texture:", err); },
-      );
+      new TextureLoader().load(this.scene.wallTextureUrl, (tex) => {
+        tex.colorSpace = SRGBColorSpace;
+        this.wallMaterial.map = tex;
+        this.wallMaterial.color.set(0xffffff);
+        this.wallMaterial.metalness = 0.1;
+        this.wallMaterial.roughness = 0.8;
+        this.wallMaterial.needsUpdate = true;
+      });
     }
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: this.scene.wallEdgeColor,
@@ -127,32 +125,33 @@ export class GameRenderer {
     }
   }
 
-  /** Create a PlaneGeometry that tapers to near-zero width at the far end. */
-  private makeTaperGeo(width: number, length: number): PlaneGeometry {
-    const geo = new PlaneGeometry(width, length);
-    const pos = geo.attributes.position;
-    const halfLen = length / 2;
-    for (let i = 0; i < pos.count; i++) {
-      // After rotation -PI/2: local Y+ → world Z- (far from camera)
-      const y = pos.getY(i);
-      // t = 1 at near (Y < 0), t = 0 at far (Y > 0)
-      const t = (-y + halfLen) / length;
-      const scale = 0.01 + 0.99 * t;
-      pos.setX(i, pos.getX(i) * scale);
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-    return geo;
-  }
-
   private buildLanes(): void {
     const { laneCount } = this.config;
     const { laneWidth } = this;
     const s = this.scene;
 
-    const groundGeo = this.makeTaperGeo(laneWidth * laneCount + 2, LANE_LENGTH);
-    const groundMat = new MeshStandardMaterial({
-      color: s.groundColor, metalness: s.groundMetalness, roughness: s.groundRoughness,
+    // Alpha gradient: opaque near camera, transparent at far end.
+    // Needs segments along Y so the gradient interpolates smoothly.
+    const fadeCanvas = document.createElement("canvas");
+    fadeCanvas.width = 1;
+    fadeCanvas.height = 256;
+    const fadeCtx = fadeCanvas.getContext("2d");
+    if (fadeCtx) {
+      const grad = fadeCtx.createLinearGradient(0, 0, 0, 256);
+      // UV y=0 is far end, y=1 is near camera (after -PI/2 rotation)
+      grad.addColorStop(0, "#000");    // far: fully transparent
+      grad.addColorStop(0.20, "#fff"); // fade in over 20%
+      grad.addColorStop(1, "#fff");    // near camera: opaque
+      fadeCtx.fillStyle = grad;
+      fadeCtx.fillRect(0, 0, 1, 256);
+    }
+    const fadeTex = new CanvasTexture(fadeCanvas);
+
+    // Use enough Y segments for smooth gradient (32)
+    const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH, 1, 32);
+    const groundMat = new MeshBasicMaterial({
+      color: 0x0a0a0a,
+      transparent: true, alphaMap: fadeTex, depthWrite: false, fog: false,
     });
     const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -160,9 +159,10 @@ export class GameRenderer {
     this.adapter.add(ground);
 
     for (let i = 0; i < laneCount; i++) {
-      const stripGeo = this.makeTaperGeo(laneWidth * 0.92, LANE_LENGTH);
-      const stripMat = new MeshStandardMaterial({
-        color: s.laneStripColor, metalness: 0.6, roughness: 0.5,
+      const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH, 1, 32);
+      const stripMat = new MeshBasicMaterial({
+        color: 0x0e0e0e,
+        transparent: true, alphaMap: fadeTex, depthWrite: false, fog: false,
       });
       const strip = new Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -172,11 +172,10 @@ export class GameRenderer {
 
     for (let i = 0; i <= laneCount; i++) {
       const x = i * laneWidth - this.laneOffset - laneWidth / 2;
-      const lineGeo = this.makeTaperGeo(0.06, LANE_LENGTH);
-      const lineMat = new MeshStandardMaterial({
-        color: s.laneDividerColor,
-        emissive: new Color(s.laneDividerEmissive),
-        emissiveIntensity: s.laneDividerEmissiveIntensity,
+      const lineGeo = new PlaneGeometry(0.06, LANE_LENGTH, 1, 32);
+      const lineMat = new MeshBasicMaterial({
+        color: 0x222222,
+        transparent: true, alphaMap: fadeTex, depthWrite: false, fog: false,
       });
       const line = new Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
@@ -210,6 +209,19 @@ export class GameRenderer {
 
     const line = new LineSegments(this.wallEdgesGeometry, this.wallEdgesMaterial);
     group.add(line);
+
+    // Bright bottom bar so wall is clearly visible against dark floor
+    const { wallHeight, wallDepth } = this.config.render;
+    const barGeo = new PlaneGeometry(this.laneWidth * 0.88, wallDepth);
+    const barMat = new MeshBasicMaterial({
+      color: 0xaaaaaa,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const bar = new Mesh(barGeo, barMat);
+    bar.rotation.x = -Math.PI / 2;
+    bar.position.y = -wallHeight / 2 + 0.01;
+    group.add(bar);
 
     this.adapter.add(group);
     return group;
@@ -265,6 +277,9 @@ export class GameRenderer {
         (tex) => {
           tex.colorSpace = SRGBColorSpace;
           this.wallMaterial.map = tex;
+          this.wallMaterial.color.set(0xffffff);
+          this.wallMaterial.metalness = 0.1;
+          this.wallMaterial.roughness = 0.8;
           this.wallMaterial.needsUpdate = true;
         },
         undefined,
@@ -273,6 +288,9 @@ export class GameRenderer {
     } else if (this.wallMaterial.map) {
       this.wallMaterial.map.dispose();
       this.wallMaterial.map = null;
+      this.wallMaterial.color.set(s.wallColor);
+      this.wallMaterial.metalness = s.wallMetalness;
+      this.wallMaterial.roughness = s.wallRoughness;
       this.wallMaterial.needsUpdate = true;
     }
 

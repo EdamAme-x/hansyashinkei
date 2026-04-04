@@ -9,7 +9,6 @@ function openDb(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
     req.onsuccess = () => {
       const db = req.result;
-      // Close gracefully if another tab triggers a version upgrade.
       db.onversionchange = () => db.close();
       resolve(db);
     };
@@ -20,7 +19,6 @@ function openDb(): Promise<IDBDatabase> {
 async function getOrCreateKey(): Promise<CryptoKey> {
   const db = await openDb();
 
-  // Single readwrite transaction to avoid race between tabs
   const tx = db.transaction(STORE_NAME, "readwrite");
   const store = tx.objectStore(STORE_NAME);
 
@@ -36,7 +34,7 @@ async function getOrCreateKey(): Promise<CryptoKey> {
 
   const key = await crypto.subtle.generateKey(
     { name: "AES-GCM", length: 256 },
-    false, // extractable=false: cannot be exported from DevTools
+    false,
     ["encrypt", "decrypt"],
   );
 
@@ -53,11 +51,16 @@ export class DeviceKeyStore {
   private key: CryptoKey | null = null;
 
   async init(): Promise<void> {
-    this.key = await getOrCreateKey();
+    try {
+      this.key = await getOrCreateKey();
+    } catch {
+      // HTTP or crypto.subtle unavailable — skip encryption
+      this.key = null;
+    }
   }
 
   async encrypt(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
-    if (!this.key) throw new Error("DeviceKeyStore not initialized");
+    if (!this.key) return data; // passthrough when crypto unavailable
 
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
     const encrypted = await crypto.subtle.encrypt(
@@ -73,7 +76,7 @@ export class DeviceKeyStore {
   }
 
   async decrypt(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
-    if (!this.key) throw new Error("DeviceKeyStore not initialized");
+    if (!this.key) return data; // passthrough when crypto unavailable
 
     const iv = data.slice(0, IV_LENGTH);
     const encrypted = data.slice(IV_LENGTH);

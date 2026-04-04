@@ -28,13 +28,7 @@ function createLetterboxCanvas(
   const imgAspect = imgW / imgH;
   const viewAspect = viewW / viewH;
 
-  // Black background
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, viewW, viewH);
-
-  // Draw image preserving aspect ratio (contain), dimmed
-  ctx.globalAlpha = 0.5;
-
+  // Compute contain rect
   let dx: number, dy: number, dw: number, dh: number;
   if (imgAspect > viewAspect) {
     dw = viewW;
@@ -47,6 +41,24 @@ function createLetterboxCanvas(
     dx = (viewW - dw) / 2;
     dy = 0;
   }
+
+  // 1. Draw edge-glow: stretch the image edge pixels to fill the whole canvas,
+  //    heavily blurred and dimmed, so letterbox bars get a colored glow.
+  //    We draw the image scaled to cover, then blur + darken.
+  ctx.save();
+  ctx.filter = "blur(40px) brightness(0.2)";
+  // Cover: fill entire canvas by cropping
+  if (imgAspect > viewAspect) {
+    const coverW = viewH * imgAspect;
+    ctx.drawImage(img, (viewW - coverW) / 2, 0, coverW, viewH);
+  } else {
+    const coverH = viewW / imgAspect;
+    ctx.drawImage(img, 0, (viewH - coverH) / 2, viewW, coverH);
+  }
+  ctx.restore();
+
+  // 2. Draw the main image (contain, correct aspect ratio), dimmed
+  ctx.globalAlpha = 0.5;
   ctx.drawImage(img, dx, dy, dw, dh);
 
   return canvas;
