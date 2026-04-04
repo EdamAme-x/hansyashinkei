@@ -1,5 +1,5 @@
 import type { GameConfig } from "@domain/entities/GameConfig";
-import type { InputConfig } from "@presentation/InputConfig";
+import type { InputConfig } from "@domain/entities/InputConfig";
 
 /** Parse dev params from query string. Supports both `&` and missing `&` between __dev__ keys. */
 function parseDevParams(search: string): Map<string, string> {

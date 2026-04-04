@@ -25,7 +25,7 @@ export class ReplayFileSerializer implements ReplaySerializer {
         return null;
       }
 
-      return replay as unknown as Replay;
+      return (replay as unknown) as Replay;
     } catch {
       return null;
     }

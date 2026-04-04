@@ -1,4 +1,5 @@
 import { openGameDb } from "./gameDb";
+import type { IImageStore } from "@domain/repositories/ImageStore";
 
 const STORE_NAME = "images";
 const MAX_SIZE = 1024;
@@ -35,14 +36,10 @@ async function optimizeImage(file: File): Promise<string> {
   });
 }
 
-export class ImageStore {
-  private async getDb(): Promise<IDBDatabase> {
-    return openGameDb();
-  }
-
+export class ImageStore implements IImageStore {
   async save(key: string, file: File): Promise<string> {
     const dataUrl = await optimizeImage(file);
-    const db = await this.getDb();
+    const db = await openGameDb();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
@@ -53,7 +50,7 @@ export class ImageStore {
   }
 
   async load(key: string): Promise<string | null> {
-    const db = await this.getDb();
+    const db = await openGameDb();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
@@ -64,7 +61,7 @@ export class ImageStore {
   }
 
   async remove(key: string): Promise<void> {
-    const db = await this.getDb();
+    const db = await openGameDb();
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readwrite");

@@ -38,16 +38,12 @@ export class EncryptedStore {
     private readonly compress = false,
   ) {}
 
-  private async getDb(): Promise<IDBDatabase> {
-    return openGameDb();
-  }
-
   private pipeline(): Pipeline {
     return this.compress ? COMPRESSED_PIPELINE : PLAIN_PIPELINE;
   }
 
   async put<T extends { id: string }>(item: T): Promise<void> {
-    const db = await this.getDb();
+    const db = await openGameDb();
     const pipe = this.pipeline();
     const encrypted = await this.crypto.encrypt(pipe.encode(item));
 
@@ -60,7 +56,7 @@ export class EncryptedStore {
   }
 
   async get<T>(id: string): Promise<T | null> {
-    const db = await this.getDb();
+    const db = await openGameDb();
 
     const record = await new Promise<{ id: string; data: ArrayBuffer } | undefined>(
       (resolve, reject) => {
@@ -82,7 +78,7 @@ export class EncryptedStore {
   }
 
   async getAll<T>(): Promise<T[]> {
-    const db = await this.getDb();
+    const db = await openGameDb();
 
     const records = await new Promise<{ id: string; data: ArrayBuffer }[]>(
       (resolve, reject) => {
@@ -107,7 +103,7 @@ export class EncryptedStore {
   }
 
   async del(id: string): Promise<void> {
-    const db = await this.getDb();
+    const db = await openGameDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, "readwrite");
       tx.objectStore(this.storeName).delete(id);
@@ -118,7 +114,7 @@ export class EncryptedStore {
 
   async delMany(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
-    const db = await this.getDb();
+    const db = await openGameDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, "readwrite");
       const store = tx.objectStore(this.storeName);
@@ -129,7 +125,7 @@ export class EncryptedStore {
   }
 
   async clear(): Promise<void> {
-    const db = await this.getDb();
+    const db = await openGameDb();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(this.storeName, "readwrite");
       tx.objectStore(this.storeName).clear();

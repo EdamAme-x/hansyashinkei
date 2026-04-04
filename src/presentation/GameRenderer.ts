@@ -267,6 +267,10 @@ export class GameRenderer {
     const ball = this.ballMeshes[ballIndex];
     if (!ball) return;
 
+    // Clear any in-progress death animation before starting a new one,
+    // otherwise the old rAF loop keeps running and orphaned shards accumulate.
+    this.clearShards();
+
     const origin = ball.position.clone();
     ball.visible = false;
     this.ballGlows[ballIndex].visible = false;

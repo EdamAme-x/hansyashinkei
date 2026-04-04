@@ -29,6 +29,12 @@ export function openGameDb(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       dbInstance = request.result;
+      // If another tab upgrades the DB, close our connection so the upgrade
+      // can proceed and re-open fresh on the next access.
+      dbInstance.onversionchange = () => {
+        dbInstance?.close();
+        dbInstance = null;
+      };
       resolve(dbInstance);
     };
 

@@ -1,6 +1,6 @@
 {
   "name": "hansyashinkei",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.9.0",
@@ -19,7 +19,6 @@
     "@types/pako": "^2.0.4",
     "@types/three": "^0.183.0",
     "eslint": "^10.2.0",
-    "happy-dom": "^20.8.0",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.3",

@@ -1,6 +1,6 @@
 import type { ThemeConfig, CustomThemeOverrides } from "@domain/entities/ThemeConfig";
 import { getBuiltinThemes, applyOverrides } from "@domain/entities/ThemeConfig";
-import type { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
+import type { IThemeRepository } from "@domain/repositories/ThemeRepository";
 
 type ThemeChangeListener = (theme: ThemeConfig) => void;
 
@@ -9,7 +9,7 @@ export class ThemeManager {
   private overrides: CustomThemeOverrides;
   private readonly listeners: ThemeChangeListener[] = [];
 
-  constructor(private readonly repo: ThemeRepository) {
+  constructor(private readonly repo: IThemeRepository) {
     this.overrides = repo.loadOverrides();
     this.active = repo.load();
   }

@@ -44,7 +44,7 @@ export class KeybindUI {
       this.keyEls.set(id, el(`keybind-${id}-key`));
       const btn = el(`keybind-${id}-btn`);
       this.btnEls.set(id, btn);
-      btn.addEventListener("click", () => this.startListening(id, slot));
+      btn.addEventListener("click", () => this.startListening(slot));
     }
 
     this.resetBtn.addEventListener("click", () => this.resetToDefault());
@@ -85,7 +85,7 @@ export class KeybindUI {
     }
   }
 
-  private startListening(_slotId: string, slot: Slot): void {
+  private startListening(slot: Slot): void {
     this.stopListening();
     this.listeningSlot = slot;
     this.render();

@@ -1,10 +1,11 @@
 import type { ThemeConfig, CustomThemeOverrides } from "@domain/entities/ThemeConfig";
 import { createDefaultTheme, getBuiltinThemes, createEmptyOverrides, applyOverrides } from "@domain/entities/ThemeConfig";
+import type { IThemeRepository } from "@domain/repositories/ThemeRepository";
 
 const THEME_KEY = "hansyashinkei-theme";
 const OVERRIDES_KEY = "hansyashinkei-theme-overrides";
 
-export class ThemeRepository {
+export class ThemeRepository implements IThemeRepository {
   loadThemeId(): string {
     try {
       const raw = localStorage.getItem(THEME_KEY);

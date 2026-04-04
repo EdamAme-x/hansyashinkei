@@ -69,20 +69,21 @@ export function createEmptyOverrides(): CustomThemeOverrides {
 }
 
 export function applyOverrides(theme: ThemeConfig, overrides: CustomThemeOverrides): ThemeConfig {
-  const scene = { ...theme.scene };
-  const audio = { ...theme.audio };
+  const background: BackgroundMode = overrides.backgroundUrl
+    ? { type: "texture", url: overrides.backgroundUrl }
+    : theme.scene.background;
 
-  if (overrides.backgroundUrl) {
-    (scene as { background: BackgroundMode }).background = { type: "texture", url: overrides.backgroundUrl };
-  }
-  if (overrides.wallTextureUrl !== null) {
-    (scene as { wallTextureUrl: string | null }).wallTextureUrl = overrides.wallTextureUrl;
-  }
-  if (overrides.bgmUrl) {
-    (audio as { bgmUrl: string }).bgmUrl = overrides.bgmUrl;
-  }
+  const wallTextureUrl = overrides.wallTextureUrl
+    ? overrides.wallTextureUrl
+    : theme.scene.wallTextureUrl;
 
-  return { ...theme, scene, audio };
+  const bgmUrl = overrides.bgmUrl ?? theme.audio.bgmUrl;
+
+  return {
+    ...theme,
+    scene: { ...theme.scene, background, wallTextureUrl },
+    audio: { ...theme.audio, bgmUrl },
+  };
 }
 
 const DEFAULT_BALL_SKIN: BallSkin = {

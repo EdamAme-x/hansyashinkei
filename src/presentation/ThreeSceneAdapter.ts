@@ -2,6 +2,7 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, Fog, Color,
   TextureLoader, NoToneMapping,
   type Object3D,
+  type Texture,
 } from "three";
 import type { SceneTheme } from "@domain/entities/ThemeConfig";
 
@@ -59,19 +60,34 @@ export class ThreeSceneAdapter {
   }
 
   applySceneTheme(sceneTheme: SceneTheme): void {
+    // Dispose the previous background texture to prevent GPU memory leaks.
+    if (this.scene.background && (this.scene.background as Texture).isTexture) {
+      (this.scene.background as Texture).dispose();
+    }
+
     if (sceneTheme.background.type === "color") {
       this.scene.background = new Color(sceneTheme.background.hex);
     } else {
       new TextureLoader().load(sceneTheme.background.url, (tex) => {
+        // Dispose any texture that was set between the load call and the callback.
+        if (this.scene.background && (this.scene.background as Texture).isTexture) {
+          (this.scene.background as Texture).dispose();
+        }
         this.scene.background = tex;
       });
     }
     if (this.scene.fog) {
-      (this.scene.fog as Fog).color.set(sceneTheme.fogColor);
+      const fog = this.scene.fog as Fog;
+      fog.color.set(sceneTheme.fogColor);
+      fog.near = sceneTheme.fogNear;
+      fog.far = sceneTheme.fogFar;
     }
   }
 
   dispose(): void {
+    if (this.scene.background && (this.scene.background as Texture).isTexture) {
+      (this.scene.background as Texture).dispose();
+    }
     this.renderer.dispose();
   }
 }

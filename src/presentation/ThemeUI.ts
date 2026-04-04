@@ -1,5 +1,5 @@
 import type { ThemeManager } from "./ThemeManager";
-import type { ImageStore } from "@infrastructure/storage/ImageStore";
+import type { IImageStore } from "@domain/repositories/ImageStore";
 
 function el(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -25,9 +25,9 @@ export class ThemeUI {
   private readonly bgmFileInput = el("theme-bgm-file") as HTMLInputElement;
   private readonly bgmClearBtn = el("theme-bgm-clear");
   private readonly manager: ThemeManager;
-  private readonly imageStore: ImageStore;
+  private readonly imageStore: IImageStore;
 
-  constructor(manager: ThemeManager, imageStore: ImageStore) {
+  constructor(manager: ThemeManager, imageStore: IImageStore) {
     this.manager = manager;
     this.imageStore = imageStore;
 

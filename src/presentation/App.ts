@@ -17,7 +17,7 @@ import { KeybindUI } from "./KeybindUI";
 import { AudioManager } from "./AudioManager";
 import type { ThemeManager } from "./ThemeManager";
 import { ThemeUI } from "./ThemeUI";
-import type { ImageStore } from "@infrastructure/storage/ImageStore";
+import type { IImageStore } from "@domain/repositories/ImageStore";
 import type { ManageSave } from "@application/usecases/ManageSave";
 
 interface RecordingSession {
@@ -52,7 +52,6 @@ export class App {
   private replayController: ReplayController | null = null;
   private renderDirty = true;
 
-
   constructor(
     container: HTMLElement,
     manageScore: ManageScore,
@@ -61,7 +60,7 @@ export class App {
     gameConfig: GameConfig,
     inputConfig: InputConfig,
     themeManager: ThemeManager,
-    imageStore: ImageStore,
+    imageStore: IImageStore,
     manageSave: ManageSave,
   ) {
     const theme = themeManager.current;
@@ -107,7 +106,7 @@ export class App {
     this.hud.show(GameState.Title);
     this.updateKeyHints();
     this.startLoop();
-    this.loadBestScore();
+    this.loadBestScore().catch(() => {});
   }
 
   private async loadBestScore(): Promise<void> {
@@ -176,7 +175,7 @@ export class App {
         this.audio.playNewBest();
       }
       this.hud.showGameOver(this.world.score, this.bestScore, isNewBest);
-      this.saveRecording(isNewBest);
+      this.saveRecording(isNewBest).catch(() => {});
     }
 
     if (state === GameState.Title) {
@@ -192,20 +191,26 @@ export class App {
   private async saveRecording(isNewBest: boolean): Promise<void> {
     if (!this.recording) return;
 
+    // Snapshot mutable state immediately before any await so that a rapid
+    // restart cannot overwrite this.recording / this.world mid-flight.
+    const snapshot = this.recording;
+    const finalScore = this.world.score;
+    this.recording = null;
+
     const replayId = crypto.randomUUID();
     const scoreId = await this.manageScore.record(
-      this.world.score,
+      finalScore,
       replayId,
     );
 
     const replay = createReplay(
       replayId,
       scoreId,
-      this.recording.seed,
+      snapshot.seed,
       this.gameConfig,
-      this.world.score,
-      this.recording.dts,
-      this.recording.events,
+      finalScore,
+      snapshot.dts,
+      snapshot.events,
     );
 
     await this.manageReplay.save(replay);
@@ -216,7 +221,6 @@ export class App {
     }
 
     await this.manageReplay.prune(this.bestReplayId);
-    this.recording = null;
   }
 
   private watchReplay(replay: Replay): void {
@@ -426,17 +430,17 @@ export class App {
     }, { passive: false });
 
     window.addEventListener("touchend", (e) => {
-      if (this.sm.state === GameState.Playing) {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          const touch = e.changedTouches[i];
-          const ballIndex = activeTouches.get(touch.identifier);
-          if (ballIndex !== undefined) {
-            activeTouches.delete(touch.identifier);
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const ballIndex = activeTouches.get(touch.identifier);
+        if (ballIndex !== undefined) {
+          activeTouches.delete(touch.identifier);
+          if (this.sm.state === GameState.Playing) {
             this.recordUndodge(ballIndex);
           }
         }
-        updateZones();
       }
+      updateZones();
     });
 
     window.addEventListener("touchcancel", (e) => {
@@ -452,7 +456,6 @@ export class App {
       }
       updateZones();
     });
-
   }
 
   private recordDodge(ballIndex: number): void {
@@ -480,7 +483,7 @@ export class App {
 
   private async showHistory(): Promise<void> {
     const history = await this.manageScore.getHistory();
-    this.historyUI.show(history);
+    await this.historyUI.show(history);
   }
 
   private startLoop(): void {

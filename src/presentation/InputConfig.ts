@@ -1,12 +1,5 @@
-export interface InputBinding {
-  code: string;
-  ballIndex: number;
-}
-
-export interface InputConfig {
-  dodge: InputBinding[];
-  start: string[];
-}
+export type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
+import type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
 
 const STORAGE_KEY = "hansyashinkei-keybinds";
 

@@ -62,7 +62,10 @@ async function main() {
 }
 
 function dataUrlToFile(dataUrl: string): File {
-  const [header, base64] = dataUrl.split(",");
+  const commaIdx = dataUrl.indexOf(",");
+  if (commaIdx === -1) return new File([], "image");
+  const header = dataUrl.slice(0, commaIdx);
+  const base64 = dataUrl.slice(commaIdx + 1);
   const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -74,4 +77,6 @@ function dataUrlToFile(dataUrl: string): File {
 const versionEl = document.getElementById("app-version");
 if (versionEl) versionEl.textContent = `v${__APP_VERSION__}`;
 
-main();
+main().catch((err: unknown) => {
+  console.error("Failed to initialise app:", err);
+});
