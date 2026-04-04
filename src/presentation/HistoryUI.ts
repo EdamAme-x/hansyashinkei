@@ -50,12 +50,13 @@ export class HistoryUI {
       info.textContent = `${score.value}  ${dateStr}`;
       li.appendChild(info);
 
-      if (score.replayId) {
+      const { replayId } = score;
+      if (replayId) {
         const watchBtn = document.createElement("button");
         watchBtn.className = "history-btn";
         watchBtn.textContent = "WATCH";
         watchBtn.addEventListener("click", async () => {
-          const replay = await this.manageReplay.getById(score.replayId!);
+          const replay = await this.manageReplay.getById(replayId);
           if (replay) this.onWatch(replay);
         });
         li.appendChild(watchBtn);
@@ -64,7 +65,7 @@ export class HistoryUI {
         dlBtn.className = "history-btn";
         dlBtn.textContent = "DL";
         dlBtn.addEventListener("click", async () => {
-          const replay = await this.manageReplay.getById(score.replayId!);
+          const replay = await this.manageReplay.getById(replayId);
           if (replay) this.downloadReplay(replay);
         });
         li.appendChild(dlBtn);
