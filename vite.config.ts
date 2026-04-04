@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import { resolve } from "node:path";
 
 export default defineConfig({
-  base: "/hansyashinkei/",
+  base: "/",
   resolve: {
     alias: {
       "@domain": resolve(import.meta.dirname!, "src/domain"),

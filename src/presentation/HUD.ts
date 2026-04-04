@@ -7,7 +7,7 @@ function el(id: string): HTMLElement {
   return e;
 }
 
-const GAME_URL = "https://edamame-x.github.io/hansyashinkei/";
+const GAME_URL = "https://hs.evex.land";
 
 export class HUD {
   private readonly titleScreen = el("title-screen");
