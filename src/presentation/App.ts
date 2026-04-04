@@ -16,7 +16,6 @@ import { KeybindUI } from "./KeybindUI";
 
 interface RecordingSession {
   seed: number;
-  pendingInputs: ReplayEvent[];
   dts: number[];
   events: ReplayEvent[];
   frameCount: number;
@@ -103,7 +102,6 @@ export class App {
       this.lastTier = 0;
       this.recording = {
         seed,
-        pendingInputs: [],
         dts: [],
         events: [],
         frameCount: 0,
@@ -209,11 +207,9 @@ export class App {
 
   private updateKeyHints(): void {
     const keysEl = document.getElementById("title-keys");
-    const hintEl = document.getElementById("title-hint-line");
 
     if (this.isTouchOnly) {
       if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
-      if (hintEl) hintEl.textContent = "tap to start";
     } else {
       const leftCodes = this.inputConfig.dodge
         .filter((b) => b.ballIndex === 0)
@@ -306,15 +302,13 @@ export class App {
       if (this.sm.state !== GameState.Playing) return;
       e.preventDefault();
 
-      if (this.sm.state === GameState.Playing) {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          const touch = e.changedTouches[i];
-          const ballIndex = touchSide(touch.clientX);
-          activeTouches.set(touch.identifier, ballIndex);
-          this.recordDodge(ballIndex);
-        }
-        updateZones();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const ballIndex = touchSide(touch.clientX);
+        activeTouches.set(touch.identifier, ballIndex);
+        this.recordDodge(ballIndex);
       }
+      updateZones();
     }, { passive: false });
 
     window.addEventListener("touchend", (e) => {

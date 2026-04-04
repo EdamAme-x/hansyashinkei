@@ -1,9 +1,15 @@
 import type { Replay } from "@domain/entities/Replay";
 import type { ReplayRepository } from "@domain/repositories/ReplayRepository";
 
+export interface ReplaySerializer {
+  encode(replay: Replay): Uint8Array;
+  decode(data: Uint8Array): Replay | null;
+}
+
 export class ManageReplay {
   constructor(
     private readonly repository: ReplayRepository,
+    private readonly serializer: ReplaySerializer,
     private readonly maxReplays: number = 20,
   ) {}
 
@@ -34,8 +40,26 @@ export class ManageReplay {
       }
     }
 
+    // If best replay was in the oldest batch, we may not have deleted enough
+    if (toDelete.length < excess) {
+      for (const replay of sorted) {
+        if (toDelete.length >= excess) break;
+        if (replay.id !== bestReplayId && !toDelete.includes(replay.id)) {
+          toDelete.push(replay.id);
+        }
+      }
+    }
+
     if (toDelete.length > 0) {
       await this.repository.deleteMany(toDelete);
     }
+  }
+
+  exportReplay(replay: Replay): Uint8Array {
+    return this.serializer.encode(replay);
+  }
+
+  importReplay(data: Uint8Array): Replay | null {
+    return this.serializer.decode(data);
   }
 }

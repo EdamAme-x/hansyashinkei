@@ -1,10 +1,5 @@
 import type { GameConfig } from "./GameConfig";
 
-export const enum BallSide {
-  Left = 0,
-  Right = 1,
-}
-
 export interface BallState {
   readonly lane: number;
   readonly dodging: boolean;

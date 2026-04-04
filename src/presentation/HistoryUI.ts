@@ -1,8 +1,6 @@
 import type { ScoreHistory } from "@domain/entities/Score";
 import type { Replay } from "@domain/entities/Replay";
 import type { ManageReplay } from "@application/usecases/ManageReplay";
-import { deflate, inflate } from "pako";
-import { encode, decode } from "cbor-x";
 
 function el(id: string): HTMLElement {
   const e = document.getElementById(id);
@@ -97,11 +95,8 @@ export class HistoryUI {
   }
 
   private downloadReplay(replay: Replay): void {
-    const cbor = encode(replay);
-    const compressed = deflate(
-      new Uint8Array(cbor.buffer, cbor.byteOffset, cbor.byteLength),
-    );
-    const blob = new Blob([compressed], { type: "application/octet-stream" });
+    const data = this.manageReplay.exportReplay(replay);
+    const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -115,12 +110,9 @@ export class HistoryUI {
     if (!file) return;
 
     const buffer = await file.arrayBuffer();
-    const decompressed = inflate(new Uint8Array(buffer));
-    const replay = decode(decompressed) as Replay;
+    const replay = this.manageReplay.importReplay(new Uint8Array(buffer));
 
-    if (!replay.version || !replay.seed || !replay.dts) return;
-
-    this.onWatch(replay);
+    if (replay) this.onWatch(replay);
     this.fileInput.value = "";
   }
 }

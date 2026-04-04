@@ -22,6 +22,7 @@ export class ReplayController {
   private readonly eventsByFrame: Map<number, ReplayEvent[]>;
   private readonly cumulativeDts: Float64Array;
   private readonly totalTime: number;
+  private readonly abortCtrl = new AbortController();
   private frameIndex = 0;
   private animationId = 0;
   private lastTier = 0;
@@ -64,31 +65,32 @@ export class ReplayController {
     this.cumulativeDts = cum;
     this.totalTime = cum[dts.length];
 
+    const sig = { signal: this.abortCtrl.signal };
     el("replay-back-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       this.stop();
       this.onDone();
-    });
+    }, sig);
     el("replay-rw-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       this.skip(-5);
-    });
+    }, sig);
     this.playBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.togglePause();
-    });
+    }, sig);
     el("replay-ff-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       this.skip(5);
-    });
+    }, sig);
     this.speedBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.cycleSpeed();
-    });
+    }, sig);
     this.progress.addEventListener("click", (e) => {
       e.stopPropagation();
       this.seek(e);
-    });
+    }, sig);
   }
 
   start(): void {
@@ -137,6 +139,7 @@ export class ReplayController {
 
   stop(): void {
     cancelAnimationFrame(this.animationId);
+    this.abortCtrl.abort();
     this.renderer.clearWalls();
     this.bar.classList.add("hidden");
   }

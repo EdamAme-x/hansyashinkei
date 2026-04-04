@@ -19,7 +19,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Lint & Type check & Test
-        run: pnpm lint & pnpm typecheck & pnpm test & wait
+        run: |
+          pnpm lint & L=$!
+          pnpm typecheck & T=$!
+          pnpm test & TS=$!
+          wait $L && wait $T && wait $TS
 
       - name: Build
         run: pnpm build

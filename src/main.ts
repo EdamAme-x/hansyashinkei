@@ -3,6 +3,7 @@ import { ManageScore } from "@application/usecases/ManageScore";
 import { ManageReplay } from "@application/usecases/ManageReplay";
 import { IndexedDbScoreRepository } from "@infrastructure/storage/IndexedDbScoreRepository";
 import { IndexedDbReplayRepository } from "@infrastructure/storage/IndexedDbReplayRepository";
+import { ReplayFileSerializer } from "@infrastructure/storage/ReplayFileSerializer";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { loadInputConfig } from "@presentation/InputConfig";
@@ -17,7 +18,8 @@ async function main() {
   const scoreRepo = new IndexedDbScoreRepository(deviceKey);
   const replayRepo = new IndexedDbReplayRepository(deviceKey);
   const manageScore = new ManageScore(scoreRepo);
-  const manageReplay = new ManageReplay(replayRepo, 20);
+  const replaySerializer = new ReplayFileSerializer();
+  const manageReplay = new ManageReplay(replayRepo, replaySerializer, 20);
 
   const gameConfig = createDefaultConfig();
   const inputConfig = loadInputConfig();

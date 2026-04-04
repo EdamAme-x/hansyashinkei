@@ -42,9 +42,14 @@ describe("ManageReplay", () => {
   let usecase: ManageReplay;
   let repo: InMemoryReplayRepository;
 
+  const stubSerializer = {
+    encode: () => new Uint8Array(0),
+    decode: () => null,
+  };
+
   beforeEach(() => {
     repo = new InMemoryReplayRepository();
-    usecase = new ManageReplay(repo, 3);
+    usecase = new ManageReplay(repo, stubSerializer, 3);
   });
 
   it("should save and retrieve a replay", async () => {
@@ -88,5 +93,19 @@ describe("ManageReplay", () => {
 
     const all = await usecase.getAll();
     expect(all).toHaveLength(2);
+  });
+
+  it("should fully prune when best is in middle of excess range", async () => {
+    await usecase.save(makeReplay("r1", 1000));
+    await usecase.save(makeReplay("r2", 2000)); // best
+    await usecase.save(makeReplay("r3", 3000));
+    await usecase.save(makeReplay("r4", 4000));
+    await usecase.save(makeReplay("r5", 5000));
+
+    await usecase.prune("r2");
+
+    const all = await usecase.getAll();
+    expect(all).toHaveLength(3);
+    expect(all.find((r) => r.id === "r2")).toBeDefined();
   });
 });
