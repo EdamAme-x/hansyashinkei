@@ -63,7 +63,7 @@ export class GameRenderer {
     this.wallReflectionMaterial = new MeshBasicMaterial({
       color: new Color(0xffffff),
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.2,
       depthWrite: false,
       depthTest: false,
       blending: AdditiveBlending,
