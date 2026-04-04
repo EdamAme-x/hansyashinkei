@@ -16,6 +16,7 @@ import { HistoryUI } from "./HistoryUI";
 import { KeybindUI } from "./KeybindUI";
 import { AudioManager } from "./AudioManager";
 import type { ThemeManager } from "./ThemeManager";
+import { ThemeUI } from "./ThemeUI";
 
 interface RecordingSession {
   seed: number;
@@ -30,6 +31,7 @@ export class App {
   private readonly hud: HUD;
   private readonly historyUI: HistoryUI;
   private readonly keybindUI: KeybindUI;
+  private readonly themeUI: ThemeUI;
   private readonly audio: AudioManager;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
@@ -82,6 +84,11 @@ export class App {
       },
       () => {},
     );
+
+    this.themeUI = new ThemeUI(themeManager, () => {
+      // Theme changed — reload page to apply
+      location.reload();
+    });
 
     this.sm.onStateChange((_prev, next) => this.onStateChange(next));
 
@@ -247,6 +254,11 @@ export class App {
         this.updateSoundBtn(soundBtn);
       });
     }
+
+    document.getElementById("btn-theme")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.themeUI.show();
+    });
   }
 
   private updateSoundBtn(btn: HTMLElement): void {

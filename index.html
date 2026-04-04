@@ -300,6 +300,51 @@
       }
       .keybind-actions button:hover, .keybind-actions button:focus-visible { background: rgba(255,255,255,0.12); }
 
+      /* Theme screen */
+      #theme-screen {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 20; pointer-events: auto;
+        background: rgba(0,0,0,0.95);
+      }
+      #theme-screen.hidden { display: none; }
+      #theme-screen h2 {
+        font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+      }
+      #theme-list {
+        display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+        max-width: 400px; margin-bottom: 1.5rem;
+      }
+      .theme-item {
+        display: flex; align-items: center; gap: 0.8rem;
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.6em 1.2em; border-radius: 6px; cursor: pointer;
+        width: 100%;
+      }
+      .theme-item:hover { background: rgba(255,255,255,0.08); }
+      .theme-item.active { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+      .theme-preview {
+        display: inline-block; width: 1.2rem; height: 1.2rem;
+        border-radius: 3px; border: 2px solid;
+        flex-shrink: 0;
+      }
+      .theme-label { flex: 1; }
+      .theme-check { opacity: 0.6; }
+      #theme-close {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+      }
+      #theme-close:hover { background: rgba(255,255,255,0.12); }
+      .theme-hint {
+        font-family: 'Noto Sans JP', sans-serif;
+        font-size: 0.7rem; opacity: 0.25; margin-top: 1rem;
+      }
+
       /* How to play */
       .how-to-play {
         font-family: 'Noto Sans JP', sans-serif;
@@ -374,6 +419,7 @@
           <button id="btn-history" aria-label="スコア履歴を表示">HISTORY</button>
           <button id="btn-keybinds" aria-label="キー設定を変更">KEYS</button>
           <button id="btn-sound" aria-label="サウンド切替">SOUND ON</button>
+          <button id="btn-theme" aria-label="テーマ変更">THEME</button>
         </div>
 
         <button id="btn-start" class="start-btn" aria-label="ゲームを開始">START</button>
@@ -447,6 +493,13 @@
           <button id="keybind-reset" aria-label="キー設定をリセット">RESET</button>
           <button id="keybind-close" aria-label="キー設定を閉じる">CLOSE</button>
         </div>
+      </div>
+
+      <div id="theme-screen" class="hidden" role="dialog" aria-label="テーマ選択">
+        <h2>THEME</h2>
+        <div id="theme-list"></div>
+        <button id="theme-close" aria-label="閉じる">CLOSE</button>
+        <p class="theme-hint">テーマ変更後はページ再読み込みで反映</p>
       </div>
     </div>
 
