@@ -300,6 +300,38 @@
       }
       .keybind-actions button:hover, .keybind-actions button:focus-visible { background: rgba(255,255,255,0.12); }
 
+      /* Settings screen */
+      #settings-screen {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 20; pointer-events: auto;
+        background: rgba(0,0,0,0.95);
+      }
+      #settings-screen.hidden { display: none; }
+      #settings-screen h2 {
+        font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+      }
+      .settings-list {
+        display: flex; flex-direction: column; gap: 0.6rem;
+        width: 100%; max-width: 300px; margin-bottom: 1.5rem;
+      }
+      .settings-item {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.7em 1.2em; border-radius: 5px; cursor: pointer;
+        text-align: left;
+      }
+      .settings-item:hover, .settings-item:focus-visible { background: rgba(255,255,255,0.08); }
+      #settings-close {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+      }
+      #settings-close:hover { background: rgba(255,255,255,0.12); }
+
       /* Theme screen */
       #theme-screen {
         position: absolute; inset: 0;
@@ -415,12 +447,7 @@
 
         <div class="title-buttons">
           <button id="btn-history" aria-label="スコア履歴を表示">HISTORY</button>
-          <button id="btn-keybinds" aria-label="キー設定を変更">KEYS</button>
-          <button id="btn-sound" aria-label="サウンド切替">SOUND ON</button>
-          <button id="btn-theme" aria-label="テーマ変更">THEME</button>
-          <button id="btn-export" aria-label="セーブデータ出力">EXPORT</button>
-          <button id="btn-import" aria-label="セーブデータ読込">IMPORT</button>
-          <input type="file" id="save-import-file" accept=".hss" style="display:none" />
+          <button id="btn-settings" aria-label="設定">SETTINGS</button>
         </div>
 
         <button id="btn-start" class="start-btn" aria-label="ゲームを開始">START</button>
@@ -466,6 +493,19 @@
           <button id="history-import" aria-label="リプレイファイルを読み込む">IMPORT</button>
         </div>
         <input type="file" id="replay-file-input" accept=".hsr" aria-label="リプレイファイルを選択" />
+      </div>
+
+      <div id="settings-screen" class="hidden" role="dialog" aria-label="設定">
+        <h2>SETTINGS</h2>
+        <div class="settings-list">
+          <button id="settings-keys" class="settings-item">KEYS</button>
+          <button id="settings-sound" class="settings-item"><span id="settings-sound-label">SOUND ON</span></button>
+          <button id="settings-theme" class="settings-item">CUSTOMIZE</button>
+          <button id="settings-export" class="settings-item">EXPORT SAVE</button>
+          <button id="settings-import" class="settings-item">IMPORT SAVE</button>
+          <input type="file" id="save-import-file" accept=".hss" style="display:none" />
+        </div>
+        <button id="settings-close" aria-label="閉じる">CLOSE</button>
       </div>
 
       <div id="keybind-screen" class="hidden" role="dialog" aria-label="キー設定">

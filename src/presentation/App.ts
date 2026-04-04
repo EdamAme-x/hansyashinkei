@@ -245,32 +245,39 @@ export class App {
       e.stopPropagation();
       this.showHistory();
     });
-    document.getElementById("btn-keybinds")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.keybindUI.show();
-    });
     document.getElementById("back-to-title-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.sm.dispatch(GameEvent.BackToTitle);
     });
 
-    const soundBtn = document.getElementById("btn-sound");
-    if (soundBtn) {
-      this.updateSoundBtn(soundBtn);
-      soundBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.audio.toggle();
-        this.updateSoundBtn(soundBtn);
-      });
-    }
-
-    document.getElementById("btn-theme")?.addEventListener("click", (e) => {
+    // Settings screen
+    const settingsScreen = document.getElementById("settings-screen");
+    document.getElementById("btn-settings")?.addEventListener("click", (e) => {
       e.stopPropagation();
+      this.updateSoundLabel();
+      settingsScreen?.classList.remove("hidden");
+    });
+    document.getElementById("settings-close")?.addEventListener("click", () => {
+      settingsScreen?.classList.add("hidden");
+    });
+
+    // Settings items
+    document.getElementById("settings-keys")?.addEventListener("click", () => {
+      settingsScreen?.classList.add("hidden");
+      this.keybindUI.show();
+    });
+
+    document.getElementById("settings-sound")?.addEventListener("click", () => {
+      this.audio.toggle();
+      this.updateSoundLabel();
+    });
+
+    document.getElementById("settings-theme")?.addEventListener("click", () => {
+      settingsScreen?.classList.add("hidden");
       this.themeUI.show();
     });
 
-    document.getElementById("btn-export")?.addEventListener("click", async (e) => {
-      e.stopPropagation();
+    document.getElementById("settings-export")?.addEventListener("click", async () => {
       const data = await this.manageSave.exportSave();
       const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
@@ -282,6 +289,9 @@ export class App {
     });
 
     const importInput = document.getElementById("save-import-file") as HTMLInputElement | null;
+    document.getElementById("settings-import")?.addEventListener("click", () => {
+      importInput?.click();
+    });
     importInput?.addEventListener("change", async () => {
       const file = importInput.files?.[0];
       if (!file) return;
@@ -292,15 +302,11 @@ export class App {
       }
       importInput.value = "";
     });
-
-    document.getElementById("btn-import")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      importInput?.click();
-    });
   }
 
-  private updateSoundBtn(btn: HTMLElement): void {
-    btn.textContent = this.audio.enabled ? "SOUND ON" : "SOUND OFF";
+  private updateSoundLabel(): void {
+    const label = document.getElementById("settings-sound-label");
+    if (label) label.textContent = this.audio.enabled ? "SOUND ON" : "SOUND OFF";
   }
 
   private setupResize(): void {
