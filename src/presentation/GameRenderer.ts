@@ -25,6 +25,7 @@ export class GameRenderer {
   private readonly wallGeometry: BoxGeometry;
   private readonly wallEdgesGeometry: EdgesGeometry;
   private readonly wallMaterial: MeshStandardMaterial;
+  private readonly wallReflectionMaterial: MeshStandardMaterial;
   private readonly wallEdgesMaterial: LineBasicMaterial;
 
   constructor(container: HTMLElement, config: GameConfig) {
@@ -55,6 +56,13 @@ export class GameRenderer {
       color: 0x111111,
       metalness: 0.9,
       roughness: 0.3,
+    });
+    this.wallReflectionMaterial = new MeshStandardMaterial({
+      color: 0x111111,
+      metalness: 0.9,
+      roughness: 0.3,
+      transparent: true,
+      opacity: 0.15,
     });
     this.wallEdgesMaterial = new LineBasicMaterial({
       color: 0xffffff,
@@ -154,6 +162,12 @@ export class GameRenderer {
     const line = new LineSegments(this.wallEdgesGeometry, this.wallEdgesMaterial);
     group.add(line);
 
+    // Reflection: flipped copy below the floor
+    const reflection = new Mesh(this.wallGeometry, this.wallReflectionMaterial);
+    reflection.scale.y = -1;
+    reflection.position.y = -this.config.render.wallHeight;
+    group.add(reflection);
+
     this.adapter.add(group);
     return group;
   }
@@ -216,6 +230,7 @@ export class GameRenderer {
     this.wallGeometry.dispose();
     this.wallEdgesGeometry.dispose();
     this.wallMaterial.dispose();
+    this.wallReflectionMaterial.dispose();
     this.wallEdgesMaterial.dispose();
     this.adapter.dispose();
   }
