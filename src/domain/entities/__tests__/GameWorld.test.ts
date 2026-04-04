@@ -143,7 +143,7 @@ describe("GameWorld", () => {
     it("should spawn walls on first tick (spawnTimer starts at spawnInterval)", () => {
       // spawnTimer starts at config.spawnInterval; warmup slows speed so
       // baseInterval = spawnInterval / warmupScale. Need enough dt to cross.
-      tick(world, 0.2);
+      tick(world, 0.3);
       expect(world.walls.length).toBeGreaterThanOrEqual(2);
     });
 

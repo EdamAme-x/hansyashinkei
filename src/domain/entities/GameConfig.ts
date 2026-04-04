@@ -67,7 +67,7 @@ export function createDefaultConfig(): GameConfig {
     despawnZ: 5,
     spawnInterval: 0.45084,
     spawnJitter: 0.4,
-    hitZone: 0.75,
+    hitZone: 0.55,
     warmup: [
       { until: 20, speedScale: 0.75 },
       { until: 50, speedScale: 0.85 },
