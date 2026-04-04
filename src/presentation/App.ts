@@ -344,14 +344,6 @@ export class App {
       updateZones();
     });
 
-    // Canvas click — only for exiting replay
-    this.renderer.adapter.renderer.domElement.addEventListener("click", () => {
-      if (this.sm.state === GameState.Watching) {
-        this.replayController?.stop();
-        this.replayController = null;
-        this.sm.dispatch(GameEvent.BackToTitle);
-      }
-    });
   }
 
   private recordDodge(ballIndex: number): void {

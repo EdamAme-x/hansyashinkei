@@ -55,6 +55,11 @@ export class ReplayController {
       this.eventsByFrame.set(ev.frame, arr);
     }
 
+    el("replay-back-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.stop();
+      this.onDone();
+    });
     this.playBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.togglePause();
