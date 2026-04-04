@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - link "ゲーム開始へスキップ" [ref=e2] [cursor=pointer]:
+    - /url: "#btn-start"
+  - application "反射神経ゲーム" [ref=e3]:
+    - dialog "タイトル":
+      - heading "反射神経" [level=1]
+      - paragraph
+      - paragraph:
+        - text: 迫る壁をよけろ!
+        - text: 左右キーでボールを動かし、壁をかわし続けよう
+      - paragraph: F/← J/→
+      - generic [ref=e4]:
+        - button "スコア履歴を表示" [ref=e5] [cursor=pointer]: HISTORY
+        - button "設定" [ref=e6] [cursor=pointer]: SETTINGS
+      - button "ゲームを開始" [ref=e7] [cursor=pointer]: START
+    - dialog "テーマ設定" [ref=e23]:
+      - heading "CUSTOMIZE" [level=2] [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e27]: BACKGROUND
+          - generic [ref=e29] [cursor=pointer]: SELECT
+          - button "CLEAR" [ref=e30] [cursor=pointer]
+        - generic [ref=e31]:
+          - generic [ref=e32]: WALL IMAGE
+          - generic [ref=e34] [cursor=pointer]: SELECT
+          - button "CLEAR" [ref=e35] [cursor=pointer]
+        - generic [ref=e36]:
+          - generic [ref=e37]: BGM
+          - generic [ref=e38]: DEFAULT
+          - generic [ref=e39] [cursor=pointer]: SELECT
+          - button "CLEAR" [ref=e40] [cursor=pointer]
+      - button "閉じる" [ref=e41] [cursor=pointer]: CLOSE
+  - generic "バージョン": v1.8.5
+  - navigation "クレジット" [ref=e8]:
+    - link "𝕏 @evex_dev" [ref=e9] [cursor=pointer]:
+      - /url: https://x.com/evex_dev
+    - link "GitHub" [ref=e10] [cursor=pointer]:
+      - /url: https://github.com/EdamAme-x/hansyashinkei
+      - img [ref=e11]
+      - text: GitHub

@@ -4,7 +4,7 @@ import {
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
-  TextureLoader, SRGBColorSpace,
+  TextureLoader, SRGBColorSpace, CanvasTexture,
 } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
@@ -130,6 +130,7 @@ export class GameRenderer {
     const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH);
     const groundMat = new MeshStandardMaterial({
       color: s.groundColor, metalness: s.groundMetalness, roughness: s.groundRoughness,
+      transparent: false,
     });
     const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -140,6 +141,7 @@ export class GameRenderer {
       const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH);
       const stripMat = new MeshStandardMaterial({
         color: s.laneStripColor, metalness: 0.6, roughness: 0.5,
+        transparent: false,
       });
       const strip = new Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -174,18 +176,36 @@ export class GameRenderer {
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
 
-    // Horizon glow — soft fade at the far end of lanes
-    const glowDepth = 20;
+    // Horizon glow — gradient fade at the far end of lanes so the floor
+    // blends smoothly into darkness rather than cutting off abruptly.
+    // A canvas-based alpha gradient goes from opaque (near side) to
+    // fully transparent (far side), sitting just above the floor plane.
+    const glowDepth = 30;
+    const glowCanvas = document.createElement("canvas");
+    glowCanvas.width = 4;   // single-column gradient; width doesn't matter
+    glowCanvas.height = 64;
+    const glowCtx = glowCanvas.getContext("2d");
+    if (glowCtx) {
+      const grad = glowCtx.createLinearGradient(0, 0, 0, 64);
+      // near end (bottom of canvas → near camera): transparent
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      // far end (top of canvas → far from camera): fully opaque dark
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+      glowCtx.fillStyle = grad;
+      glowCtx.fillRect(0, 0, 4, 64);
+    }
+    const glowTex = new CanvasTexture(glowCanvas);
     const glowGeo = new PlaneGeometry(laneWidth * laneCount + 6, glowDepth);
     const glowMat = new MeshBasicMaterial({
-      color: 0x222233,
+      map: glowTex,
       transparent: true,
-      opacity: 0.4,
       depthWrite: false,
     });
     const glow = new Mesh(glowGeo, glowMat);
     glow.rotation.x = -Math.PI / 2;
-    glow.position.set(0, 0.03, -LANE_LENGTH / 2 + 10 + glowDepth / 2);
+    // Place so the near edge aligns with the far end of the visible lane area
+    // and the gradient sweeps forward toward the player for a smooth horizon.
+    glow.position.set(0, 0.03, -LANE_LENGTH / 2 + 10 - glowDepth / 2);
     this.adapter.add(glow);
   }
 
