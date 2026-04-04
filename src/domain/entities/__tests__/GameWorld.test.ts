@@ -124,8 +124,8 @@ describe("GameWorld", () => {
       world.score = 199;
       world.walls.push(createWall(world.wallIdGen, 199, 0, 0.9));
       tick(world, 0.01);
-      // tier 2: BASE * 1.15 * 1.075
-      expect(world.speed).toBeCloseTo(BASE * 1.15 * 1.075, 2);
+      // tier 2: BASE * 1.15 * 1.0375  (mult /= 4 each tier)
+      expect(world.speed).toBeCloseTo(BASE * 1.15 * 1.0375, 2);
     });
   });
 

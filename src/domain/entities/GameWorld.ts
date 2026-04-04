@@ -90,7 +90,7 @@ function computeSpeed(config: GameConfig, score: number): number {
   let mult = config.speedMultiplier - 1;
   for (let i = 0; i < tiers; i++) {
     speed *= 1 + mult;
-    mult /= 2;
+    mult /= 4;
   }
 
   // Warmup: smoothly ramp from reduced speed to full speed
