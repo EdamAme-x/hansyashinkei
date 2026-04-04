@@ -3,13 +3,13 @@ import type { GameConfig } from "@domain/entities/GameConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
 import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
-const LANE_WIDTH = 2.5;
 const LANE_LENGTH = 250;
 
 export class GameRenderer {
   readonly adapter: ThreeSceneAdapter;
 
   private readonly config: GameConfig;
+  private readonly laneWidth: number;
   private readonly laneOffset: number;
   private readonly ballMeshes: THREE.Mesh[] = [];
   private readonly ballGlows: THREE.PointLight[] = [];
@@ -22,7 +22,9 @@ export class GameRenderer {
 
   constructor(container: HTMLElement, config: GameConfig) {
     this.config = config;
-    this.laneOffset = ((config.laneCount - 1) / 2) * LANE_WIDTH;
+    const { laneWidth, wallHeight, wallDepth } = config.render;
+    this.laneWidth = laneWidth;
+    this.laneOffset = ((config.laneCount - 1) / 2) * laneWidth;
     this.adapter = new ThreeSceneAdapter(container);
 
     // Lighting
@@ -34,7 +36,6 @@ export class GameRenderer {
     dirLight.castShadow = true;
     this.adapter.add(dirLight);
 
-    // Rim light from behind for ball highlights
     const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
     rimLight.position.set(-2, 8, -10);
     this.adapter.add(rimLight);
@@ -46,8 +47,7 @@ export class GameRenderer {
     this.buildLanes();
     this.buildBalls();
 
-    // Wall — tall, white edges
-    this.wallGeometry = new THREE.BoxGeometry(LANE_WIDTH * 0.88, 3.5, 0.5);
+    this.wallGeometry = new THREE.BoxGeometry(laneWidth * 0.88, wallHeight, wallDepth);
     this.wallMaterial = new THREE.MeshStandardMaterial({
       color: 0x111111,
       metalness: 0.9,
@@ -60,11 +60,12 @@ export class GameRenderer {
   }
 
   private laneX(lane: number): number {
-    return lane * LANE_WIDTH - this.laneOffset;
+    return lane * this.laneWidth - this.laneOffset;
   }
 
   private buildBalls(): void {
-    const ballGeo = new THREE.SphereGeometry(1.056, 32, 32);
+    const { ballRadius, ballY } = this.config.render;
+    const ballGeo = new THREE.SphereGeometry(ballRadius, 32, 32);
 
     for (let i = 0; i < this.config.balls.length; i++) {
       const mat = new THREE.MeshPhysicalMaterial({
@@ -81,12 +82,12 @@ export class GameRenderer {
 
       const mesh = new THREE.Mesh(ballGeo, mat);
       mesh.castShadow = true;
-      mesh.position.set(this.laneX(this.config.balls[i].homeLane), 0.8, 0);
+      mesh.position.set(this.laneX(this.config.balls[i].homeLane), ballY, 0);
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
       const glow = new THREE.PointLight(0xffffff, 1.0, 8);
-      glow.position.set(this.laneX(this.config.balls[i].homeLane), 1.2, 0);
+      glow.position.set(this.laneX(this.config.balls[i].homeLane), ballY + 0.4, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
     }
@@ -94,9 +95,9 @@ export class GameRenderer {
 
   private buildLanes(): void {
     const { laneCount } = this.config;
+    const { laneWidth } = this;
 
-    // Ground — dark
-    const groundGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 2, LANE_LENGTH);
+    const groundGeo = new THREE.PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x101018, metalness: 0.7, roughness: 0.5,
     });
@@ -106,9 +107,8 @@ export class GameRenderer {
     ground.receiveShadow = true;
     this.adapter.add(ground);
 
-    // Lane strips
     for (let i = 0; i < laneCount; i++) {
-      const stripGeo = new THREE.PlaneGeometry(LANE_WIDTH * 0.92, LANE_LENGTH);
+      const stripGeo = new THREE.PlaneGeometry(laneWidth * 0.92, LANE_LENGTH);
       const stripMat = new THREE.MeshStandardMaterial({
         color: 0x1a1a24, metalness: 0.6, roughness: 0.5,
       });
@@ -119,9 +119,8 @@ export class GameRenderer {
       this.adapter.add(strip);
     }
 
-    // Dividers
     for (let i = 0; i <= laneCount; i++) {
-      const x = i * LANE_WIDTH - this.laneOffset - LANE_WIDTH / 2;
+      const x = i * laneWidth - this.laneOffset - laneWidth / 2;
       const lineGeo = new THREE.PlaneGeometry(0.06, LANE_LENGTH);
       const lineMat = new THREE.MeshStandardMaterial({
         color: 0x555555,
@@ -134,8 +133,7 @@ export class GameRenderer {
       this.adapter.add(line);
     }
 
-    // Ball zone line
-    const zoneGeo = new THREE.PlaneGeometry(LANE_WIDTH * laneCount + 1, 0.1);
+    const zoneGeo = new THREE.PlaneGeometry(laneWidth * laneCount + 1, 0.1);
     const zoneMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       emissive: 0xffffff,
@@ -174,6 +172,8 @@ export class GameRenderer {
   }
 
   sync(world: GameWorldState): void {
+    const wallY = this.config.render.wallHeight / 2;
+
     for (let i = 0; i < world.balls.length; i++) {
       const target = this.laneX(world.balls[i].lane);
       const mesh = this.ballMeshes[i];
@@ -189,7 +189,7 @@ export class GameRenderer {
         group = this.getWallGroup();
         this.activeWallMeshes.set(wall.id, group);
       }
-      group.position.set(this.laneX(wall.lane), 1.75, wall.z);
+      group.position.set(this.laneX(wall.lane), wallY, wall.z);
     }
 
     for (const [id, group] of this.activeWallMeshes) {

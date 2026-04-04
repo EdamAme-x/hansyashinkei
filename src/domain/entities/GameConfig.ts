@@ -16,6 +16,13 @@ export interface GameConfig {
   readonly spawnJitter: number;
   readonly hitZone: number;
   readonly warmup: readonly { readonly until: number; readonly speedScale: number }[];
+  readonly render: {
+    readonly laneWidth: number;
+    readonly ballRadius: number;
+    readonly ballY: number;
+    readonly wallHeight: number;
+    readonly wallDepth: number;
+  };
 }
 
 export function computeValidWallLanes(config: GameConfig): number[][] {
@@ -66,5 +73,12 @@ export function createDefaultConfig(): GameConfig {
       { until: 50, speedScale: 0.85 },
       { until: 100, speedScale: 1.0 },
     ],
+    render: {
+      laneWidth: 2.5,
+      ballRadius: 1.056,
+      ballY: 1.0,
+      wallHeight: 3.5,
+      wallDepth: 0.5,
+    },
   };
 }
