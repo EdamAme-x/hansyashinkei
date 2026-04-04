@@ -1,10 +1,8 @@
 import type { Replay } from "@domain/entities/Replay";
 import type { ReplayRepository } from "@domain/repositories/ReplayRepository";
+import type { ReplaySerializer } from "@domain/repositories/ReplaySerializer";
 
-export interface ReplaySerializer {
-  encode(replay: Replay): Uint8Array;
-  decode(data: Uint8Array): Replay | null;
-}
+export type { ReplaySerializer };
 
 export class ManageReplay {
   constructor(

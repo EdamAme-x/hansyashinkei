@@ -29,7 +29,9 @@ async function main() {
   const devSpeed = new URLSearchParams(location.search).get("__dev__speed");
   if (devSpeed) {
     const mult = Math.max(1, Math.min(20, parseFloat(devSpeed) || 1));
-    (gameConfig as { baseSpeed: number }).baseSpeed *= mult;
+    const mutable = gameConfig as { baseSpeed: number; spawnInterval: number };
+    mutable.baseSpeed *= mult;
+    mutable.spawnInterval /= mult;
   }
 
   const inputConfig = loadInputConfig();
