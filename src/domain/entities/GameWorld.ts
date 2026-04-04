@@ -120,13 +120,16 @@ export function tick(world: GameWorldState, dt: number): void {
 
   const { config, prng } = world;
 
-  for (const wall of world.walls) {
-    wall.z += world.speed * dt;
-  }
+  const hitMin = BALL_Z - config.hitZone;
+  const hitMax = BALL_Z + config.hitZone;
 
   for (const wall of world.walls) {
+    const prevZ = wall.z;
+    wall.z += world.speed * dt;
+
     if (wall.passed) continue;
-    if (wall.z >= BALL_Z - config.hitZone && wall.z <= BALL_Z + config.hitZone) {
+    // Sweep test: wall crossed through hitZone between prevZ and wall.z
+    if (prevZ <= hitMax && wall.z >= hitMin) {
       for (const ball of world.balls) {
         if (ball.lane === wall.lane) {
           world.alive = false;
