@@ -4,35 +4,34 @@ import type { IImageStore } from "@domain/repositories/ImageStore";
 const STORE_NAME = "images";
 const MAX_SIZE = 1024;
 
-/** Resize and compress image to avoid blurry/pixelated textures. */
-async function optimizeImage(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
+/** Resize image to max dimension, return as data URL. */
+function optimizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
 
-  let w = bitmap.width;
-  let h = bitmap.height;
+      if (w > MAX_SIZE || h > MAX_SIZE) {
+        const scale = MAX_SIZE / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
 
-  // Scale down if larger than MAX_SIZE while keeping aspect ratio
-  if (w > MAX_SIZE || h > MAX_SIZE) {
-    const scale = MAX_SIZE / Math.max(w, h);
-    w = Math.round(w * scale);
-    h = Math.round(h * scale);
-  }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas not supported")); return; }
 
-  const canvas = new OffscreenCanvas(w, h);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas not supported");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, w, h);
 
-  // Use high quality scaling
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-
-  const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.85 });
-  const reader = new FileReader();
-  return new Promise((resolve) => {
-    reader.onload = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
+      resolve(canvas.toDataURL("image/webp", 0.85));
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = URL.createObjectURL(file);
   });
 }
 
@@ -49,6 +48,7 @@ export class ImageStore implements IImageStore {
     const dataUrl = file.type.startsWith("image/")
       ? await optimizeImage(file)
       : await fileToDataUrl(file);
+
     const db = await openGameDb();
 
     return new Promise((resolve, reject) => {
