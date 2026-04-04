@@ -5,7 +5,7 @@ import { IndexedDbScoreRepository } from "@infrastructure/storage/IndexedDbScore
 import { IndexedDbReplayRepository } from "@infrastructure/storage/IndexedDbReplayRepository";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
-import { createDefaultInputConfig } from "@presentation/InputConfig";
+import { loadInputConfig } from "@presentation/InputConfig";
 
 async function main() {
   const container = document.getElementById("app");
@@ -20,7 +20,7 @@ async function main() {
   const manageReplay = new ManageReplay(replayRepo, 20);
 
   const gameConfig = createDefaultConfig();
-  const inputConfig = createDefaultInputConfig();
+  const inputConfig = loadInputConfig();
 
   new App(container, manageScore, manageReplay, gameConfig, inputConfig);
 }

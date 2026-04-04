@@ -7,6 +7,8 @@ function el(id: string): HTMLElement {
   return e;
 }
 
+const GAME_URL = "https://edamame-x.github.io/hansyashinkei/";
+
 export class HUD {
   private readonly titleScreen = el("title-screen");
   private readonly gameOverScreen = el("gameover-screen");
@@ -17,7 +19,13 @@ export class HUD {
   private readonly speedUpDisplay = el("speedup-display");
   private readonly titleBest = el("title-best");
   private readonly replayIndicator = el("replay-indicator");
+  private readonly shareBtn = el("share-btn");
   private speedUpTimer = 0;
+  private lastScore = 0;
+
+  constructor() {
+    this.shareBtn.addEventListener("click", () => this.share());
+  }
 
   show(state: GameState): void {
     this.titleScreen.classList.toggle("hidden", state !== GS.Title);
@@ -51,10 +59,17 @@ export class HUD {
   }
 
   showGameOver(score: number, best: number, isNewBest: boolean): void {
+    this.lastScore = score;
     this.finalScore.textContent = `${score}`;
     this.bestScore.textContent = `BEST ${best}`;
     this.newBestLabel.classList.toggle("hidden", !isNewBest);
     clearTimeout(this.speedUpTimer);
     this.speedUpDisplay.classList.add("hidden");
+  }
+
+  private share(): void {
+    const text = `反射神経 スコア ${this.lastScore}!\nみんなもプレイ!\n${GAME_URL}`;
+    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank", "noopener");
   }
 }

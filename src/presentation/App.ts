@@ -7,10 +7,12 @@ import { mulberry32, generateSeed } from "@domain/entities/Prng";
 import { ManageScore } from "@application/usecases/ManageScore";
 import { ManageReplay } from "@application/usecases/ManageReplay";
 import type { InputConfig } from "./InputConfig";
+import { codeToLabel } from "./InputConfig";
 import { GameRenderer } from "./GameRenderer";
 import { HUD } from "./HUD";
 import { ReplayController } from "./ReplayController";
 import { HistoryUI } from "./HistoryUI";
+import { KeybindUI } from "./KeybindUI";
 
 interface RecordingSession {
   seed: number;
@@ -25,10 +27,11 @@ export class App {
   private readonly renderer: GameRenderer;
   private readonly hud: HUD;
   private readonly historyUI: HistoryUI;
+  private readonly keybindUI: KeybindUI;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly gameConfig: GameConfig;
-  private readonly inputConfig: InputConfig;
+  private inputConfig: InputConfig;
 
   private world: GameWorldState;
   private animationId = 0;
@@ -60,11 +63,21 @@ export class App {
       () => {},
     );
 
+    this.keybindUI = new KeybindUI(
+      inputConfig,
+      (updated) => {
+        this.inputConfig = updated;
+        this.updateKeyHints();
+      },
+      () => {},
+    );
+
     this.sm.onStateChange((_prev, next) => this.onStateChange(next));
 
     this.setupInput();
     this.setupResize();
     this.hud.show(GameState.Title);
+    this.updateKeyHints();
     this.startLoop();
     this.loadBestScore();
   }
@@ -168,13 +181,24 @@ export class App {
     });
   }
 
+  private updateKeyHints(): void {
+    const left = this.inputConfig.dodge.find((b) => b.ballIndex === 0);
+    const right = this.inputConfig.dodge.find((b) => b.ballIndex === 1);
+    const leftLabel = left ? codeToLabel(left.code) : "?";
+    const rightLabel = right ? codeToLabel(right.code) : "?";
+
+    const keysEl = document.getElementById("title-keys");
+    if (keysEl) keysEl.textContent = `${leftLabel}  ${rightLabel}`;
+  }
+
   private setupInput(): void {
     const pressed = new Set<string>();
-    const { dodge: dodgeBindings, start: startCodes } = this.inputConfig;
 
     window.addEventListener("keydown", (e) => {
       if (pressed.has(e.code)) return;
       pressed.add(e.code);
+
+      const { dodge: dodgeBindings, start: startCodes } = this.inputConfig;
 
       if (this.sm.state === GameState.Title) {
         if (startCodes.includes(e.code)) {
@@ -183,6 +207,10 @@ export class App {
         }
         if (e.code === "KeyH") {
           this.showHistory();
+          return;
+        }
+        if (e.code === "KeyK") {
+          this.keybindUI.show();
           return;
         }
       }
@@ -225,6 +253,8 @@ export class App {
 
     window.addEventListener("keyup", (e) => {
       pressed.delete(e.code);
+
+      const { dodge: dodgeBindings } = this.inputConfig;
 
       if (this.sm.state === GameState.Playing) {
         for (const binding of dodgeBindings) {

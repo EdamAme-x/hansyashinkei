@@ -163,20 +163,76 @@
       }
       #history-close:hover, #history-import:hover { background: rgba(255,255,255,0.12); }
       #replay-file-input { display: none; }
+
+      /* Share button */
+      .share-btn {
+        margin-top: 1.5rem; pointer-events: auto;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.6em 1.5em; border-radius: 5px; cursor: pointer;
+      }
+      .share-btn:hover { background: rgba(255,255,255,0.15); }
+
+      /* Credit */
+      #credit {
+        position: fixed; bottom: 0.8rem; right: 1rem; z-index: 5;
+        font-size: 0.65rem; font-weight: 400; opacity: 0.2;
+        color: #fff; text-decoration: none; letter-spacing: 0.05em;
+      }
+      #credit:hover { opacity: 0.5; }
+
+      /* Keybind screen */
+      #keybind-screen {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 20; pointer-events: auto;
+        background: rgba(0,0,0,0.95);
+      }
+      #keybind-screen.hidden { display: none; }
+      #keybind-screen h2 {
+        font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em;
+        margin-bottom: 2rem;
+      }
+      .keybind-row {
+        display: flex; align-items: center; gap: 1.2rem;
+        margin-bottom: 1rem; font-size: 0.85rem;
+      }
+      .keybind-label { opacity: 0.5; min-width: 4rem; text-align: right; }
+      .keybind-key {
+        font-size: 1.2rem; font-weight: 900; min-width: 3rem; text-align: center;
+      }
+      .keybind-set {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.4em 1em; border-radius: 4px; cursor: pointer;
+      }
+      .keybind-set:hover { background: rgba(255,255,255,0.12); }
+      .keybind-set.listening {
+        border-color: #fff; background: rgba(255,255,255,0.15);
+        animation: keybind-blink 0.6s ease-in-out infinite alternate;
+      }
+      @keyframes keybind-blink { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+      .keybind-actions { display: flex; gap: 0.8rem; margin-top: 2rem; }
+      .keybind-actions button {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+      }
+      .keybind-actions button:hover { background: rgba(255,255,255,0.12); }
     </style>
   </head>
   <body>
     <div id="app">
       <div id="title-screen" class="overlay">
         <h1>反射神経</h1>
-        <p class="sub">dodge or die</p>
         <p id="title-best" class="title-best"></p>
         <p class="keys">
-          <kbd>F</kbd> &nbsp;
-          <kbd>J</kbd> &nbsp;&nbsp;
-          <kbd>Space</kbd>
+          <span id="title-keys">F  J</span> &nbsp;&nbsp; <kbd>Space</kbd>
         </p>
-        <p class="history-hint"><kbd>H</kbd> history</p>
+        <p class="history-hint"><kbd>H</kbd> history &nbsp; <kbd>K</kbd> keys</p>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
@@ -185,7 +241,10 @@
         <p id="final-score">0</p>
         <p id="best-score">BEST 0</p>
         <p class="hint"><kbd>Space</kbd> restart &nbsp; <kbd>⌫</kbd> title</p>
+        <button id="share-btn" class="share-btn">SHARE ON 𝕏</button>
       </div>
+
+      <a id="credit" href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
 
       <div id="score-display" class="hidden">0</div>
       <div id="speedup-display" class="hidden">SPEED UP</div>
@@ -199,6 +258,24 @@
           <button id="history-import">IMPORT</button>
         </div>
         <input type="file" id="replay-file-input" accept=".hsr" />
+      </div>
+
+      <div id="keybind-screen" class="hidden">
+        <h2>KEYBINDS</h2>
+        <div class="keybind-row">
+          <span class="keybind-label">LEFT</span>
+          <span id="keybind-left-key" class="keybind-key">F</span>
+          <button id="keybind-left-btn" class="keybind-set">SET</button>
+        </div>
+        <div class="keybind-row">
+          <span class="keybind-label">RIGHT</span>
+          <span id="keybind-right-key" class="keybind-key">J</span>
+          <button id="keybind-right-btn" class="keybind-set">SET</button>
+        </div>
+        <div class="keybind-actions">
+          <button id="keybind-reset">RESET</button>
+          <button id="keybind-close">CLOSE</button>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
