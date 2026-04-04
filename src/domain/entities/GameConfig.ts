@@ -63,7 +63,7 @@ export function createDefaultConfig(): GameConfig {
     baseSpeed: 32.472,
     speedMultiplier: 1.15,
     speedUpInterval: 100,
-    spawnZ: -39.6,
+    spawnZ: -80,
     despawnZ: 5,
     spawnInterval: 0.45084,
     spawnJitter: 0.4,

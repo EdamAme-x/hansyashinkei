@@ -12,7 +12,7 @@ export class ThreeSceneAdapter {
   constructor(container: HTMLElement) {
     this.scene = new Scene();
     this.scene.background = new Color(0x000000);
-    this.scene.fog = new Fog(0x000000, 15, 85);
+    this.scene.fog = new Fog(0x000000, 20, 100);
 
     this.camera = new PerspectiveCamera(
       70,
