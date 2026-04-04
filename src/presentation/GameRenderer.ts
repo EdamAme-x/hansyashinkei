@@ -173,7 +173,7 @@ export class GameRenderer {
     const reflection = new Mesh(this.wallReflectionGeometry, this.wallReflectionMaterial);
     reflection.rotation.x = -Math.PI / 2;   // lay flat on the floor
     reflection.position.y = 0.03 - wallHalf; // world Y ≈ 0.03, above the ground plane
-    reflection.renderOrder = 2;
+    reflection.renderOrder = -1;
     group.add(reflection);
 
     this.adapter.add(group);

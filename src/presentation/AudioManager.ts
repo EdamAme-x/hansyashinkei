@@ -36,8 +36,9 @@ export class AudioManager {
     this.ensureCtx();
     this.stopBgm();
 
-    const ctx = this.ctx!;
-    const gain = this.bgmGain!;
+    const ctx = this.ctx;
+    const gain = this.bgmGain;
+    if (!ctx || !gain) return;
 
     // Layered detuned sine waves for ethereal pad
     const freqs = [55, 82.41, 110, 164.81]; // A1, E2, A2, E3
@@ -193,7 +194,8 @@ export class AudioManager {
   private playSe(fn: (ctx: AudioContext, dest: AudioNode) => void): void {
     if (!this._enabled) return;
     this.ensureCtx();
-    fn(this.ctx!, this.seGain!);
+    if (!this.ctx || !this.seGain) return;
+    fn(this.ctx, this.seGain);
   }
 
   private loadPref(): boolean {
