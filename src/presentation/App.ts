@@ -41,6 +41,7 @@ export class App {
   private lastTier = 0;
   private recording: RecordingSession | null = null;
   private replayController: ReplayController | null = null;
+  private renderDirty = true;
 
   constructor(
     container: HTMLElement,
@@ -94,6 +95,7 @@ export class App {
 
   private onStateChange(state: GameState): void {
     this.hud.show(state);
+    this.renderDirty = true;
 
     if (state === GameState.Playing) {
       const seed = generateSeed();
@@ -196,8 +198,12 @@ export class App {
   }
 
   private setupResize(): void {
+    let timer = 0;
     window.addEventListener("resize", () => {
-      this.renderer.resize(window.innerWidth, window.innerHeight);
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        this.renderer.resize(window.innerWidth, window.innerHeight);
+      }, 100);
     });
   }
 
@@ -397,8 +403,9 @@ export class App {
         }
       }
 
-      if (this.sm.state !== GameState.Watching) {
+      if (this.sm.state === GameState.Playing || this.renderDirty) {
         this.renderer.render();
+        this.renderDirty = false;
       }
     };
     this.animationId = requestAnimationFrame(loop);

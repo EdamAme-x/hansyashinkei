@@ -20,6 +20,8 @@ export class ReplayController {
   private readonly onDone: () => void;
 
   private readonly eventsByFrame: Map<number, ReplayEvent[]>;
+  private readonly cumulativeDts: Float64Array;
+  private readonly totalTime: number;
   private frameIndex = 0;
   private animationId = 0;
   private lastTier = 0;
@@ -54,6 +56,13 @@ export class ReplayController {
       arr.push(ev);
       this.eventsByFrame.set(ev.frame, arr);
     }
+
+    // Precompute cumulative dt sums for O(1) time lookups
+    const dts = replay.dts;
+    const cum = new Float64Array(dts.length + 1);
+    for (let i = 0; i < dts.length; i++) cum[i + 1] = cum[i] + dts[i];
+    this.cumulativeDts = cum;
+    this.totalTime = cum[dts.length];
 
     el("replay-back-btn").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -229,9 +238,8 @@ export class ReplayController {
     this.progressFill.style.width = `${pct}%`;
     this.progress.setAttribute("aria-valuenow", String(pct));
 
-    const elapsed = this.replay.dts.slice(0, this.frameIndex).reduce((a, b) => a + b, 0);
-    const totalTime = this.replay.dts.reduce((a, b) => a + b, 0);
-    this.timeDisplay.textContent = `${fmtTime(elapsed)} / ${fmtTime(totalTime)}`;
+    const elapsed = this.cumulativeDts[this.frameIndex];
+    this.timeDisplay.textContent = `${fmtTime(elapsed)} / ${fmtTime(this.totalTime)}`;
   }
 }
 

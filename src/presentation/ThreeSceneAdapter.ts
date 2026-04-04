@@ -1,16 +1,20 @@
-import * as THREE from "three";
+import {
+  Scene, PerspectiveCamera, WebGLRenderer, Fog, Color,
+  NoToneMapping,
+  type Object3D,
+} from "three";
 
 export class ThreeSceneAdapter {
-  readonly scene: THREE.Scene;
-  readonly camera: THREE.PerspectiveCamera;
-  readonly renderer: THREE.WebGLRenderer;
+  readonly scene: Scene;
+  readonly camera: PerspectiveCamera;
+  readonly renderer: WebGLRenderer;
 
   constructor(container: HTMLElement) {
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x000000);
-    this.scene.fog = new THREE.Fog(0x000000, 15, 65);
+    this.scene = new Scene();
+    this.scene.background = new Color(0x000000);
+    this.scene.fog = new Fog(0x000000, 15, 65);
 
-    this.camera = new THREE.PerspectiveCamera(
+    this.camera = new PerspectiveCamera(
       70,
       container.clientWidth / container.clientHeight,
       0.1,
@@ -19,20 +23,18 @@ export class ThreeSceneAdapter {
     this.camera.position.set(0, 12, 14);
     this.camera.lookAt(0, 0, -40);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMapping = NoToneMapping;
     container.appendChild(this.renderer.domElement);
   }
 
-  add(obj: THREE.Object3D): void {
+  add(obj: Object3D): void {
     this.scene.add(obj);
   }
 
-  remove(obj: THREE.Object3D): void {
+  remove(obj: Object3D): void {
     this.scene.remove(obj);
   }
 

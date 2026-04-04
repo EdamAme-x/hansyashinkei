@@ -14,5 +14,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    target: "es2022",
+    rolldownOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("node_modules/three")) return "three";
+          if (id.includes("node_modules/pako") || id.includes("node_modules/cbor")) return "vendor";
+        },
+      },
+    },
   },
 });
