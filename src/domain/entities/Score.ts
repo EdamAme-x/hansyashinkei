@@ -2,6 +2,7 @@ export interface Score {
   readonly id: string;
   readonly value: number;
   readonly timestamp: number;
+  readonly replayId: string | null;
 }
 
 export interface ScoreHistory {
@@ -9,8 +10,12 @@ export interface ScoreHistory {
   readonly bestScore: Score | null;
 }
 
-export function createScore(id: string, value: number): Score {
-  return { id, value, timestamp: Date.now() };
+export function createScore(
+  id: string,
+  value: number,
+  replayId: string | null = null,
+): Score {
+  return { id, value, timestamp: Date.now(), replayId };
 }
 
 export function buildHistory(scores: Score[]): ScoreHistory {

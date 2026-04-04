@@ -8,15 +8,16 @@ import {
 } from "@domain/entities/GameWorld";
 import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { createWall } from "@domain/entities/Wall";
+import { mulberry32 } from "@domain/entities/Prng";
 
 const config = createDefaultConfig();
-const BASE = config.baseSpeed; // 26.4
+const BASE = config.baseSpeed;
 
 describe("GameWorld", () => {
   let world: GameWorldState;
 
   beforeEach(() => {
-    world = createGameWorld(config);
+    world = createGameWorld(config, mulberry32(42));
   });
 
   describe("createGameWorld", () => {
@@ -172,6 +173,26 @@ describe("GameWorld", () => {
       world.walls.push(createWall(world.wallIdGen, 0, 0, -10));
       tick(world, 1);
       expect(world.walls[0].z).toBe(-10);
+    });
+  });
+
+  describe("determinism", () => {
+    it("should produce identical results with same seed and inputs", () => {
+      const w1 = createGameWorld(config, mulberry32(999));
+      const w2 = createGameWorld(config, mulberry32(999));
+
+      for (let i = 0; i < 100; i++) {
+        if (i === 20) { dodge(w1, 0); dodge(w2, 0); }
+        if (i === 25) { undodge(w1, 0); undodge(w2, 0); }
+        tick(w1, 0.016);
+        tick(w2, 0.016);
+        if (!w1.alive || !w2.alive) break;
+      }
+
+      expect(w1.score).toBe(w2.score);
+      expect(w1.speed).toBe(w2.speed);
+      expect(w1.alive).toBe(w2.alive);
+      expect(w1.walls.length).toBe(w2.walls.length);
     });
   });
 });

@@ -1,5 +1,6 @@
 import type { GameConfig } from "./GameConfig";
 import { computeValidWallLanes } from "./GameConfig";
+import type { Prng } from "./Prng";
 import {
   type BallState,
   createBalls,
@@ -12,6 +13,7 @@ const BALL_Z = 0;
 
 export interface GameWorldState {
   readonly config: GameConfig;
+  readonly prng: Prng;
   balls: BallState[];
   walls: Wall[];
   score: number;
@@ -25,9 +27,10 @@ export interface GameWorldState {
   lastPatternIndex: number;
 }
 
-export function createGameWorld(config: GameConfig): GameWorldState {
+export function createGameWorld(config: GameConfig, prng: Prng): GameWorldState {
   return {
     config,
+    prng,
     balls: createBalls(config),
     walls: [],
     score: 0,
@@ -58,13 +61,12 @@ export function undodge(world: GameWorldState, ballIndex: number): void {
   );
 }
 
-// Weighted spawn: same pattern as last wave gets 1x weight, others get 3x
 function spawnWalls(world: GameWorldState): void {
-  const { validWallLanes, lastPatternIndex } = world;
+  const { validWallLanes, lastPatternIndex, prng } = world;
   const weights = validWallLanes.map((_, i) => (i === lastPatternIndex ? 1 : 3));
   const totalWeight = weights.reduce((a, b) => a + b, 0);
 
-  let roll = Math.random() * totalWeight;
+  let roll = prng() * totalWeight;
   let chosen = 0;
   for (let i = 0; i < weights.length; i++) {
     roll -= weights[i];
@@ -82,12 +84,10 @@ function spawnWalls(world: GameWorldState): void {
   }
 }
 
-// Diminishing speed-up: multiplier halves each tier
-// tier 0: base, tier 1: x1.15, tier 2: x1.15*1.075, tier 3: x1.15*1.075*1.0375...
 function computeSpeed(config: GameConfig, score: number): number {
   const tiers = Math.floor(score / config.speedUpInterval);
   let speed = config.baseSpeed;
-  let mult = config.speedMultiplier - 1; // 0.15
+  let mult = config.speedMultiplier - 1;
   for (let i = 0; i < tiers; i++) {
     speed *= 1 + mult;
     mult /= 2;
@@ -102,13 +102,12 @@ export function getSpeedTier(config: GameConfig, score: number): number {
 export function tick(world: GameWorldState, dt: number): void {
   if (!world.alive) return;
 
-  const { config } = world;
+  const { config, prng } = world;
 
   for (const wall of world.walls) {
     wall.z += world.speed * dt;
   }
 
-  // Collision
   for (const wall of world.walls) {
     if (wall.passed) continue;
     if (wall.z >= BALL_Z - config.hitZone && wall.z <= BALL_Z + config.hitZone) {
@@ -121,7 +120,6 @@ export function tick(world: GameWorldState, dt: number): void {
     }
   }
 
-  // Score — per wave, not per wall
   for (const wall of world.walls) {
     if (!wall.passed && wall.z > BALL_Z + config.hitZone) {
       wall.passed = true;
@@ -133,14 +131,12 @@ export function tick(world: GameWorldState, dt: number): void {
   }
 
   world.speed = computeSpeed(config, world.score);
-
   world.walls = world.walls.filter((w) => w.z < config.despawnZ);
 
-  // Spawn with jitter
   const baseInterval = config.spawnInterval * (config.baseSpeed / world.speed);
   world.spawnTimer += dt;
   if (world.spawnTimer >= baseInterval) {
-    const jitter = (Math.random() - 0.5) * 2 * config.spawnJitter * baseInterval;
+    const jitter = (prng() - 0.5) * 2 * config.spawnJitter * baseInterval;
     world.spawnTimer = jitter;
     spawnWalls(world);
   }

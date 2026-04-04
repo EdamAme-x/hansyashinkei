@@ -31,6 +31,24 @@ describe("StateMachine", () => {
     expect(sm.state).toBe(GameState.Title);
   });
 
+  it("should transition Title -> Watching on WatchReplay", () => {
+    const sm = new StateMachine();
+    expect(sm.dispatch(GameEvent.WatchReplay)).toBe(true);
+    expect(sm.state).toBe(GameState.Watching);
+  });
+
+  it("should transition Watching -> Title on ReplayDone", () => {
+    const sm = new StateMachine(GameState.Watching);
+    expect(sm.dispatch(GameEvent.ReplayDone)).toBe(true);
+    expect(sm.state).toBe(GameState.Title);
+  });
+
+  it("should transition Watching -> Title on BackToTitle", () => {
+    const sm = new StateMachine(GameState.Watching);
+    expect(sm.dispatch(GameEvent.BackToTitle)).toBe(true);
+    expect(sm.state).toBe(GameState.Title);
+  });
+
   it("should reject invalid transitions", () => {
     const sm = new StateMachine();
     expect(sm.dispatch(GameEvent.Die)).toBe(false);

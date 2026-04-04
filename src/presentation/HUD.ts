@@ -16,13 +16,18 @@ export class HUD {
   private readonly newBestLabel = el("new-best");
   private readonly speedUpDisplay = el("speedup-display");
   private readonly titleBest = el("title-best");
+  private readonly replayIndicator = el("replay-indicator");
   private speedUpTimer = 0;
 
   show(state: GameState): void {
     this.titleScreen.classList.toggle("hidden", state !== GS.Title);
     this.gameOverScreen.classList.toggle("hidden", state !== GS.GameOver);
-    this.scoreDisplay.classList.toggle("hidden", state !== GS.Playing);
-    if (state !== GS.Playing) {
+
+    const showScore = state === GS.Playing || state === GS.Watching;
+    this.scoreDisplay.classList.toggle("hidden", !showScore);
+    this.replayIndicator.classList.toggle("hidden", state !== GS.Watching);
+
+    if (state !== GS.Playing && state !== GS.Watching) {
       this.speedUpDisplay.classList.add("hidden");
     }
   }

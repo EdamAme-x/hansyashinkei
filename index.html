@@ -35,17 +35,26 @@
       #title-screen .sub {
         font-family: 'Orbitron', sans-serif;
         font-size: 0.7rem; font-weight: 400; opacity: 0.3;
-        letter-spacing: 0.5em; margin-top: 0.8rem; margin-bottom: 3rem;
+        letter-spacing: 0.5em; margin-top: 0.8rem; margin-bottom: 1.5rem;
         text-transform: uppercase;
+      }
+      .title-best {
+        font-size: 0.85rem; font-weight: 700; opacity: 0.25;
+        letter-spacing: 0.2em; margin-bottom: 1.5rem;
       }
       #title-screen .keys {
         font-size: 0.75rem; opacity: 0.25; letter-spacing: 0.05em;
+        margin-bottom: 0.8rem;
       }
-      #title-screen .keys kbd {
+      #title-screen .keys kbd,
+      #title-screen .history-hint kbd {
         display: inline-block; padding: 0.3em 0.8em; margin: 0 0.25em;
         border: 1px solid rgba(255,255,255,0.12); border-radius: 4px;
         font-family: 'Orbitron', monospace; font-size: 0.85em;
         background: rgba(255,255,255,0.03);
+      }
+      #title-screen .history-hint {
+        font-size: 0.65rem; opacity: 0.15;
       }
 
       /* Game Over */
@@ -55,48 +64,29 @@
         text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 3px 0 rgba(0,0,0,0.5);
         margin-bottom: 1.5rem;
       }
-      #final-score {
-        font-size: 2rem; font-weight: 700; margin-bottom: 0.4rem;
-      }
-      #best-score {
-        font-size: 1rem; font-weight: 400; opacity: 0.35;
-        margin-bottom: 2rem;
-      }
-      #gameover-screen .hint {
-        font-size: 0.75rem; opacity: 0.2;
-      }
+      #final-score { font-size: 2rem; font-weight: 700; margin-bottom: 0.4rem; }
+      #best-score { font-size: 1rem; font-weight: 400; opacity: 0.35; margin-bottom: 2rem; }
+      #gameover-screen .hint { font-size: 0.75rem; opacity: 0.2; }
       #gameover-screen .hint kbd {
         display: inline-block; padding: 0.2em 0.5em;
         border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
         font-family: 'Orbitron', monospace; font-size: 0.85em;
       }
 
-      /* New Best */
       .new-best {
         font-size: 1.2rem; font-weight: 900; letter-spacing: 0.3em;
-        color: #fff;
-        text-shadow: 0 0 25px rgba(255,255,255,0.6);
+        color: #fff; text-shadow: 0 0 25px rgba(255,255,255,0.6);
         margin-bottom: 1rem;
         animation: new-best-pulse 0.8s ease-in-out infinite alternate;
       }
       .new-best.hidden { display: none; }
-      @keyframes new-best-pulse {
-        0% { opacity: 0.7; }
-        100% { opacity: 1; }
-      }
-
-      /* Title Best */
-      .title-best {
-        font-size: 0.85rem; font-weight: 700; opacity: 0.25;
-        letter-spacing: 0.2em; margin-bottom: 2rem;
-      }
+      @keyframes new-best-pulse { 0% { opacity: 0.7; } 100% { opacity: 1; } }
 
       /* Score HUD */
       #score-display {
         position: absolute; top: 2rem; left: 50%; transform: translateX(-50%);
         font-size: 2.5rem; font-weight: 900; z-index: 10;
-        letter-spacing: 0.1em;
-        color: #fff;
+        letter-spacing: 0.1em; color: #fff;
         text-shadow: 0 0 15px rgba(255,255,255,0.3);
       }
       #score-display.hidden { display: none; }
@@ -105,17 +95,68 @@
       #speedup-display {
         position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
         font-size: 1.8rem; font-weight: 900; z-index: 15;
-        letter-spacing: 0.2em;
-        color: #fff;
+        letter-spacing: 0.2em; color: #fff;
         text-shadow: 0 0 20px rgba(255,255,255,0.5);
-        opacity: 0;
-        pointer-events: none;
+        opacity: 0; pointer-events: none;
       }
       #speedup-display.hidden { display: none; }
       @keyframes speedup-fade {
         0% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
         100% { opacity: 0; transform: translate(-50%, -70%) scale(1); }
       }
+
+      /* Replay indicator */
+      #replay-indicator {
+        position: absolute; top: 2rem; right: 2rem;
+        font-size: 0.9rem; font-weight: 700; z-index: 15;
+        letter-spacing: 0.15em; opacity: 0.5;
+        animation: replay-blink 1s ease-in-out infinite alternate;
+      }
+      #replay-indicator.hidden { display: none; }
+      @keyframes replay-blink { 0% { opacity: 0.3; } 100% { opacity: 0.7; } }
+
+      /* History */
+      #history-screen {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 3rem 1rem;
+        z-index: 20; pointer-events: auto;
+        background: rgba(0,0,0,0.95);
+        overflow-y: auto;
+      }
+      #history-screen.hidden { display: none; }
+      #history-screen h2 {
+        font-size: 1.8rem; font-weight: 900; letter-spacing: 0.2em;
+        margin-bottom: 1.5rem;
+      }
+      #history-list {
+        list-style: none; width: 100%; max-width: 500px;
+      }
+      .history-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+        font-size: 0.85rem;
+      }
+      .history-info { flex: 1; opacity: 0.6; letter-spacing: 0.05em; }
+      .history-btn {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.35em 0.8em; border-radius: 4px; cursor: pointer;
+        margin-left: 0.5rem;
+      }
+      .history-btn:hover { background: rgba(255,255,255,0.15); }
+      .history-actions {
+        display: flex; gap: 0.8rem; margin-top: 1.5rem;
+      }
+      #history-close, #history-import {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+      }
+      #history-close:hover, #history-import:hover { background: rgba(255,255,255,0.12); }
+      #replay-file-input { display: none; }
     </style>
   </head>
   <body>
@@ -129,6 +170,7 @@
           <kbd>J</kbd> &nbsp;&nbsp;
           <kbd>Space</kbd>
         </p>
+        <p class="history-hint"><kbd>H</kbd> history</p>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
@@ -141,6 +183,17 @@
 
       <div id="score-display" class="hidden">0</div>
       <div id="speedup-display" class="hidden">SPEED UP</div>
+      <div id="replay-indicator" class="hidden">REPLAY</div>
+
+      <div id="history-screen" class="hidden">
+        <h2>HISTORY</h2>
+        <ul id="history-list"></ul>
+        <div class="history-actions">
+          <button id="history-close">CLOSE</button>
+          <button id="history-import">IMPORT</button>
+        </div>
+        <input type="file" id="replay-file-input" accept=".hsr" />
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

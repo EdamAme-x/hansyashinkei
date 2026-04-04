@@ -1,16 +1,32 @@
 import { StateMachine, GameState, GameEvent } from "@domain/entities/StateMachine";
 import type { GameConfig } from "@domain/entities/GameConfig";
+import type { Replay, ReplayEvent } from "@domain/entities/Replay";
+import { createReplay } from "@domain/entities/Replay";
 import { createGameWorld, dodge, undodge, tick, getSpeedTier, type GameWorldState } from "@domain/entities/GameWorld";
+import { mulberry32, generateSeed } from "@domain/entities/Prng";
 import { ManageScore } from "@application/usecases/ManageScore";
+import { ManageReplay } from "@application/usecases/ManageReplay";
 import type { InputConfig } from "./InputConfig";
 import { GameRenderer } from "./GameRenderer";
 import { HUD } from "./HUD";
+import { ReplayController } from "./ReplayController";
+import { HistoryUI } from "./HistoryUI";
+
+interface RecordingSession {
+  seed: number;
+  pendingInputs: ReplayEvent[];
+  dts: number[];
+  events: ReplayEvent[];
+  frameCount: number;
+}
 
 export class App {
   private readonly sm = new StateMachine();
   private readonly renderer: GameRenderer;
   private readonly hud: HUD;
+  private readonly historyUI: HistoryUI;
   private readonly manageScore: ManageScore;
+  private readonly manageReplay: ManageReplay;
   private readonly gameConfig: GameConfig;
   private readonly inputConfig: InputConfig;
 
@@ -18,11 +34,15 @@ export class App {
   private animationId = 0;
   private lastTime = 0;
   private bestScore = 0;
+  private bestReplayId: string | null = null;
   private lastTier = 0;
+  private recording: RecordingSession | null = null;
+  private replayController: ReplayController | null = null;
 
   constructor(
     container: HTMLElement,
     manageScore: ManageScore,
+    manageReplay: ManageReplay,
     gameConfig: GameConfig,
     inputConfig: InputConfig,
   ) {
@@ -31,7 +51,14 @@ export class App {
     this.renderer = new GameRenderer(container, gameConfig);
     this.hud = new HUD();
     this.manageScore = manageScore;
-    this.world = createGameWorld(gameConfig);
+    this.manageReplay = manageReplay;
+    this.world = createGameWorld(gameConfig, mulberry32(generateSeed()));
+
+    this.historyUI = new HistoryUI(
+      manageReplay,
+      (replay) => this.watchReplay(replay),
+      () => {},
+    );
 
     this.sm.onStateChange((_prev, next) => this.onStateChange(next));
 
@@ -39,7 +66,6 @@ export class App {
     this.setupResize();
     this.hud.show(GameState.Title);
     this.startLoop();
-
     this.loadBestScore();
   }
 
@@ -47,6 +73,7 @@ export class App {
     const history = await this.manageScore.getHistory();
     if (history.bestScore) {
       this.bestScore = history.bestScore.value;
+      this.bestReplayId = history.bestScore.replayId;
     }
     this.hud.updateTitleBest(this.bestScore);
   }
@@ -55,8 +82,16 @@ export class App {
     this.hud.show(state);
 
     if (state === GameState.Playing) {
-      this.world = createGameWorld(this.gameConfig);
+      const seed = generateSeed();
+      this.world = createGameWorld(this.gameConfig, mulberry32(seed));
       this.lastTier = 0;
+      this.recording = {
+        seed,
+        pendingInputs: [],
+        dts: [],
+        events: [],
+        frameCount: 0,
+      };
       this.renderer.clearWalls();
       this.renderer.showBalls(true);
       this.hud.updateScore(0);
@@ -69,12 +104,61 @@ export class App {
         this.bestScore = this.world.score;
       }
       this.hud.showGameOver(this.world.score, this.bestScore, isNewBest);
-      this.manageScore.record(this.world.score).catch(() => {});
+      this.saveRecording(isNewBest);
     }
 
     if (state === GameState.Title) {
       this.hud.updateTitleBest(this.bestScore);
     }
+
+    if (state === GameState.Watching) {
+      this.renderer.clearWalls();
+    }
+  }
+
+  private async saveRecording(isNewBest: boolean): Promise<void> {
+    if (!this.recording) return;
+
+    const replayId = crypto.randomUUID();
+    const scoreId = await this.manageScore.record(
+      this.world.score,
+      replayId,
+    );
+
+    const replay = createReplay(
+      replayId,
+      scoreId,
+      this.recording.seed,
+      this.gameConfig,
+      this.world.score,
+      this.recording.dts,
+      this.recording.events,
+    );
+
+    await this.manageReplay.save(replay);
+
+    if (isNewBest) {
+      this.bestReplayId = replayId;
+    }
+
+    await this.manageReplay.prune(this.bestReplayId);
+    this.recording = null;
+  }
+
+  private watchReplay(replay: Replay): void {
+    this.sm.dispatch(GameEvent.WatchReplay);
+    this.replayController?.stop();
+
+    this.replayController = new ReplayController(
+      replay,
+      this.renderer,
+      this.hud,
+      () => {
+        this.replayController = null;
+        this.sm.dispatch(GameEvent.ReplayDone);
+      },
+    );
+    this.replayController.start();
   }
 
   private setupResize(): void {
@@ -91,9 +175,15 @@ export class App {
       if (pressed.has(e.code)) return;
       pressed.add(e.code);
 
-      if (this.sm.state === GameState.Title && startCodes.includes(e.code)) {
-        this.sm.dispatch(GameEvent.Start);
-        return;
+      if (this.sm.state === GameState.Title) {
+        if (startCodes.includes(e.code)) {
+          this.sm.dispatch(GameEvent.Start);
+          return;
+        }
+        if (e.code === "KeyH") {
+          this.showHistory();
+          return;
+        }
       }
 
       if (this.sm.state === GameState.GameOver) {
@@ -107,10 +197,26 @@ export class App {
         }
       }
 
+      if (this.sm.state === GameState.Watching) {
+        if (e.code === "Escape" || e.code === "Backspace") {
+          this.replayController?.stop();
+          this.replayController = null;
+          this.sm.dispatch(GameEvent.BackToTitle);
+          return;
+        }
+      }
+
       if (this.sm.state === GameState.Playing) {
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
             dodge(this.world, binding.ballIndex);
+            if (this.recording) {
+              this.recording.events.push({
+                frame: this.recording.frameCount,
+                type: "dodge",
+                ballIndex: binding.ballIndex,
+              });
+            }
           }
         }
       }
@@ -123,10 +229,22 @@ export class App {
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
             undodge(this.world, binding.ballIndex);
+            if (this.recording) {
+              this.recording.events.push({
+                frame: this.recording.frameCount,
+                type: "undodge",
+                ballIndex: binding.ballIndex,
+              });
+            }
           }
         }
       }
     });
+  }
+
+  private async showHistory(): Promise<void> {
+    const history = await this.manageScore.getHistory();
+    this.historyUI.show(history);
   }
 
   private startLoop(): void {
@@ -139,6 +257,11 @@ export class App {
       if (this.sm.state === GameState.Playing) {
         tick(this.world, dt);
         this.hud.updateScore(this.world.score);
+
+        if (this.recording) {
+          this.recording.dts.push(dt);
+          this.recording.frameCount++;
+        }
 
         const tier = getSpeedTier(this.gameConfig, this.world.score);
         if (tier > this.lastTier) {
@@ -153,13 +276,16 @@ export class App {
         }
       }
 
-      this.renderer.render();
+      if (this.sm.state !== GameState.Watching) {
+        this.renderer.render();
+      }
     };
     this.animationId = requestAnimationFrame(loop);
   }
 
   dispose(): void {
     cancelAnimationFrame(this.animationId);
+    this.replayController?.stop();
     this.renderer.dispose();
   }
 }
