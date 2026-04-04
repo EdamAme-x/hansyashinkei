@@ -36,21 +36,22 @@
 
       /* Background layer — YouTube-style letterbox with edge glow */
       #bg-layer {
-        position: fixed; inset: 0; z-index: 0; overflow: hidden;
+        position: fixed; inset: 0; z-index: 0;
       }
       #bg-blur {
-        position: absolute; inset: -40px;
+        position: absolute; inset: -80px;
         background-size: cover; background-position: center;
-        filter: blur(40px) brightness(0.3);
+        filter: blur(60px) brightness(0.25) saturate(1.2);
       }
       #bg-image {
         position: absolute; inset: 0;
         background-size: contain; background-position: center; background-repeat: no-repeat;
-        filter: brightness(0.5);
+        filter: brightness(0.45);
       }
       #bg-mask {
         position: absolute; inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0,0,0,0.35);
+        pointer-events: none;
       }
 
       .overlay {

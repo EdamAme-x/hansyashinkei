@@ -174,14 +174,13 @@ export class GameRenderer {
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
 
-    // Horizon glow — hides the hard edge where the floor ends
-    const glowDepth = 15;
-    const glowGeo = new PlaneGeometry(laneWidth * laneCount + 4, glowDepth);
+    // Horizon glow — soft fade at the far end of lanes
+    const glowDepth = 20;
+    const glowGeo = new PlaneGeometry(laneWidth * laneCount + 6, glowDepth);
     const glowMat = new MeshBasicMaterial({
-      color: s.fogColor,
+      color: 0x222233,
       transparent: true,
-      opacity: 0.6,
-      blending: AdditiveBlending,
+      opacity: 0.4,
       depthWrite: false,
     });
     const glow = new Mesh(glowGeo, glowMat);
