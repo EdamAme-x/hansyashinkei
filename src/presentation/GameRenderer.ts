@@ -64,7 +64,7 @@ export class GameRenderer {
   }
 
   private buildBalls(): void {
-    const ballGeo = new THREE.SphereGeometry(0.8, 32, 32);
+    const ballGeo = new THREE.SphereGeometry(0.88, 32, 32);
 
     for (let i = 0; i < this.config.balls.length; i++) {
       const mat = new THREE.MeshPhysicalMaterial({
