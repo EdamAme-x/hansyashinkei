@@ -90,7 +90,7 @@ function computeSpeed(config: GameConfig, score: number): number {
   let mult = config.speedMultiplier - 1;
   for (let i = 0; i < tiers; i++) {
     speed *= 1 + mult;
-    mult /= 4;
+    mult /= 3;
   }
 
   // Warmup: smoothly ramp speed scale between checkpoints
