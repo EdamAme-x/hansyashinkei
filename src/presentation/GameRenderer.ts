@@ -127,10 +127,27 @@ export class GameRenderer {
     const { laneWidth } = this;
     const s = this.scene;
 
+    // Alpha gradient texture: opaque at near (player) end, transparent at far end.
+    // PlaneGeometry rotated -PI/2: UV y=0 = +Z (near), y=1 = -Z (far).
+    const fadeCanvas = document.createElement("canvas");
+    fadeCanvas.width = 4;
+    fadeCanvas.height = 128;
+    const fadeCtx = fadeCanvas.getContext("2d");
+    if (fadeCtx) {
+      const grad = fadeCtx.createLinearGradient(0, 0, 0, 128);
+      grad.addColorStop(0, "rgba(255,255,255,1)");   // near camera: opaque
+      grad.addColorStop(0.7, "rgba(255,255,255,1)");  // stay opaque for 70%
+      grad.addColorStop(1, "rgba(255,255,255,0)");     // far: transparent
+      fadeCtx.fillStyle = grad;
+      fadeCtx.fillRect(0, 0, 4, 128);
+    }
+    const fadeTex = new CanvasTexture(fadeCanvas);
+
     const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH);
     const groundMat = new MeshStandardMaterial({
       color: s.groundColor, metalness: s.groundMetalness, roughness: s.groundRoughness,
-      transparent: false,
+      transparent: true,
+      alphaMap: fadeTex,
     });
     const ground = new Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -141,7 +158,8 @@ export class GameRenderer {
       const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH);
       const stripMat = new MeshStandardMaterial({
         color: s.laneStripColor, metalness: 0.6, roughness: 0.5,
-        transparent: false,
+        transparent: true,
+        alphaMap: fadeTex,
       });
       const strip = new Mesh(stripGeo, stripMat);
       strip.rotation.x = -Math.PI / 2;
@@ -156,6 +174,8 @@ export class GameRenderer {
         color: s.laneDividerColor,
         emissive: new Color(s.laneDividerEmissive),
         emissiveIntensity: s.laneDividerEmissiveIntensity,
+        transparent: true,
+        alphaMap: fadeTex,
       });
       const line = new Mesh(lineGeo, lineMat);
       line.rotation.x = -Math.PI / 2;
@@ -175,38 +195,6 @@ export class GameRenderer {
     zoneLine.rotation.x = -Math.PI / 2;
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
-
-    // Horizon glow — gradient fade at the far end of lanes.
-    // Gradient: near camera = transparent, far = opaque black.
-    const glowDepth = 25;
-    const glowCanvas = document.createElement("canvas");
-    glowCanvas.width = 4;
-    glowCanvas.height = 64;
-    const glowCtx = glowCanvas.getContext("2d");
-    if (glowCtx) {
-      const grad = glowCtx.createLinearGradient(0, 0, 0, 64);
-      // UV y=0 maps to the +Z edge (near camera) of the rotated plane
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      // UV y=1 maps to the -Z edge (far from camera)
-      grad.addColorStop(1, "rgba(0,0,0,1)");
-      glowCtx.fillStyle = grad;
-      glowCtx.fillRect(0, 0, 4, 64);
-    }
-    const glowTex = new CanvasTexture(glowCanvas);
-    const glowGeo = new PlaneGeometry(laneWidth * laneCount + 6, glowDepth);
-    const glowMat = new MeshBasicMaterial({
-      map: glowTex,
-      transparent: true,
-      depthWrite: false,
-    });
-    const glow2 = new Mesh(glowGeo, glowMat);
-    glow2.rotation.x = -Math.PI / 2;
-    // Ground far edge is at z = -LANE_LENGTH/2 + 10 - LANE_LENGTH/2 = -115
-    // Place glow so its far edge (-Z) aligns with ground far edge
-    // and it extends glowDepth toward camera (+Z)
-    const groundFarZ = -LANE_LENGTH / 2 + 10 - LANE_LENGTH / 2;
-    glow2.position.set(0, 0.04, groundFarZ + glowDepth / 2);
-    this.adapter.add(glow2);
   }
 
   private getWallGroup(): Group {

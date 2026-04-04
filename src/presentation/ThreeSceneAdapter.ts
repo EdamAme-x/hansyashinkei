@@ -124,6 +124,9 @@ export class ThreeSceneAdapter {
         this.rebuildBgTexture(el.width, el.height);
 
         rawTex.dispose();
+
+        // Force render so bg appears even on static screens
+        this.render();
       });
     } else {
       this.scene.background = new Color(sceneTheme.background.hex);
