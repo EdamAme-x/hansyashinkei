@@ -68,7 +68,7 @@ export class HUD {
   }
 
   private share(): void {
-    const text = `反射神経 スコア ${this.lastScore}!\nみんなもプレイ!\n${GAME_URL}`;
+    const text = `反射神経 スコア${this.lastScore}!\nここからプレイ\n${GAME_URL}`;
     const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener");
   }

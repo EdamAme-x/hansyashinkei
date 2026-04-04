@@ -76,6 +76,7 @@ export class App {
 
     this.setupInput();
     this.setupResize();
+    this.setupTitleButtons();
     this.hud.show(GameState.Title);
     this.updateKeyHints();
     this.startLoop();
@@ -175,6 +176,17 @@ export class App {
     this.replayController.start();
   }
 
+  private setupTitleButtons(): void {
+    document.getElementById("btn-history")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.showHistory();
+    });
+    document.getElementById("btn-keybinds")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.keybindUI.show();
+    });
+  }
+
   private setupResize(): void {
     window.addEventListener("resize", () => {
       this.renderer.resize(window.innerWidth, window.innerHeight);
@@ -182,18 +194,29 @@ export class App {
   }
 
   private updateKeyHints(): void {
-    const left = this.inputConfig.dodge.find((b) => b.ballIndex === 0);
-    const right = this.inputConfig.dodge.find((b) => b.ballIndex === 1);
-    const leftLabel = left ? codeToLabel(left.code) : "?";
-    const rightLabel = right ? codeToLabel(right.code) : "?";
-
     const keysEl = document.getElementById("title-keys");
-    if (keysEl) keysEl.textContent = `${leftLabel}  ${rightLabel}`;
+    const hintEl = document.getElementById("title-hint-line");
+
+    if (this.isTouchDevice) {
+      if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
+      if (hintEl) hintEl.textContent = "tap to start";
+    } else {
+      const left = this.inputConfig.dodge.find((b) => b.ballIndex === 0);
+      const right = this.inputConfig.dodge.find((b) => b.ballIndex === 1);
+      const leftLabel = left ? codeToLabel(left.code) : "?";
+      const rightLabel = right ? codeToLabel(right.code) : "?";
+      if (keysEl) keysEl.textContent = `${leftLabel}  ${rightLabel}`;
+    }
+  }
+
+  private get isTouchDevice(): boolean {
+    return navigator.maxTouchPoints > 0;
   }
 
   private setupInput(): void {
     const pressed = new Set<string>();
 
+    // Keyboard
     window.addEventListener("keydown", (e) => {
       if (pressed.has(e.code)) return;
       pressed.add(e.code);
@@ -238,14 +261,7 @@ export class App {
       if (this.sm.state === GameState.Playing) {
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
-            dodge(this.world, binding.ballIndex);
-            if (this.recording) {
-              this.recording.events.push({
-                frame: this.recording.frameCount,
-                type: "dodge",
-                ballIndex: binding.ballIndex,
-              });
-            }
+            this.recordDodge(binding.ballIndex);
           }
         }
       }
@@ -253,24 +269,121 @@ export class App {
 
     window.addEventListener("keyup", (e) => {
       pressed.delete(e.code);
-
       const { dodge: dodgeBindings } = this.inputConfig;
 
       if (this.sm.state === GameState.Playing) {
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
-            undodge(this.world, binding.ballIndex);
-            if (this.recording) {
-              this.recording.events.push({
-                frame: this.recording.frameCount,
-                type: "undodge",
-                ballIndex: binding.ballIndex,
-              });
-            }
+            this.recordUndodge(binding.ballIndex);
           }
         }
       }
     });
+
+    // Touch — left half = ballIndex 0, right half = ballIndex 1
+    const activeTouches = new Map<number, number>(); // touchId → ballIndex
+    const zoneLeft = document.getElementById("touch-zone-left");
+    const zoneRight = document.getElementById("touch-zone-right");
+
+    const touchSide = (x: number): number => (x < window.innerWidth / 2) ? 0 : 1;
+
+    const updateZones = (): void => {
+      const sides = new Set(activeTouches.values());
+      zoneLeft?.classList.toggle("active", sides.has(0));
+      zoneRight?.classList.toggle("active", sides.has(1));
+    };
+
+    window.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+
+      if (this.sm.state === GameState.Title) {
+        this.sm.dispatch(GameEvent.Start);
+        return;
+      }
+      if (this.sm.state === GameState.GameOver) {
+        this.sm.dispatch(GameEvent.Restart);
+        return;
+      }
+      if (this.sm.state === GameState.Watching) {
+        this.replayController?.stop();
+        this.replayController = null;
+        this.sm.dispatch(GameEvent.BackToTitle);
+        return;
+      }
+
+      if (this.sm.state === GameState.Playing) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          const ballIndex = touchSide(touch.clientX);
+          activeTouches.set(touch.identifier, ballIndex);
+          this.recordDodge(ballIndex);
+        }
+        updateZones();
+      }
+    }, { passive: false });
+
+    window.addEventListener("touchend", (e) => {
+      if (this.sm.state === GameState.Playing) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          const ballIndex = activeTouches.get(touch.identifier);
+          if (ballIndex !== undefined) {
+            activeTouches.delete(touch.identifier);
+            this.recordUndodge(ballIndex);
+          }
+        }
+        updateZones();
+      }
+    });
+
+    window.addEventListener("touchcancel", (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const ballIndex = activeTouches.get(touch.identifier);
+        if (ballIndex !== undefined) {
+          activeTouches.delete(touch.identifier);
+          if (this.sm.state === GameState.Playing) {
+            this.recordUndodge(ballIndex);
+          }
+        }
+      }
+      updateZones();
+    });
+
+    // Mouse click on canvas — for non-touch, non-keyboard navigation
+    this.renderer.adapter.renderer.domElement.addEventListener("click", () => {
+      if (this.sm.state === GameState.Title) {
+        this.sm.dispatch(GameEvent.Start);
+      } else if (this.sm.state === GameState.GameOver) {
+        this.sm.dispatch(GameEvent.Restart);
+      } else if (this.sm.state === GameState.Watching) {
+        this.replayController?.stop();
+        this.replayController = null;
+        this.sm.dispatch(GameEvent.BackToTitle);
+      }
+    });
+  }
+
+  private recordDodge(ballIndex: number): void {
+    dodge(this.world, ballIndex);
+    if (this.recording) {
+      this.recording.events.push({
+        frame: this.recording.frameCount,
+        type: "dodge",
+        ballIndex,
+      });
+    }
+  }
+
+  private recordUndodge(ballIndex: number): void {
+    undodge(this.world, ballIndex);
+    if (this.recording) {
+      this.recording.events.push({
+        frame: this.recording.frameCount,
+        type: "undodge",
+        ballIndex,
+      });
+    }
   }
 
   private async showHistory(): Promise<void> {

@@ -39,23 +39,29 @@
         text-transform: uppercase;
       }
       .title-best {
-        font-size: 0.85rem; font-weight: 700; opacity: 0.25;
+        font-size: 0.85rem; font-weight: 700; opacity: 0.45;
         letter-spacing: 0.2em; margin-bottom: 1.5rem;
       }
       #title-screen .keys {
-        font-size: 0.8rem; opacity: 0.55; letter-spacing: 0.05em;
-        margin-bottom: 0.8rem;
+        font-size: 1rem; opacity: 0.6; letter-spacing: 0.05em;
+        margin-bottom: 1rem;
       }
-      #title-screen .keys kbd,
-      #title-screen .history-hint kbd {
+      #title-screen .keys kbd {
         display: inline-block; padding: 0.35em 0.9em; margin: 0 0.3em;
         border: 1px solid rgba(255,255,255,0.35); border-radius: 5px;
         font-family: 'Orbitron', monospace; font-size: 0.9em;
         background: rgba(255,255,255,0.08);
       }
-      #title-screen .history-hint {
-        font-size: 0.7rem; opacity: 0.3;
+      .title-buttons {
+        display: flex; gap: 0.8rem; margin-top: 0.5rem; pointer-events: auto;
       }
+      .title-buttons button {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.2em; border-radius: 5px; cursor: pointer; opacity: 0.5;
+      }
+      .title-buttons button:hover { background: rgba(255,255,255,0.12); opacity: 0.7; }
 
       /* Game Over */
       #gameover-screen h2 {
@@ -64,9 +70,9 @@
         text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 3px 0 rgba(0,0,0,0.5);
         margin-bottom: 1.5rem;
       }
-      #final-score { font-size: 2rem; font-weight: 700; margin-bottom: 0.4rem; }
-      #best-score { font-size: 1rem; font-weight: 400; opacity: 0.35; margin-bottom: 2rem; }
-      #gameover-screen .hint { font-size: 0.75rem; opacity: 0.2; }
+      #final-score { font-size: 3rem; font-weight: 900; margin-bottom: 0.5rem; }
+      #best-score { font-size: 1rem; font-weight: 400; opacity: 0.5; margin-bottom: 2rem; }
+      #gameover-screen .hint { font-size: 0.75rem; opacity: 0.4; }
       #gameover-screen .hint kbd {
         display: inline-block; padding: 0.2em 0.5em;
         border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
@@ -222,6 +228,29 @@
         padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
       }
       .keybind-actions button:hover { background: rgba(255,255,255,0.12); }
+
+      /* How to play */
+      .how-to-play {
+        font-family: 'Noto Sans JP', sans-serif;
+        font-size: 0.85rem; font-weight: 400; opacity: 0.4;
+        line-height: 1.8; margin-top: 2rem; text-align: center;
+        letter-spacing: 0.05em;
+      }
+
+      /* Touch zones */
+      .touch-zone {
+        position: fixed; top: 0; bottom: 0; width: 50%; z-index: 4;
+        pointer-events: none; transition: background 0.1s;
+      }
+      .touch-zone-left { left: 0; }
+      .touch-zone-right { right: 0; }
+      .touch-zone.active { background: rgba(255,255,255,0.04); }
+
+      /* Touch-friendly gameover hint */
+      @media (pointer: coarse) {
+        #gameover-screen .hint { display: none; }
+        .history-hint kbd { display: none; }
+      }
     </style>
   </head>
   <body>
@@ -232,7 +261,11 @@
         <p class="keys">
           <span id="title-keys">F  J</span> &nbsp;&nbsp; <kbd>Space</kbd>
         </p>
-        <p class="history-hint"><kbd>H</kbd> history &nbsp; <kbd>K</kbd> keys</p>
+        <div id="title-hint-line" class="title-buttons">
+          <button id="btn-history">HISTORY</button>
+          <button id="btn-keybinds">KEYS</button>
+        </div>
+        <p class="how-to-play">迫る壁をよけろ!<br/>左右キーでボールを動かし、壁をかわし続けよう</p>
       </div>
 
       <div id="gameover-screen" class="overlay hidden">
@@ -243,6 +276,9 @@
         <p class="hint"><kbd>Space</kbd> restart &nbsp; <kbd>⌫</kbd> title</p>
         <button id="share-btn" class="share-btn">SHARE ON 𝕏</button>
       </div>
+
+      <div id="touch-zone-left" class="touch-zone touch-zone-left"></div>
+      <div id="touch-zone-right" class="touch-zone touch-zone-right"></div>
 
       <a id="credit" href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
 
