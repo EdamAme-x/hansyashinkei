@@ -1,117 +1,76 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Fog, Color,
   TextureLoader, NoToneMapping, SRGBColorSpace,
-  Mesh, PlaneGeometry, ShaderMaterial,
+  CanvasTexture,
   type Object3D,
   type Texture,
 } from "three";
 import type { SceneTheme } from "@domain/entities/ThemeConfig";
 
-// ---------------------------------------------------------------------------
-// Vertex shader — just pass through NDC position and UV
-// ---------------------------------------------------------------------------
-const BG_VERT = /* glsl */`
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = vec4(position.xy, 1.0, 1.0);
-}
-`;
+/**
+ * Draw YouTube-style letterbox background onto a canvas:
+ * - Fill entire canvas with blurred/dimmed cover version
+ * - Draw contained (aspect-preserved) image on top, slightly brighter
+ */
+function createLetterboxCanvas(
+  img: HTMLImageElement,
+  viewW: number,
+  viewH: number,
+): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = viewW;
+  canvas.height = viewH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
 
-// ---------------------------------------------------------------------------
-// "Cover" fragment shader — scales/crops the image to fill the viewport.
-// Applied with very low opacity to create a blurred-looking dim backdrop.
-// (No actual GPU blur — the darkening + scale-up gives a similar feel.)
-// ---------------------------------------------------------------------------
-const COVER_FRAG = /* glsl */`
-uniform sampler2D uTex;
-uniform float uImgAspect;   // image w/h
-uniform float uViewAspect;  // viewport w/h
-uniform float uBrightness;  // 0-1
-varying vec2 vUv;
-void main() {
-  // Scale UV so image covers the quad (CSS object-fit:cover)
-  vec2 uv = vUv;
-  float imgA = uImgAspect;
-  float viewA = uViewAspect;
-  if (imgA > viewA) {
-    // image is wider than viewport — crop sides
-    float scale = viewA / imgA;
-    uv.x = (uv.x - 0.5) * scale + 0.5;
+  const imgW = img.naturalWidth || img.width;
+  const imgH = img.naturalHeight || img.height;
+  const imgAspect = imgW / imgH;
+  const viewAspect = viewW / viewH;
+
+  // 1. Cover fill (dim backdrop) — fill entire canvas
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, viewW, viewH);
+  ctx.globalAlpha = 0.15;
+
+  if (imgAspect > viewAspect) {
+    // Image wider: fit height, crop sides
+    const drawW = viewH * imgAspect;
+    ctx.drawImage(img, (viewW - drawW) / 2, 0, drawW, viewH);
   } else {
-    // image is taller than viewport — crop top/bottom
-    float scale = imgA / viewA;
-    uv.y = (uv.y - 0.5) * scale + 0.5;
+    // Image taller: fit width, crop top/bottom
+    const drawH = viewW / imgAspect;
+    ctx.drawImage(img, 0, (viewH - drawH) / 2, viewW, drawH);
   }
-  vec4 col = texture2D(uTex, uv);
-  gl_FragColor = vec4(col.rgb * uBrightness, 1.0);
-}
-`;
 
-// ---------------------------------------------------------------------------
-// "Contain" fragment shader — letterboxes the image (CSS object-fit:contain).
-// Outside the image area we emit transparent black so the cover layer shows.
-// ---------------------------------------------------------------------------
-const CONTAIN_FRAG = /* glsl */`
-uniform sampler2D uTex;
-uniform float uImgAspect;   // image w/h
-uniform float uViewAspect;  // viewport w/h
-uniform float uBrightness;  // 0-1
-varying vec2 vUv;
-void main() {
-  vec2 uv = vUv;
-  float imgA = uImgAspect;
-  float viewA = uViewAspect;
-  if (imgA > viewA) {
-    // image wider than viewport — pillarbox: shrink vertically
-    float scale = imgA / viewA;
-    uv.y = (uv.y - 0.5) * scale + 0.5;
+  // 2. Contain (letterbox, correct aspect ratio) — brighter
+  ctx.globalAlpha = 0.45;
+
+  let dx: number, dy: number, dw: number, dh: number;
+  if (imgAspect > viewAspect) {
+    // Image wider: fit width, letterbox top/bottom
+    dw = viewW;
+    dh = viewW / imgAspect;
+    dx = 0;
+    dy = (viewH - dh) / 2;
   } else {
-    // image taller — letterbox: shrink horizontally
-    float scale = viewA / imgA;
-    uv.x = (uv.x - 0.5) * scale + 0.5;
+    // Image taller: fit height, pillarbox left/right
+    dh = viewH;
+    dw = viewH * imgAspect;
+    dx = (viewW - dw) / 2;
+    dy = 0;
   }
-  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    discard;
-  }
-  vec4 col = texture2D(uTex, uv);
-  gl_FragColor = vec4(col.rgb * uBrightness, col.a);
-}
-`;
+  ctx.drawImage(img, dx, dy, dw, dh);
 
-// ---------------------------------------------------------------------------
-// Helper — build one fullscreen quad plane
-// ---------------------------------------------------------------------------
-function makeBgPlane(frag: string, texture: Texture, imgAspect: number, viewAspect: number, brightness: number): Mesh {
-  const geo = new PlaneGeometry(2, 2);
-  const mat = new ShaderMaterial({
-    vertexShader: BG_VERT,
-    fragmentShader: frag,
-    uniforms: {
-      uTex: { value: texture },
-      uImgAspect: { value: imgAspect },
-      uViewAspect: { value: viewAspect },
-      uBrightness: { value: brightness },
-    },
-    depthTest: false,
-    depthWrite: false,
-    fog: false,
-    transparent: frag === CONTAIN_FRAG,
-  });
-  const mesh = new Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = -1000;
-  return mesh;
+  return canvas;
 }
 
 export class ThreeSceneAdapter {
   readonly scene: Scene;
   readonly camera: PerspectiveCamera;
   readonly renderer: WebGLRenderer;
-
   private bgTexture: Texture | null = null;
-  private bgCoverPlane: Mesh | null = null;
-  private bgContainPlane: Mesh | null = null;
+  private bgSourceImg: HTMLImageElement | null = null;
 
   constructor(container: HTMLElement, sceneTheme: SceneTheme) {
     this.scene = new Scene();
@@ -152,41 +111,32 @@ export class ThreeSceneAdapter {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-    this._updateBgAspect(width / height);
+
+    // Rebuild letterbox canvas for new aspect ratio
+    if (this.bgSourceImg) {
+      this.rebuildBgTexture(width, height);
+    }
   }
 
   applySceneTheme(sceneTheme: SceneTheme): void {
-    this._removeBgPlanes();
-
     if (this.bgTexture) {
       this.bgTexture.dispose();
       this.bgTexture = null;
     }
+    this.bgSourceImg = null;
 
     if (sceneTheme.background.type === "texture") {
       const url = (sceneTheme.background as { url: string }).url;
-      // Keep the scene background as solid color; the planes handle the image
       this.scene.background = new Color(sceneTheme.fogColor);
 
       new TextureLoader().load(url, (rawTex) => {
         rawTex.colorSpace = SRGBColorSpace;
-        this.bgTexture = rawTex;
+        this.bgSourceImg = rawTex.image as HTMLImageElement;
 
-        const img = rawTex.image as HTMLImageElement;
-        const imgW = img.naturalWidth || img.width;
-        const imgH = img.naturalHeight || img.height;
-        const imgAspect = imgW / imgH;
-        const viewAspect = this.camera.aspect;
+        const el = this.renderer.domElement;
+        this.rebuildBgTexture(el.width, el.height);
 
-        // Back plane: cover (fills viewport, crops) — very dim
-        this.bgCoverPlane = makeBgPlane(COVER_FRAG, rawTex, imgAspect, viewAspect, 0.15);
-        this.bgCoverPlane.renderOrder = -1001;
-        this.scene.add(this.bgCoverPlane);
-
-        // Front plane: contain (letterboxed, correct ratio) — dimmed but readable
-        this.bgContainPlane = makeBgPlane(CONTAIN_FRAG, rawTex, imgAspect, viewAspect, 0.55);
-        this.bgContainPlane.renderOrder = -1000;
-        this.scene.add(this.bgContainPlane);
+        rawTex.dispose();
       });
     } else {
       this.scene.background = new Color(sceneTheme.background.hex);
@@ -200,32 +150,18 @@ export class ThreeSceneAdapter {
     }
   }
 
-  // Update both planes' uViewAspect when the viewport is resized
-  private _updateBgAspect(viewAspect: number): void {
-    for (const plane of [this.bgCoverPlane, this.bgContainPlane]) {
-      if (!plane) continue;
-      const mat = plane.material as ShaderMaterial;
-      mat.uniforms["uViewAspect"].value = viewAspect;
-    }
-  }
+  private rebuildBgTexture(viewW: number, viewH: number): void {
+    if (!this.bgSourceImg) return;
 
-  private _removeBgPlanes(): void {
-    if (this.bgCoverPlane) {
-      this.scene.remove(this.bgCoverPlane);
-      (this.bgCoverPlane.material as ShaderMaterial).dispose();
-      this.bgCoverPlane.geometry.dispose();
-      this.bgCoverPlane = null;
-    }
-    if (this.bgContainPlane) {
-      this.scene.remove(this.bgContainPlane);
-      (this.bgContainPlane.material as ShaderMaterial).dispose();
-      this.bgContainPlane.geometry.dispose();
-      this.bgContainPlane = null;
-    }
+    if (this.bgTexture) this.bgTexture.dispose();
+
+    const canvas = createLetterboxCanvas(this.bgSourceImg, viewW, viewH);
+    this.bgTexture = new CanvasTexture(canvas);
+    this.bgTexture.colorSpace = SRGBColorSpace;
+    this.scene.background = this.bgTexture;
   }
 
   dispose(): void {
-    this._removeBgPlanes();
     if (this.bgTexture) this.bgTexture.dispose();
     this.renderer.dispose();
   }
