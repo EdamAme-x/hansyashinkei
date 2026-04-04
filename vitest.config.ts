@@ -1,6 +1,5 @@
 import { defineConfig } from "vitest/config";
 import { resolve } from "node:path";
-import { cpus } from "node:os";
 
 export default defineConfig({
   resolve: {
@@ -13,11 +12,5 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    pool: "threads",
-    poolOptions: {
-      threads: {
-        maxThreads: Math.max(1, Math.floor(cpus().length * 0.75)),
-      },
-    },
   },
 });
