@@ -22,6 +22,9 @@
     <meta name="twitter:description" content="迫る壁をよけろ！" />
     <meta name="twitter:creator" content="@evex_dev" />
 
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@900&display=swap" rel="stylesheet" />
@@ -309,6 +312,22 @@
         #gameover-screen .hint { display: none; }
       }
 
+      /* Rotate prompt for portrait mobile */
+      #rotate-prompt {
+        display: none;
+        position: fixed; inset: 0; z-index: 100;
+        background: #000;
+        flex-direction: column; align-items: center; justify-content: center;
+        color: #fff; font-family: 'Noto Sans JP', sans-serif;
+        font-size: 1.2rem; text-align: center; line-height: 2;
+      }
+      #rotate-prompt .rotate-icon {
+        font-size: 3rem; margin-bottom: 1rem;
+      }
+      @media (pointer: coarse) and (orientation: portrait) and (max-width: 768px) {
+        #rotate-prompt { display: flex; }
+      }
+
       /* Focus visible */
       :focus-visible {
         outline: 2px solid rgba(255,255,255,0.6);
@@ -327,6 +346,11 @@
   </head>
   <body>
     <a href="#btn-start" class="sr-only">ゲーム開始へスキップ</a>
+
+    <div id="rotate-prompt" aria-label="画面を横向きにしてください">
+      <div class="rotate-icon">📱↻</div>
+      画面を横向きにしてね
+    </div>
 
     <div id="app" role="application" aria-label="反射神経ゲーム">
       <div id="title-screen" class="overlay" role="dialog" aria-label="タイトル">
@@ -359,10 +383,6 @@
       <div id="touch-zone-left" class="touch-zone touch-zone-left" aria-hidden="true"></div>
       <div id="touch-zone-right" class="touch-zone touch-zone-right" aria-hidden="true"></div>
 
-      <nav id="credit" aria-label="クレジット">
-        <a href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
-        <a href="https://github.com/EdamAme-x/hansyashinkei" target="_blank" rel="noopener">GitHub</a>
-      </nav>
 
       <div id="score-display" class="hidden" role="status" aria-live="polite" aria-label="現在のスコア">0</div>
       <div id="speedup-display" class="hidden" role="alert" aria-live="assertive">SPEED UP</div>
@@ -418,6 +438,12 @@
         </div>
       </div>
     </div>
+
+    <nav id="credit" aria-label="クレジット">
+      <a href="https://x.com/evex_dev" target="_blank" rel="noopener">𝕏 @evex_dev</a>
+      <a href="https://github.com/EdamAme-x/hansyashinkei" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+
     <script type="module" src="/src/main.ts"></script>
 
     <style>.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }</style>
