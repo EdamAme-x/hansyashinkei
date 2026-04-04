@@ -38,39 +38,53 @@ export class HistoryUI {
   async show(history: ScoreHistory): Promise<void> {
     while (this.list.firstChild) this.list.removeChild(this.list.firstChild);
 
+    const best = history.bestScore;
+
     for (const score of history.scores) {
       const li = document.createElement("li");
       li.className = "history-item";
 
-      const date = new Date(score.timestamp);
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+      const scoreEl = document.createElement("span");
+      scoreEl.className = "history-score";
+      scoreEl.textContent = `${score.value}`;
+      if (best && score.id === best.id) {
+        scoreEl.className += " history-best";
+      }
+      li.appendChild(scoreEl);
 
-      const info = document.createElement("span");
-      info.className = "history-info";
-      info.textContent = `${score.value}  ${dateStr}`;
-      li.appendChild(info);
+      const date = new Date(score.timestamp);
+      const dateEl = document.createElement("span");
+      dateEl.className = "history-date";
+      dateEl.textContent = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+      li.appendChild(dateEl);
+
+      const btns = document.createElement("span");
+      btns.className = "history-btns";
 
       const { replayId } = score;
       if (replayId) {
         const watchBtn = document.createElement("button");
         watchBtn.className = "history-btn";
-        watchBtn.textContent = "WATCH";
+        watchBtn.textContent = "\u25B6";
+        watchBtn.title = "Watch replay";
         watchBtn.addEventListener("click", async () => {
           const replay = await this.manageReplay.getById(replayId);
           if (replay) this.onWatch(replay);
         });
-        li.appendChild(watchBtn);
+        btns.appendChild(watchBtn);
 
         const dlBtn = document.createElement("button");
         dlBtn.className = "history-btn";
-        dlBtn.textContent = "DL";
+        dlBtn.textContent = "\u2B07";
+        dlBtn.title = "Download replay";
         dlBtn.addEventListener("click", async () => {
           const replay = await this.manageReplay.getById(replayId);
           if (replay) this.downloadReplay(replay);
         });
-        li.appendChild(dlBtn);
+        btns.appendChild(dlBtn);
       }
 
+      li.appendChild(btns);
       this.list.appendChild(li);
     }
 

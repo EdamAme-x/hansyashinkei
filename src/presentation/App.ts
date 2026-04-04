@@ -146,6 +146,7 @@ export class App {
   }
 
   private watchReplay(replay: Replay): void {
+    this.historyUI.hide();
     this.sm.dispatch(GameEvent.WatchReplay);
     this.replayController?.stop();
 

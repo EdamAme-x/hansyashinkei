@@ -133,11 +133,17 @@
         list-style: none; width: 100%; max-width: 500px;
       }
       .history-item {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+        display: flex; align-items: center; gap: 1rem;
+        padding: 0.7rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
         font-size: 0.85rem;
       }
-      .history-info { flex: 1; opacity: 0.6; letter-spacing: 0.05em; }
+      .history-score {
+        font-size: 1.1rem; font-weight: 900; min-width: 3.5rem;
+        text-align: right; letter-spacing: 0.05em;
+      }
+      .history-best { text-shadow: 0 0 10px rgba(255,255,255,0.4); }
+      .history-date { flex: 1; opacity: 0.3; font-size: 0.75rem; }
+      .history-btns { display: flex; gap: 0.4rem; }
       .history-btn {
         background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
         color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
