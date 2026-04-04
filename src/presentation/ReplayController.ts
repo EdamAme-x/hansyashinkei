@@ -4,8 +4,16 @@ import { mulberry32 } from "@domain/entities/Prng";
 import type { GameRenderer } from "./GameRenderer";
 import type { HUD } from "./HUD";
 
+function el(id: string): HTMLElement {
+  const e = document.getElementById(id);
+  if (!e) throw new Error(`Missing element #${id}`);
+  return e;
+}
+
+const SPEED_OPTIONS = [0.25, 0.5, 1, 2, 4];
+
 export class ReplayController {
-  private readonly world: GameWorldState;
+  private world: GameWorldState;
   private readonly replay: Replay;
   private readonly renderer: GameRenderer;
   private readonly hud: HUD;
@@ -15,6 +23,17 @@ export class ReplayController {
   private frameIndex = 0;
   private animationId = 0;
   private lastTier = 0;
+  private paused = false;
+  private playbackSpeed = 1;
+  private frameBudget = 0;
+
+  // UI elements
+  private readonly bar = el("replay-bar");
+  private readonly progress = el("replay-progress");
+  private readonly progressFill = el("replay-progress-fill");
+  private readonly playBtn = el("replay-play-btn");
+  private readonly speedBtn = el("replay-speed-btn");
+  private readonly timeDisplay = el("replay-time");
 
   constructor(
     replay: Replay,
@@ -35,6 +54,19 @@ export class ReplayController {
       arr.push(ev);
       this.eventsByFrame.set(ev.frame, arr);
     }
+
+    this.playBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.togglePause();
+    });
+    this.speedBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.cycleSpeed();
+    });
+    this.progress.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.seek(e);
+    });
   }
 
   start(): void {
@@ -43,47 +75,39 @@ export class ReplayController {
     this.hud.updateScore(0);
     this.frameIndex = 0;
     this.lastTier = 0;
+    this.paused = false;
+    this.playbackSpeed = 1;
+    this.frameBudget = 0;
+
+    this.bar.classList.remove("hidden");
+    this.playBtn.textContent = "⏸";
+    this.speedBtn.textContent = "1x";
+    this.updateBar();
 
     const loop = () => {
-      if (this.frameIndex >= this.replay.dts.length) {
+      this.animationId = requestAnimationFrame(loop);
+
+      if (this.paused) return;
+      if (this.frameIndex >= this.replay.dts.length || !this.world.alive) {
         this.renderer.showBalls(false);
+        this.bar.classList.add("hidden");
         this.onDone();
+        cancelAnimationFrame(this.animationId);
         return;
       }
 
-      this.animationId = requestAnimationFrame(loop);
-
-      const events = this.eventsByFrame.get(this.frameIndex);
-      if (events) {
-        for (const ev of events) {
-          if (ev.type === "dodge") dodge(this.world, ev.ballIndex);
-          else undodge(this.world, ev.ballIndex);
-        }
+      // Handle playback speed by accumulating frame budget
+      this.frameBudget += this.playbackSpeed;
+      while (this.frameBudget >= 1 && this.frameIndex < this.replay.dts.length && this.world.alive) {
+        this.frameBudget -= 1;
+        this.stepFrame();
       }
-
-      const dt = this.replay.dts[this.frameIndex];
-      tick(this.world, dt);
-
-      const tier = getSpeedTier(this.world.config, this.world.score);
-      if (tier > this.lastTier) {
-        this.lastTier = tier;
-        this.hud.showSpeedUp();
-      }
-
-      this.hud.updateScore(this.world.score);
 
       if (this.world.alive) {
         this.renderer.sync(this.world);
       }
-
       this.renderer.render();
-      this.frameIndex++;
-
-      if (!this.world.alive) {
-        this.renderer.showBalls(false);
-        this.onDone();
-        cancelAnimationFrame(this.animationId);
-      }
+      this.updateBar();
     };
 
     this.animationId = requestAnimationFrame(loop);
@@ -92,5 +116,88 @@ export class ReplayController {
   stop(): void {
     cancelAnimationFrame(this.animationId);
     this.renderer.clearWalls();
+    this.bar.classList.add("hidden");
   }
+
+  private stepFrame(): void {
+    const events = this.eventsByFrame.get(this.frameIndex);
+    if (events) {
+      for (const ev of events) {
+        if (ev.type === "dodge") dodge(this.world, ev.ballIndex);
+        else undodge(this.world, ev.ballIndex);
+      }
+    }
+
+    const dt = this.replay.dts[this.frameIndex];
+    tick(this.world, dt);
+
+    const tier = getSpeedTier(this.world.config, this.world.score);
+    if (tier > this.lastTier) {
+      this.lastTier = tier;
+      this.hud.showSpeedUp();
+    }
+
+    this.hud.updateScore(this.world.score);
+    this.frameIndex++;
+  }
+
+  private togglePause(): void {
+    this.paused = !this.paused;
+    this.playBtn.textContent = this.paused ? "▶" : "⏸";
+  }
+
+  private cycleSpeed(): void {
+    const idx = SPEED_OPTIONS.indexOf(this.playbackSpeed);
+    this.playbackSpeed = SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length];
+    this.speedBtn.textContent = `${this.playbackSpeed}x`;
+  }
+
+  private seek(e: MouseEvent): void {
+    const rect = this.progress.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const targetFrame = Math.floor(ratio * this.replay.dts.length);
+
+    // Rebuild world from scratch up to target frame
+    this.world = createGameWorld(this.replay.config, mulberry32(this.replay.seed));
+    this.lastTier = 0;
+
+    for (let i = 0; i < targetFrame && this.world.alive; i++) {
+      const events = this.eventsByFrame.get(i);
+      if (events) {
+        for (const ev of events) {
+          if (ev.type === "dodge") dodge(this.world, ev.ballIndex);
+          else undodge(this.world, ev.ballIndex);
+        }
+      }
+      tick(this.world, this.replay.dts[i]);
+    }
+
+    this.frameIndex = targetFrame;
+    this.lastTier = getSpeedTier(this.world.config, this.world.score);
+    this.hud.updateScore(this.world.score);
+
+    if (this.world.alive) {
+      this.renderer.clearWalls();
+      this.renderer.showBalls(true);
+      this.renderer.sync(this.world);
+    }
+    this.renderer.render();
+    this.updateBar();
+  }
+
+  private updateBar(): void {
+    const total = this.replay.dts.length;
+    const pct = total > 0 ? (this.frameIndex / total) * 100 : 0;
+    this.progressFill.style.width = `${pct}%`;
+
+    const elapsed = this.replay.dts.slice(0, this.frameIndex).reduce((a, b) => a + b, 0);
+    const totalTime = this.replay.dts.reduce((a, b) => a + b, 0);
+    this.timeDisplay.textContent = `${fmtTime(elapsed)} / ${fmtTime(totalTime)}`;
+  }
+}
+
+function fmtTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
 }

@@ -8,7 +8,7 @@ export class ThreeSceneAdapter {
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
-    this.scene.fog = new THREE.Fog(0x000000, 15, 50);
+    this.scene.fog = new THREE.Fog(0x000000, 15, 65);
 
     this.camera = new THREE.PerspectiveCamera(
       70,
