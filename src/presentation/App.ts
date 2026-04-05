@@ -25,7 +25,8 @@ import type { ManageSave } from "@application/usecases/ManageSave";
 import type { ManageAchievement } from "@application/usecases/ManageAchievement";
 import { AchievementUI } from "./AchievementUI";
 import { AchievementToast } from "./AchievementToast";
-import { getSkinDef } from "@domain/entities/SkinDefs";
+import { getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
+import { getSkinSpeedMultiplier } from "@domain/entities/SkinDefs";
 import { downloadBlob } from "./dom";
 
 interface RecordingSession {
@@ -69,6 +70,9 @@ export class App {
   private recording: RecordingSession | null = null;
   private replayController: ReplayController | null = null;
   private renderDirty = true;
+  private dodgeTimestamps: number[] = [];
+  private maxKeysPerSecond = 0;
+  private activeSkinId = DEFAULT_SKIN_ID;
 
   constructor(
     container: HTMLElement,
@@ -121,12 +125,14 @@ export class App {
     this.achievementToast = new AchievementToast();
     this.achievementUI = new AchievementUI(manageAchievement);
     this.achievementUI.onSkinChanged = (skinId) => {
+      this.activeSkinId = skinId;
       this.renderer.applyActiveSkin(getSkinDef(skinId));
       this.renderDirty = true;
     };
 
     // Load active skin on startup
     manageAchievement.getActiveSkinId().then((skinId) => {
+      this.activeSkinId = skinId;
       this.renderer.applyActiveSkin(getSkinDef(skinId));
       this.renderDirty = true;
     }).catch(() => {});
@@ -205,6 +211,8 @@ export class App {
     const seed = generateSeed();
     this.world = createGameWorld(this.gameConfig, mulberry32(seed));
     this.lastTier = 0;
+    this.dodgeTimestamps = [];
+    this.maxKeysPerSecond = 0;
 
     this.recording = {
       seed,
@@ -293,7 +301,7 @@ export class App {
     // Evaluate achievements after score + replay are stored
     try {
       const score = { id: scoreId, value: finalScore, timestamp: Date.now(), replayId, mode: this.activeMode };
-      const unlocked = await this.manageAchievement.evaluateAndUnlock(score);
+      const unlocked = await this.manageAchievement.evaluateAndUnlock(score, this.maxKeysPerSecond);
       if (unlocked.length > 0) {
         this.achievementToast.show(unlocked);
       }
@@ -720,6 +728,17 @@ export class App {
   private recordDodge(ballIndex: number): void {
     dodge(this.world, ballIndex);
     this.audio.playDodge();
+
+    // Track key press rate for rapid_keys achievement
+    const now = performance.now();
+    this.dodgeTimestamps.push(now);
+    // Keep only timestamps from last 1 second
+    const cutoff = now - 1000;
+    while (this.dodgeTimestamps.length > 0 && this.dodgeTimestamps[0] < cutoff) {
+      this.dodgeTimestamps.shift();
+    }
+    this.maxKeysPerSecond = Math.max(this.maxKeysPerSecond, this.dodgeTimestamps.length);
+
     if (this.recording) {
       this.recording.events.push({
         frame: this.recording.frameCount,
@@ -753,7 +772,8 @@ export class App {
       this.lastTime = now;
 
       if (this.sm.state === GameState.Playing) {
-        tick(this.world, dt);
+        const speedMult = getSkinSpeedMultiplier(this.activeSkinId);
+        tick(this.world, dt * speedMult);
         this.hud.updateScore(this.world.score);
 
         if (this.recording) {

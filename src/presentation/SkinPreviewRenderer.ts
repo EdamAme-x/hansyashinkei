@@ -1,7 +1,9 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer,
-  Mesh, SphereGeometry, BoxGeometry, OctahedronGeometry,
-  MeshStandardMaterial, AmbientLight, DirectionalLight, PointLight,
+  Mesh, LineSegments,
+  SphereGeometry, BoxGeometry, OctahedronGeometry, EdgesGeometry,
+  MeshStandardMaterial, LineBasicMaterial,
+  AmbientLight, DirectionalLight, PointLight,
   Color, NoToneMapping,
 } from "three";
 import type { AchievementSkin } from "@domain/entities/Achievement";
@@ -85,6 +87,15 @@ export function renderSkinPreview(skin: AchievementSkin): string {
   // Slight tilt for visual interest
   mesh.rotation.set(0.15, -0.4, 0.1);
   scene.add(mesh);
+
+  // Wireframe edges for non-sphere shapes
+  if (skin.shape !== "sphere") {
+    const edgeGeo = new EdgesGeometry(geo);
+    const edgeMat = new LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+    const edges = new LineSegments(edgeGeo, edgeMat);
+    edges.rotation.copy(mesh.rotation);
+    scene.add(edges);
+  }
 
   renderer.render(scene, camera);
   const dataUrl = renderer.domElement.toDataURL("image/png");

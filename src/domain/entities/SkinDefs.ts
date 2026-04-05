@@ -191,8 +191,52 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
     glowColor: 0x000000, glowIntensity: 0,
     pulseSpeed: 0,
   }),
+
+  // ADHD — speed x2 skin
+  S({
+    id: "skin_adhd",
+    label: "ADHD",
+    description: "装備すると速度2倍",
+    shape: "sphere",
+    color: 0xe8e020, metalness: 0.5, roughness: 0.15,
+    emissiveColor: 0x302800, emissiveIntensity: 0.6,
+    glowColor: 0xffee40, glowIntensity: 2.5,
+    pulseSpeed: 8.0,
+  }),
+
+  // Hyper ADHD — speed x3 skin
+  S({
+    id: "skin_hyper_adhd",
+    label: "HYPER ADHD",
+    description: "装備すると速度3倍",
+    shape: "sphere",
+    color: 0xff2020, metalness: 0.4, roughness: 0.2,
+    emissiveColor: 0x400000, emissiveIntensity: 0.8,
+    glowColor: 0xff4040, glowIntensity: 3.0,
+    pulseSpeed: 12.0,
+  }),
+
+  // ULTRA LUCKYBOY — speed x5 skin
+  S({
+    id: "skin_luckyboy",
+    label: "LUCKYBOY",
+    description: "装備すると速度5倍",
+    shape: "spiky",
+    color: 0xff00ff, metalness: 0.8, roughness: 0.05,
+    emissiveColor: 0x300030, emissiveIntensity: 1.0,
+    glowColor: 0xff44ff, glowIntensity: 3.5,
+    pulseSpeed: 15.0,
+  }),
 ];
 
 export function getSkinDef(id: string): AchievementSkin {
   return SKIN_DEFS.find((s) => s.id === id) ?? SKIN_DEFS[0];
+}
+
+/** Speed multiplier for special skins. Returns 1 for normal skins. */
+export function getSkinSpeedMultiplier(id: string): number {
+  if (id === "skin_adhd") return 2;
+  if (id === "skin_hyper_adhd") return 3;
+  if (id === "skin_luckyboy") return 5;
+  return 1;
 }

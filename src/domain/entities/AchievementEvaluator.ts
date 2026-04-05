@@ -9,6 +9,8 @@ export interface EvalContext {
   readonly newScore: Score;
   /** IDs of achievements already unlocked. */
   readonly alreadyUnlocked: ReadonlySet<string>;
+  /** Max dodge key presses per second during this game (for rapid_keys condition). */
+  readonly maxKeysPerSecond?: number;
 }
 
 export interface EvalResult {
@@ -82,6 +84,17 @@ function checkCondition(def: AchievementDef, ctx: EvalContext): EvalResult | nul
     case "exact_score": {
       if (newScore.value !== condition.value) return null;
       return scoreResult(def.id, newScore, condition.type, newScore.value);
+    }
+
+    case "rapid_keys": {
+      const kps = ctx.maxKeysPerSecond ?? 0;
+      if (kps < condition.keysPerSecond) return null;
+      return scoreResult(def.id, newScore, condition.type, kps);
+    }
+
+    case "random_chance": {
+      if (Math.random() * condition.denominator >= 1) return null;
+      return scoreResult(def.id, newScore, condition.type, 1);
     }
   }
 }

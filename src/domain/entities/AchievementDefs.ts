@@ -144,6 +144,32 @@ export const ACHIEVEMENT_DEFS: readonly AchievementDef[] = [
     rewardSkinId: "skin_invisible",
     hidden: true,
   },
+
+  // ── Rapid key presses (hidden) ──
+  {
+    id: "adhd",
+    label: "THE ADHD",
+    description: "1秒間に3回以上キーを押してから死ぬ",
+    condition: { type: "rapid_keys", keysPerSecond: 3 },
+    rewardSkinId: "skin_adhd",
+    hidden: true,
+  },
+  {
+    id: "hyper_adhd",
+    label: "HYPER ADHD",
+    description: "1秒間に7回以上キーを押してから死ぬ",
+    condition: { type: "rapid_keys", keysPerSecond: 7 },
+    rewardSkinId: "skin_hyper_adhd",
+    hidden: true,
+  },
+  {
+    id: "ultra_luckyboy",
+    label: "ULTRA LUCKYBOY",
+    description: "プレイ後に1/1000の確率で出現",
+    condition: { type: "random_chance", denominator: 1000 },
+    rewardSkinId: "skin_luckyboy",
+    hidden: true,
+  },
 ];
 
 export function getAchievementDef(id: string): AchievementDef | undefined {

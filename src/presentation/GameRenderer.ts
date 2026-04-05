@@ -32,6 +32,7 @@ export class GameRenderer {
   private laneOffset: number;
   private ballMeshes: Mesh[] = [];
   private ballGlows: PointLight[] = [];
+  private ballEdges: LineSegments[] = [];
   private readonly shards: Shard[] = [];
   private readonly shardGeometry: BoxGeometry;
   private readonly shardMaterial: MeshBasicMaterial;
@@ -106,8 +107,10 @@ export class GameRenderer {
     this.laneMeshes = [];
     for (const m of this.ballMeshes) this.adapter.remove(m);
     for (const g of this.ballGlows) this.adapter.remove(g);
+    for (const e of this.ballEdges) { this.adapter.remove(e); e.geometry.dispose(); (e.material as LineBasicMaterial).dispose(); }
     this.ballMeshes = [];
     this.ballGlows = [];
+    this.ballEdges = [];
 
     // Remove old walls
     this.clearWalls();
@@ -181,6 +184,19 @@ export class GameRenderer {
       glow.position.set(this.laneX(this.config.balls[i].homeLane), ballY + 0.4, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
+
+      // Wireframe edges for non-sphere shapes
+      const shape = aSkin?.shape ?? "sphere";
+      if (shape !== "sphere") {
+        const edgeGeo = new EdgesGeometry(geo);
+        const edgeMat = new LineBasicMaterial({ color: 0xffffff, linewidth: 1 });
+        edgeMat.transparent = true;
+        edgeMat.opacity = 0.6;
+        const edges = new LineSegments(edgeGeo, edgeMat);
+        edges.position.copy(mesh.position);
+        this.adapter.add(edges);
+        this.ballEdges.push(edges);
+      }
     }
   }
 
@@ -301,6 +317,16 @@ export class GameRenderer {
       mesh.position.x += (target - mesh.position.x) * 0.35;
       this.ballGlows[i].position.x = mesh.position.x;
     }
+    // Sync edge positions with ball meshes
+    for (const edge of this.ballEdges) {
+      // Find the closest ball mesh by Y (edges share the same Y as their ball)
+      for (const m of this.ballMeshes) {
+        if (Math.abs(edge.position.y - m.position.y) < 0.01) {
+          edge.position.x = m.position.x;
+          break;
+        }
+      }
+    }
 
     const activeIds = new Set<number>();
     for (const wall of world.walls) {
@@ -377,6 +403,7 @@ export class GameRenderer {
   showBalls(visible: boolean): void {
     for (const m of this.ballMeshes) m.visible = visible;
     for (const g of this.ballGlows) g.visible = visible;
+    for (const e of this.ballEdges) e.visible = visible;
   }
 
   explodeBall(ballIndex: number): void {
@@ -469,6 +496,10 @@ export class GameRenderer {
     this.activeSkin = skin;
     const { ballRadius } = this.config.render;
 
+    // Remove old edges
+    for (const e of this.ballEdges) { this.adapter.remove(e); e.geometry.dispose(); (e.material as LineBasicMaterial).dispose(); }
+    this.ballEdges = [];
+
     for (let i = 0; i < this.ballMeshes.length; i++) {
       const mesh = this.ballMeshes[i];
       const mat = mesh.material as MeshStandardMaterial;
@@ -496,6 +527,18 @@ export class GameRenderer {
         mesh.geometry = newGeo;
       } else {
         newGeo.dispose();
+      }
+
+      // Add wireframe edges for non-sphere shapes
+      if (skin.shape !== "sphere") {
+        const edgeGeo = new EdgesGeometry(mesh.geometry);
+        const edgeMat = new LineBasicMaterial({ color: 0xffffff, linewidth: 1 });
+        edgeMat.transparent = true;
+        edgeMat.opacity = 0.6;
+        const edges = new LineSegments(edgeGeo, edgeMat);
+        edges.position.copy(mesh.position);
+        this.adapter.add(edges);
+        this.ballEdges.push(edges);
       }
     }
     this.adapter.render();
