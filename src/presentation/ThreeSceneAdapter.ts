@@ -173,6 +173,7 @@ export class ThreeSceneAdapter {
 
   dispose(): void {
     if (this.bgTexture) this.bgTexture.dispose();
+    this.renderer.domElement.remove();
     this.renderer.dispose();
   }
 }
