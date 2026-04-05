@@ -41,6 +41,7 @@ export class GameRenderer {
   private readonly wallEdgesGeometry: EdgesGeometry;
   private readonly wallMaterial: MeshStandardMaterial;
   private readonly wallEdgesMaterial: LineBasicMaterial;
+  private wallTexGeneration = 0;
 
   constructor(container: HTMLElement, config: GameConfig, theme: ThemeConfig) {
     this.config = config;
@@ -271,10 +272,12 @@ export class GameRenderer {
     this.wallEdgesMaterial.color.set(s.wallEdgeColor);
 
     // Wall texture
+    const wallGen = ++this.wallTexGeneration;
     if (s.wallTextureUrl) {
       new TextureLoader().load(
         s.wallTextureUrl,
         (tex) => {
+          if (this.wallTexGeneration !== wallGen) { tex.dispose(); return; }
           tex.colorSpace = SRGBColorSpace;
           this.wallMaterial.map = tex;
           this.wallMaterial.color.set(0xffffff);

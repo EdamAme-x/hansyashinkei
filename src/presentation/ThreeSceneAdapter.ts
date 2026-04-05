@@ -70,6 +70,7 @@ export class ThreeSceneAdapter {
   readonly renderer: WebGLRenderer;
   private bgTexture: Texture | null = null;
   private bgSourceImg: HTMLImageElement | null = null;
+  private bgLoadGeneration = 0;
 
   constructor(container: HTMLElement, sceneTheme: SceneTheme) {
     this.scene = new Scene();
@@ -118,6 +119,8 @@ export class ThreeSceneAdapter {
   }
 
   applySceneTheme(sceneTheme: SceneTheme): void {
+    const gen = ++this.bgLoadGeneration;
+
     if (this.bgTexture) {
       this.bgTexture.dispose();
       this.bgTexture = null;
@@ -129,6 +132,11 @@ export class ThreeSceneAdapter {
       this.scene.background = new Color(sceneTheme.fogColor);
 
       new TextureLoader().load(url, (rawTex) => {
+        // Guard: ignore stale loads if theme was changed again since this load started
+        if (this.bgLoadGeneration !== gen) {
+          rawTex.dispose();
+          return;
+        }
         rawTex.colorSpace = SRGBColorSpace;
         this.bgSourceImg = rawTex.image as HTMLImageElement;
 
