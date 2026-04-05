@@ -455,17 +455,21 @@ export class App {
           this.sm.dispatch(GameEvent.Restart);
           return;
         }
-        if (e.code === "Backspace") {
+        if (e.code === "Escape" || e.code === "Backspace") {
+          this.sm.dispatch(GameEvent.BackToTitle);
+          return;
+        }
+      }
+
+      if (this.sm.state === GameState.Playing || this.sm.state === GameState.Watching) {
+        if (e.code === "Escape" || e.code === "Backspace") {
+          this.replayController?.stop();
           this.sm.dispatch(GameEvent.BackToTitle);
           return;
         }
       }
 
       if (this.sm.state === GameState.Playing) {
-        if (e.code === "Escape" || e.code === "Backspace") {
-          this.sm.dispatch(GameEvent.BackToTitle);
-          return;
-        }
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
             this.recordDodge(binding.ballIndex);
