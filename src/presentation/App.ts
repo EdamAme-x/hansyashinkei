@@ -282,6 +282,7 @@ export class App {
 
   setMode(mode: GameMode): void {
     if (this.activeMode === mode) return;
+    if (this.sm.state !== GameState.Title) return;
     this.activeMode = mode;
     this.modeRepo.save(mode);
 
@@ -391,7 +392,9 @@ export class App {
     const keysEl = document.getElementById("title-keys");
 
     if (this.isTouchOnly) {
-      if (keysEl) keysEl.textContent = "TAP LEFT / RIGHT";
+      if (keysEl) keysEl.textContent = this.activeMode === "triple"
+        ? "TAP LEFT / MID / RIGHT"
+        : "TAP LEFT / RIGHT";
     } else if (this.activeMode === "triple") {
       const leftCodes = this.inputConfig.dodge
         .filter((b) => b.ballIndex === 0)
@@ -502,12 +505,20 @@ export class App {
       }
     });
 
-    // Touch — left half = ballIndex 0, right half = ballIndex 1
+    // Touch zones: classic = 2 zones (left/right), triple = 3 zones (left/mid/right)
     const activeTouches = new Map<number, number>(); // touchId → ballIndex
     const zoneLeft = document.getElementById("touch-zone-left");
     const zoneRight = document.getElementById("touch-zone-right");
 
-    const touchSide = (x: number): number => (x < window.innerWidth / 2) ? 0 : 1;
+    const touchZone = (x: number): number => {
+      const w = window.innerWidth;
+      if (this.activeMode === "triple") {
+        if (x < w / 3) return 0;       // left
+        if (x < (w * 2) / 3) return 2; // middle (ballIndex 2)
+        return 1;                       // right (ballIndex 1)
+      }
+      return x < w / 2 ? 0 : 1;
+    };
 
     const updateZones = (): void => {
       const sides = new Set(activeTouches.values());
@@ -521,7 +532,7 @@ export class App {
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const ballIndex = touchSide(touch.clientX);
+        const ballIndex = touchZone(touch.clientX);
         activeTouches.set(touch.identifier, ballIndex);
         this.recordDodge(ballIndex);
       }
