@@ -482,6 +482,9 @@ export class GameRenderer {
       this.ballGlows[i].color.set(skin.glowColor);
       this.ballGlows[i].intensity = skin.glowIntensity;
 
+      // Update shard color to match skin
+      this.shardMaterial.color.set(skin.glowColor);
+
       // Swap geometry if shape changed
       const newGeo = createBallGeometry(skin.shape, ballRadius);
       if (mesh.geometry.type !== newGeo.type || shapeKey(skin.shape) !== shapeKey(currentShape(mesh))) {
