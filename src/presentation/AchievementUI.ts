@@ -104,7 +104,7 @@ export class AchievementUI {
 
       const desc = document.createElement("div");
       desc.className = "ach-desc";
-      desc.textContent = unlocked || !def.hidden ? def.description : "Hidden achievement";
+      desc.textContent = unlocked || !def.hidden ? def.description : "隠し実績";
 
       const meta = document.createElement("div");
       meta.className = "ach-meta";
@@ -173,7 +173,7 @@ export class AchievementUI {
 
     const desc = document.createElement("div");
     desc.className = "ach-desc";
-    desc.textContent = "Standard ball";
+    desc.textContent = "標準ボール";
 
     const meta = document.createElement("div");
     meta.className = "ach-meta";

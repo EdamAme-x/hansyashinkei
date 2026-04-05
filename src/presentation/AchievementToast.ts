@@ -31,7 +31,7 @@ export class AchievementToast {
 
     const skin = document.createElement("div");
     skin.className = "achievement-toast-skin";
-    skin.textContent = "+ SKIN UNLOCKED";
+    skin.textContent = "+ SKIN 解除";
 
     toast.appendChild(title);
     toast.appendChild(label);

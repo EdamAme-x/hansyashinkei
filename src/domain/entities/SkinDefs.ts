@@ -8,7 +8,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_default",
     label: "DEFAULT",
-    description: "Standard ball",
+    description: "標準ボール",
     shape: "sphere",
     color: 0xdddddd, metalness: 0.4, roughness: 0.15,
     emissiveColor: 0x000000, emissiveIntensity: 0,
@@ -18,7 +18,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_crimson",
     label: "CRIMSON",
-    description: "Deep red sphere",
+    description: "深紅の球体",
     shape: "sphere",
     color: 0xcc2222, metalness: 0.3, roughness: 0.2,
     emissiveColor: 0x330000, emissiveIntensity: 0.3,
@@ -28,7 +28,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_gold",
     label: "GOLD",
-    description: "Shiny gold",
+    description: "輝く黄金",
     shape: "sphere",
     color: 0xffd700, metalness: 0.9, roughness: 0.05,
     emissiveColor: 0x332200, emissiveIntensity: 0.15,
@@ -38,7 +38,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_cobalt",
     label: "COBALT",
-    description: "Cobalt blue",
+    description: "コバルトブルー",
     shape: "sphere",
     color: 0x1155cc, metalness: 0.5, roughness: 0.1,
     emissiveColor: 0x001133, emissiveIntensity: 0.2,
@@ -48,7 +48,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_plasma",
     label: "PLASMA",
-    description: "Pulsing plasma energy",
+    description: "脈動するプラズマエネルギー",
     shape: "sphere",
     color: 0x9933ff, metalness: 0.2, roughness: 0.3,
     emissiveColor: 0x220044, emissiveIntensity: 0.5,
@@ -58,7 +58,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_aurora",
     label: "AURORA",
-    description: "Aurora shimmer",
+    description: "オーロラの輝き",
     shape: "sphere",
     color: 0x00ffcc, metalness: 0.4, roughness: 0.2,
     emissiveColor: 0x002211, emissiveIntensity: 0.4,
@@ -68,7 +68,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_jade",
     label: "JADE",
-    description: "Jade stone",
+    description: "翡翠の原石",
     shape: "sphere",
     color: 0x00aa66, metalness: 0.6, roughness: 0.12,
     emissiveColor: 0x001100, emissiveIntensity: 0.2,
@@ -78,7 +78,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_chrome",
     label: "CHROME",
-    description: "Mirror chrome",
+    description: "鏡面クローム",
     shape: "sphere",
     color: 0xeeeeee, metalness: 1.0, roughness: 0.02,
     emissiveColor: 0x000000, emissiveIntensity: 0,
@@ -88,7 +88,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_fire",
     label: "FIRE",
-    description: "Blazing fireball",
+    description: "燃え盛る炎球",
     shape: "sphere",
     color: 0xff4400, metalness: 0.1, roughness: 0.4,
     emissiveColor: 0x441100, emissiveIntensity: 0.8,
@@ -98,7 +98,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_cube",
     label: "CUBE",
-    description: "A cube, not a sphere",
+    description: "球ではなく、キューブ",
     shape: "cube",
     color: 0x888888, metalness: 0.7, roughness: 0.2,
     emissiveColor: 0x000000, emissiveIntensity: 0,
@@ -108,7 +108,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_neon",
     label: "NEON",
-    description: "Neon glow in the dark",
+    description: "暗闇で光るネオン",
     shape: "sphere",
     color: 0x111111, metalness: 0.0, roughness: 0.9,
     emissiveColor: 0x00ff44, emissiveIntensity: 1.0,
@@ -118,7 +118,7 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
   S({
     id: "skin_obsidian",
     label: "OBSIDIAN",
-    description: "Proof of legend",
+    description: "伝説の証",
     shape: "spiky",
     color: 0x0a0a12, metalness: 0.95, roughness: 0.01,
     emissiveColor: 0x110022, emissiveIntensity: 0.6,
