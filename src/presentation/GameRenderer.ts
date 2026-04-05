@@ -480,6 +480,7 @@ export class GameRenderer {
       const invisible = skin.id === "skin_invisible";
       mat.transparent = invisible;
       mat.opacity = invisible ? 0 : 1;
+      mat.depthWrite = !invisible;
       mat.needsUpdate = true;
 
       this.ballGlows[i].color.set(skin.glowColor);

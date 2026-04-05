@@ -32,26 +32,30 @@ export function renderSkinPreview(skin: AchievementSkin): string {
   camera.position.set(0, 0.3, 2.8);
   camera.lookAt(0, 0, 0);
 
-  // Lighting — key, fill, rim for gem-like reflections
-  const ambient = new AmbientLight(0xffffff, 0.35);
+  // Lighting — key, fill, rim, back for gem-like reflections
+  const ambient = new AmbientLight(0xffffff, 0.25);
   scene.add(ambient);
 
-  const key = new DirectionalLight(0xffffff, 1.2);
-  key.position.set(2, 3, 2);
+  const key = new DirectionalLight(0xffffff, 1.4);
+  key.position.set(1.5, 2.5, 3);
   scene.add(key);
 
-  const fill = new DirectionalLight(0x8888ff, 0.4);
-  fill.position.set(-2, 1, 1);
+  const fill = new DirectionalLight(0x6688cc, 0.5);
+  fill.position.set(-3, 0.5, 1);
   scene.add(fill);
 
-  const rim = new DirectionalLight(0xffffff, 0.6);
-  rim.position.set(0, -1, -2);
+  const rim = new DirectionalLight(0xffffff, 0.8);
+  rim.position.set(0.5, -1, -3);
   scene.add(rim);
 
-  // Glow point light
+  const top = new DirectionalLight(0xffffff, 0.3);
+  top.position.set(0, 4, 0);
+  scene.add(top);
+
+  // Glow point light matching skin color
   if (skin.glowIntensity > 0) {
-    const glow = new PointLight(skin.glowColor, skin.glowIntensity * 0.6, 5);
-    glow.position.set(0, 0.5, 1);
+    const glow = new PointLight(skin.glowColor, skin.glowIntensity * 0.5, 6);
+    glow.position.set(0.5, 0.5, 1.5);
     scene.add(glow);
   }
 
@@ -71,13 +75,10 @@ export function renderSkinPreview(skin: AchievementSkin): string {
     envMapIntensity: 1.5,
   });
 
-  // Handle invisible skin
+  // Handle invisible skin — fully transparent, just a faint outline
   if (skin.id === "skin_invisible") {
     mat.transparent = true;
-    mat.opacity = 0.08;
-    mat.color.set(0x444444);
-    mat.emissive.set(0x222222);
-    mat.emissiveIntensity = 0.3;
+    mat.opacity = 0;
   }
 
   const mesh = new Mesh(geo, mat);
