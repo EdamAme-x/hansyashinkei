@@ -1,5 +1,6 @@
 import type { InputConfig } from "./InputConfig";
 import { saveInputConfig, codeToLabel, createDefaultInputConfig } from "./InputConfig";
+import type { KVStore } from "@domain/repositories/KVStore";
 import { el } from "./dom";
 
 // slot: "left-1", "left-2", "right-1", "right-2"
@@ -18,6 +19,7 @@ export class KeybindUI {
   private readonly closeBtn = el("keybind-close");
 
   private config: InputConfig;
+  private readonly kv: KVStore;
   private readonly onUpdate: (config: InputConfig) => void;
   private readonly onClose: () => void;
   private listeningSlot: Slot | null = null;
@@ -28,10 +30,12 @@ export class KeybindUI {
 
   constructor(
     config: InputConfig,
+    kv: KVStore,
     onUpdate: (config: InputConfig) => void,
     onClose: () => void,
   ) {
     this.config = config;
+    this.kv = kv;
     this.onUpdate = onUpdate;
     this.onClose = onClose;
 
@@ -113,7 +117,7 @@ export class KeybindUI {
         this.config.dodge.push({ code: e.code, ballIndex: slot.ballIndex });
       }
 
-      saveInputConfig(this.config);
+      saveInputConfig(this.kv, this.config);
       this.onUpdate(this.config);
       this.stopListening();
     };
@@ -132,7 +136,7 @@ export class KeybindUI {
 
   private resetToDefault(): void {
     this.config = createDefaultInputConfig();
-    saveInputConfig(this.config);
+    saveInputConfig(this.kv, this.config);
     this.onUpdate(this.config);
     this.render();
   }

@@ -20,6 +20,8 @@ import { AudioManager } from "./AudioManager";
 import type { ThemeManager } from "./ThemeManager";
 import { ThemeUI } from "./ThemeUI";
 import type { IImageStore } from "@domain/repositories/ImageStore";
+import type { ModeRepository } from "@domain/repositories/ModeRepository";
+import type { KVStore } from "@domain/repositories/KVStore";
 import type { ManageSave } from "@application/usecases/ManageSave";
 import { downloadBlob } from "./dom";
 
@@ -42,6 +44,7 @@ export class App {
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
+  private readonly modeRepo: ModeRepository;
   private readonly _classicConfig: GameConfig;
   private activeMode: GameMode = "classic";
   private inputConfig: InputConfig;
@@ -70,18 +73,22 @@ export class App {
     themeManager: ThemeManager,
     imageStore: IImageStore,
     manageSave: ManageSave,
+    modeRepo: ModeRepository,
+    kv: KVStore,
   ) {
     const theme = themeManager.current;
     this._classicConfig = gameConfig;
+    this.modeRepo = modeRepo;
+    this.activeMode = modeRepo.load();
     this.inputConfig = inputConfig;
-    this.renderer = new GameRenderer(container, gameConfig, theme);
-    this.audio = new AudioManager(theme.audio);
+    this.renderer = new GameRenderer(container, this.gameConfig, theme);
+    this.audio = new AudioManager(theme.audio, kv);
     this.hud = new HUD();
     this.manageSave = manageSave;
     this.manageScore = manageScore;
     this.manageReplay = manageReplay;
     this.bestScoreRepo = bestScoreRepo;
-    this.world = createGameWorld(gameConfig, mulberry32(generateSeed()));
+    this.world = createGameWorld(this.gameConfig, mulberry32(generateSeed()));
 
     this.historyUI = new HistoryUI(
       manageReplay,
@@ -91,6 +98,7 @@ export class App {
 
     this.keybindUI = new KeybindUI(
       inputConfig,
+      kv,
       (updated) => {
         this.inputConfig = updated;
         this.updateKeyHints();
@@ -113,6 +121,8 @@ export class App {
     this.setupTitleButtons();
     this.hud.show(GameState.Title);
     this.updateKeyHints();
+    document.getElementById("mode-classic")?.classList.toggle("active", this.activeMode === "classic");
+    document.getElementById("mode-triple")?.classList.toggle("active", this.activeMode === "triple");
     this.startLoop();
     this.loadBestScore(this.activeMode).catch(() => {});
   }
@@ -273,6 +283,7 @@ export class App {
   setMode(mode: GameMode): void {
     if (this.activeMode === mode) return;
     this.activeMode = mode;
+    this.modeRepo.save(mode);
 
     // Reconfigure renderer in-place (no canvas replacement)
     this.renderer.reconfigure(this.gameConfig);

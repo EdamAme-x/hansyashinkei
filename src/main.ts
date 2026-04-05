@@ -14,6 +14,8 @@ import { createDefaultConfig } from "@domain/entities/GameConfig";
 import { applyDevParams } from "@infrastructure/dev/DevParams";
 import { loadInputConfig, saveInputConfig } from "@presentation/InputConfig";
 import { ThemeManager } from "@presentation/ThemeManager";
+import { LocalStorageModeRepository } from "@infrastructure/storage/LocalStorageModeRepository";
+import { EncryptedLocalStorage } from "@infrastructure/crypto/EncryptedLocalStorage";
 
 async function main() {
   const container = document.getElementById("app");
@@ -29,7 +31,9 @@ async function main() {
   const replaySerializer = new ReplayFileSerializer();
   const manageReplay = new ManageReplay(replayRepo, replaySerializer, 20);
 
-  const themeRepo = new ThemeRepository();
+  const kv = new EncryptedLocalStorage();
+
+  const themeRepo = new ThemeRepository(kv);
   const imageStore = new ImageStore();
   const themeManager = new ThemeManager(themeRepo, imageStore);
   await themeManager.init();
@@ -47,19 +51,20 @@ async function main() {
       }),
       saveImage: async (key, url) => { await imageStore.save(key, dataUrlToFile(url)); },
       removeImage: (key) => imageStore.remove(key),
-      loadKeybinds: () => loadInputConfig().dodge.map((b) => ({ code: b.code, ballIndex: b.ballIndex })),
-      saveKeybinds: (binds) => saveInputConfig({ dodge: binds, start: ["Space", "Enter"] }),
-      loadAudioEnabled: () => localStorage.getItem("hs-audio") !== "0",
-      saveAudioEnabled: (v) => localStorage.setItem("hs-audio", v ? "1" : "0"),
+      loadKeybinds: () => loadInputConfig(kv).dodge.map((b) => ({ code: b.code, ballIndex: b.ballIndex })),
+      saveKeybinds: (binds) => saveInputConfig(kv, { dodge: binds, start: ["Space", "Enter"] }),
+      loadAudioEnabled: () => kv.get("hs-audio") !== "0",
+      saveAudioEnabled: (v) => kv.set("hs-audio", v ? "1" : "0"),
     },
     new SaveFileSerializer(),
   );
 
   const gameConfig = createDefaultConfig();
-  const inputConfig = loadInputConfig();
+  const inputConfig = loadInputConfig(kv);
   applyDevParams(gameConfig, inputConfig);
 
-  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore, manageSave);
+  const modeRepo = new LocalStorageModeRepository(kv);
+  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore, manageSave, modeRepo, kv);
 }
 
 function dataUrlToFile(dataUrl: string): File {

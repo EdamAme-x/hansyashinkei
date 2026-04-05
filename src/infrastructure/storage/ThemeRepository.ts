@@ -1,14 +1,17 @@
 import type { ThemeConfig, CustomThemeOverrides } from "@domain/entities/ThemeConfig";
 import { createDefaultTheme, getBuiltinThemes, createEmptyOverrides, applyOverrides } from "@domain/entities/ThemeConfig";
 import type { IThemeRepository } from "@domain/repositories/ThemeRepository";
+import type { KVStore } from "@domain/repositories/KVStore";
 
 const THEME_KEY = "hs-theme";
 const OVERRIDES_KEY = "hs-theme-overrides";
 
 export class ThemeRepository implements IThemeRepository {
+  constructor(private readonly kv: KVStore) {}
+
   loadThemeId(): string {
     try {
-      const raw = localStorage.getItem(THEME_KEY);
+      const raw = this.kv.get(THEME_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as { id?: string };
         if (typeof parsed.id === "string") return parsed.id;
@@ -25,7 +28,7 @@ export class ThemeRepository implements IThemeRepository {
   }
 
   saveThemeId(id: string): void {
-    localStorage.setItem(THEME_KEY, JSON.stringify({ id }));
+    this.kv.set(THEME_KEY, JSON.stringify({ id }));
   }
 
   save(theme: ThemeConfig): void {
@@ -34,13 +37,13 @@ export class ThemeRepository implements IThemeRepository {
 
   loadOverrides(): CustomThemeOverrides {
     try {
-      const raw = localStorage.getItem(OVERRIDES_KEY);
+      const raw = this.kv.get(OVERRIDES_KEY);
       if (raw) return { ...createEmptyOverrides(), ...JSON.parse(raw) };
     } catch { /* ignore */ }
     return createEmptyOverrides();
   }
 
   saveOverrides(overrides: CustomThemeOverrides): void {
-    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+    this.kv.set(OVERRIDES_KEY, JSON.stringify(overrides));
   }
 }

@@ -1,14 +1,17 @@
 import type { AudioTheme } from "@domain/entities/ThemeConfig";
+import type { KVStore } from "@domain/repositories/KVStore";
 
 const STORAGE_KEY = "hs-audio";
 
 export class AudioManager {
   private readonly audio: AudioTheme;
+  private readonly kv: KVStore;
   private bgm: HTMLAudioElement | null = null;
   private _enabled: boolean;
 
-  constructor(audioTheme: AudioTheme) {
+  constructor(audioTheme: AudioTheme, kv: KVStore) {
     this.audio = audioTheme;
+    this.kv = kv;
     this._enabled = this.loadPref();
   }
 
@@ -18,7 +21,7 @@ export class AudioManager {
 
   toggle(): boolean {
     this._enabled = !this._enabled;
-    localStorage.setItem(STORAGE_KEY, this._enabled ? "1" : "0");
+    this.kv.set(STORAGE_KEY, this._enabled ? "1" : "0");
 
     if (!this._enabled) {
       this.stopBgm();
@@ -73,7 +76,7 @@ export class AudioManager {
   }
 
   private loadPref(): boolean {
-    const v = localStorage.getItem(STORAGE_KEY);
+    const v = this.kv.get(STORAGE_KEY);
     return v !== "0";
   }
 }

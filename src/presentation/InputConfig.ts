@@ -1,5 +1,6 @@
 export type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
 import type { InputBinding, InputConfig } from "@domain/entities/InputConfig";
+import type { KVStore } from "@domain/repositories/KVStore";
 
 const STORAGE_KEY = "hs-keybinds";
 
@@ -14,13 +15,12 @@ const DEFAULT_DODGE: InputBinding[] = [
 
 const DEFAULT_START = ["Space", "Enter"];
 
-export function loadInputConfig(): InputConfig {
+export function loadInputConfig(kv: KVStore): InputConfig {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = kv.get(STORAGE_KEY);
     if (raw) {
       const saved = JSON.parse(raw) as { dodge?: InputBinding[] };
       if (Array.isArray(saved.dodge) && saved.dodge.length > 0) {
-        // Merge: keep saved bindings, add default ones that aren't present
         const codes = new Set(saved.dodge.map((b) => b.code));
         const merged = [...saved.dodge];
         for (const def of DEFAULT_DODGE) {
@@ -37,8 +37,8 @@ export function loadInputConfig(): InputConfig {
   return createDefaultInputConfig();
 }
 
-export function saveInputConfig(config: InputConfig): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ dodge: config.dodge }));
+export function saveInputConfig(kv: KVStore, config: InputConfig): void {
+  kv.set(STORAGE_KEY, JSON.stringify({ dodge: config.dodge }));
 }
 
 export function createDefaultInputConfig(): InputConfig {
