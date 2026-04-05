@@ -142,13 +142,8 @@ export class App {
     const classicBest = classicRecord?.score ?? 0;
     const tripleBest = tripleRecord?.score ?? 0;
 
-    if (classicBest === 0 && tripleBest === 0) {
-      this.hud.updateTitleBest(0);
-    } else if (classicBest >= tripleBest) {
-      this.hud.updateTitleBest(classicBest, classicBest > 0 ? "CLASSIC" : undefined);
-    } else {
-      this.hud.updateTitleBest(tripleBest, "TRIPLE");
-    }
+    const best = Math.max(classicBest, tripleBest);
+    this.hud.updateTitleBest(best);
   }
 
   private persistBestScore(): void {
