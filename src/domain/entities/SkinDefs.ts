@@ -132,9 +132,9 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
     label: "CUBE",
     description: "球ではなく、キューブ",
     shape: "cube",
-    color: 0x404050, metalness: 0.85, roughness: 0.08,
-    emissiveColor: 0x080810, emissiveIntensity: 0.08,
-    glowColor: 0x8888aa, glowIntensity: 0.9,
+    color: 0x8090a0, metalness: 0.8, roughness: 0.06,
+    emissiveColor: 0x101820, emissiveIntensity: 0.15,
+    glowColor: 0xa0b0c0, glowIntensity: 1.1,
     pulseSpeed: 0,
   }),
 
