@@ -144,6 +144,7 @@ export class App {
 
     this.setupInput();
     this.setupResize();
+    this.setupCursor();
     this.setupTitleButtons();
     this.hud.show(GameState.Title);
     this.updateKeyHints();
@@ -483,6 +484,64 @@ export class App {
       timer = window.setTimeout(() => {
         this.renderer.resize(window.innerWidth, window.innerHeight);
       }, 100);
+    });
+  }
+
+  private setupCursor(): void {
+    const cursor = document.getElementById("custom-cursor");
+    if (!cursor || this.isTouchOnly) return;
+
+    const TRAIL_COUNT = 8;
+    const trails: HTMLElement[] = [];
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      const t = document.createElement("div");
+      t.className = "cursor-trail";
+      t.style.opacity = "0";
+      document.body.appendChild(t);
+      trails.push(t);
+    }
+
+    let mx = -100;
+    let my = -100;
+    const positions: { x: number; y: number }[] = Array.from(
+      { length: TRAIL_COUNT },
+      () => ({ x: -100, y: -100 }),
+    );
+
+    window.addEventListener("mousemove", (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+      cursor.style.left = `${mx}px`;
+      cursor.style.top = `${my}px`;
+    });
+
+    const animateTrails = () => {
+      for (let i = trails.length - 1; i > 0; i--) {
+        positions[i].x = positions[i - 1].x;
+        positions[i].y = positions[i - 1].y;
+      }
+      positions[0].x = mx;
+      positions[0].y = my;
+
+      for (let i = 0; i < trails.length; i++) {
+        const t = trails[i];
+        const p = positions[i];
+        t.style.left = `${p.x}px`;
+        t.style.top = `${p.y}px`;
+        const alpha = 0.35 * (1 - i / trails.length);
+        const scale = 1 - i * 0.08;
+        t.style.opacity = String(alpha);
+        t.style.transform = `translate(-50%,-50%) scale(${scale})`;
+      }
+      requestAnimationFrame(animateTrails);
+    };
+    requestAnimationFrame(animateTrails);
+
+    // Hide cursor during gameplay
+    this.sm.onStateChange((_prev, next) => {
+      const hide = next === GameState.Playing;
+      cursor.classList.toggle("hide", hide);
+      for (const t of trails) t.style.opacity = hide ? "0" : t.style.opacity;
     });
   }
 
