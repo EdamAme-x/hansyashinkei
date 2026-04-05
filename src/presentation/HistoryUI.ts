@@ -3,12 +3,7 @@ import type { GameMode } from "@domain/entities/GameMode";
 import type { Replay } from "@domain/entities/Replay";
 import type { ManageReplay } from "@application/usecases/ManageReplay";
 import type { ManageScore } from "@application/usecases/ManageScore";
-
-function el(id: string): HTMLElement {
-  const e = document.getElementById(id);
-  if (!e) throw new Error(`Missing element #${id}`);
-  return e;
-}
+import { el, downloadBlob } from "./dom";
 
 type HistoryTab = GameMode | "all";
 
@@ -188,13 +183,7 @@ export class HistoryUI {
 
   private downloadReplay(replay: Replay): void {
     const data = this.manageReplay.exportReplay(replay);
-    const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `replay-${replay.finalScore}-${replay.id.slice(0, 8)}.hsr`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Uint8Array(data), `replay-${replay.finalScore}-${replay.id.slice(0, 8)}.hsr`);
   }
 
   private async handleImport(): Promise<void> {

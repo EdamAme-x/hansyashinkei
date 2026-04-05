@@ -1,11 +1,6 @@
 import type { ThemeManager } from "./ThemeManager";
 import type { IImageStore } from "@domain/repositories/ImageStore";
-
-function el(id: string): HTMLElement {
-  const e = document.getElementById(id);
-  if (!e) throw new Error(`Missing element #${id}`);
-  return e;
-}
+import { el } from "./dom";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve) => {

@@ -6,11 +6,8 @@ import { SAVE_VERSION, isSaveData, canMigrate, migrate } from "@domain/entities/
 import type { CustomThemeOverrides } from "@domain/entities/ThemeConfig";
 import { createEmptyOverrides } from "@domain/entities/ThemeConfig";
 import type { GameMode } from "@domain/entities/GameMode";
-
-export interface SaveSerializer {
-  encode(data: SaveData): Uint8Array;
-  decode(raw: Uint8Array): SaveData | null;
-}
+import type { SaveSerializer } from "@domain/repositories/SaveSerializer";
+export type { SaveSerializer } from "@domain/repositories/SaveSerializer";
 
 export interface SaveExternals {
   scoreRepo: ScoreRepository;

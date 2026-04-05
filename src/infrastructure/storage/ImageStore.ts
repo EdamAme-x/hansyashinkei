@@ -8,7 +8,9 @@ const MAX_SIZE = 1024;
 function optimizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
       let w = img.width;
       let h = img.height;
 
@@ -30,8 +32,11 @@ function optimizeImage(file: File): Promise<string> {
 
       resolve(canvas.toDataURL("image/webp", 0.85));
     };
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = objectUrl;
   });
 }
 

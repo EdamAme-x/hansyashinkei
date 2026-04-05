@@ -16,7 +16,7 @@ const SHARD_COUNT = 24;
 const SHARD_LIFETIME = 1.2;
 
 interface Shard {
-  mesh: Mesh;
+  mesh: Mesh<BoxGeometry, MeshBasicMaterial>;
   velocity: Vector3;
   life: number;
 }
@@ -417,7 +417,7 @@ export class GameRenderer {
         shard.mesh.rotation.z += dt * 3;
 
         const t = Math.max(0, shard.life / SHARD_LIFETIME);
-        (shard.mesh.material as MeshBasicMaterial).opacity = t * 0.8;
+        shard.mesh.material.opacity = t * 0.8;
         shard.mesh.scale.setScalar(shard.mesh.scale.x * (0.98 + 0.02 * t));
       }
 
@@ -437,7 +437,7 @@ export class GameRenderer {
     cancelAnimationFrame(this.deathAnimId);
     for (const shard of this.shards) {
       this.adapter.remove(shard.mesh);
-      (shard.mesh.material as MeshBasicMaterial).dispose();
+      shard.mesh.material.dispose();
     }
     this.shards.length = 0;
   }

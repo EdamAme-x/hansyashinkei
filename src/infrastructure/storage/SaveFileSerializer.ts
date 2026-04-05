@@ -2,7 +2,7 @@ import { encode, decode } from "cbor-x";
 import { deflate, inflate } from "pako";
 import type { SaveData } from "@domain/entities/SaveData";
 import { isSaveData } from "@domain/entities/SaveData";
-import type { SaveSerializer } from "@application/usecases/ManageSave";
+import type { SaveSerializer } from "@domain/repositories/SaveSerializer";
 
 export class SaveFileSerializer implements SaveSerializer {
   encode(data: SaveData): Uint8Array {

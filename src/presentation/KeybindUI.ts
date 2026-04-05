@@ -1,11 +1,6 @@
 import type { InputConfig } from "./InputConfig";
 import { saveInputConfig, codeToLabel, createDefaultInputConfig } from "./InputConfig";
-
-function el(id: string): HTMLElement {
-  const e = document.getElementById(id);
-  if (!e) throw new Error(`Missing element #${id}`);
-  return e;
-}
+import { el } from "./dom";
 
 // slot: "left-1", "left-2", "right-1", "right-2"
 type Slot = { ballIndex: number; idx: number };

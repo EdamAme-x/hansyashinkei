@@ -1,11 +1,6 @@
 import type { GameState } from "@domain/entities/StateMachine";
 import { GameState as GS } from "@domain/entities/StateMachine";
-
-function el(id: string): HTMLElement {
-  const e = document.getElementById(id);
-  if (!e) throw new Error(`Missing element #${id}`);
-  return e;
-}
+import { el } from "./dom";
 
 const GAME_URL = "https://hs.evex.land";
 
@@ -50,6 +45,7 @@ export class HUD {
   }
 
   showSpeedUp(): void {
+    clearTimeout(this.speedUpTimer);
     this.speedUpDisplay.classList.remove("hidden");
     this.speedUpDisplay.style.animation = "none";
     void this.speedUpDisplay.offsetWidth;

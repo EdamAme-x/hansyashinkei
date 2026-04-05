@@ -21,6 +21,7 @@ import type { ThemeManager } from "./ThemeManager";
 import { ThemeUI } from "./ThemeUI";
 import type { IImageStore } from "@domain/repositories/ImageStore";
 import type { ManageSave } from "@application/usecases/ManageSave";
+import { downloadBlob } from "./dom";
 
 interface RecordingSession {
   seed: number;
@@ -157,58 +158,63 @@ export class App {
     this.hud.show(state);
     this.renderDirty = true;
 
-    if (state === GameState.Playing) {
-      const seed = generateSeed();
-      this.world = createGameWorld(this.gameConfig, mulberry32(seed));
-      this.lastTier = 0;
+    if (state === GameState.Playing) this.onEnterPlaying();
+    else if (state === GameState.GameOver) this.onEnterGameOver();
+    else if (state === GameState.Title) this.onEnterTitle();
+    else if (state === GameState.Watching) this.onEnterWatching();
+  }
 
-      this.recording = {
-        seed,
-        dts: [],
-        events: [],
-        frameCount: 0,
-      };
-      this.renderer.clearWalls();
-      this.renderer.clearShards();
-      this.renderer.showBalls(true);
-      this.hud.updateScore(0);
-      this.audio.playStart();
-      this.audio.startBgm();
-    }
+  private onEnterPlaying(): void {
+    const seed = generateSeed();
+    this.world = createGameWorld(this.gameConfig, mulberry32(seed));
+    this.lastTier = 0;
 
-    if (state === GameState.GameOver) {
-      // Explode the ball(s) that collided
-      for (let i = 0; i < this.world.balls.length; i++) {
-        for (const wall of this.world.walls) {
-          if (this.world.balls[i].lane === wall.lane) {
-            this.renderer.explodeBall(i);
-            break;
-          }
+    this.recording = {
+      seed,
+      dts: [],
+      events: [],
+      frameCount: 0,
+    };
+    this.renderer.clearWalls();
+    this.renderer.clearShards();
+    this.renderer.showBalls(true);
+    this.hud.updateScore(0);
+    this.audio.playStart();
+    this.audio.startBgm();
+  }
+
+  private onEnterGameOver(): void {
+    // Explode the ball(s) that collided
+    for (let i = 0; i < this.world.balls.length; i++) {
+      for (const wall of this.world.walls) {
+        if (this.world.balls[i].lane === wall.lane) {
+          this.renderer.explodeBall(i);
+          break;
         }
       }
-      this.audio.stopBgm();
-      this.audio.playDeath();
-      const isNewBest = this.world.score > this.bestScore;
-      if (isNewBest) {
-        this.bestScore = this.world.score;
-        this.audio.playNewBest();
-      }
-      this.hud.showGameOver(this.world.score, this.bestScore, isNewBest, this.gameConfig.balls.length);
-      this.saveRecording(isNewBest).catch(() => {});
     }
+    this.audio.stopBgm();
+    this.audio.playDeath();
+    const isNewBest = this.world.score > this.bestScore;
+    if (isNewBest) {
+      this.bestScore = this.world.score;
+      this.audio.playNewBest();
+    }
+    this.hud.showGameOver(this.world.score, this.bestScore, isNewBest, this.gameConfig.balls.length);
+    this.saveRecording(isNewBest).catch(() => {});
+  }
 
-    if (state === GameState.Title) {
-      this.audio.stopBgm();
-      this.renderer.clearWalls();
-      this.renderer.clearShards();
-      this.renderer.showBalls(true);
-      this.recording = null;
-      this.loadBestScore(this.activeMode).catch(() => {});
-    }
+  private onEnterTitle(): void {
+    this.audio.stopBgm();
+    this.renderer.clearWalls();
+    this.renderer.clearShards();
+    this.renderer.showBalls(true);
+    this.recording = null;
+    this.loadBestScore(this.activeMode).catch(() => {});
+  }
 
-    if (state === GameState.Watching) {
-      this.renderer.clearWalls();
-    }
+  private onEnterWatching(): void {
+    this.renderer.clearWalls();
   }
 
   private async saveRecording(isNewBest: boolean): Promise<void> {
@@ -336,13 +342,7 @@ export class App {
 
     document.getElementById("settings-export")?.addEventListener("click", async () => {
       const data = await this.manageSave.exportSave();
-      const blob = new Blob([new Uint8Array(data)], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `hs-${Date.now()}.hss`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(new Uint8Array(data), `hs-${Date.now()}.hss`);
     });
 
     const importInput = document.getElementById("save-import-file") as HTMLInputElement | null;
@@ -517,7 +517,7 @@ export class App {
       updateZones();
     }, { passive: false });
 
-    window.addEventListener("touchend", (e) => {
+    const handleTouchRelease = (e: TouchEvent): void => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const ballIndex = activeTouches.get(touch.identifier);
@@ -529,21 +529,10 @@ export class App {
         }
       }
       updateZones();
-    });
+    };
 
-    window.addEventListener("touchcancel", (e) => {
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        const ballIndex = activeTouches.get(touch.identifier);
-        if (ballIndex !== undefined) {
-          activeTouches.delete(touch.identifier);
-          if (this.sm.state === GameState.Playing) {
-            this.recordUndodge(ballIndex);
-          }
-        }
-      }
-      updateZones();
-    });
+    window.addEventListener("touchend", handleTouchRelease);
+    window.addEventListener("touchcancel", handleTouchRelease);
   }
 
   private recordDodge(ballIndex: number): void {

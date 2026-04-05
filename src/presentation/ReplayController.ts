@@ -3,12 +3,7 @@ import { createGameWorld, dodge, undodge, tick, getSpeedTier, type GameWorldStat
 import { mulberry32 } from "@domain/entities/Prng";
 import type { GameRenderer } from "./GameRenderer";
 import type { HUD } from "./HUD";
-
-function el(id: string): HTMLElement {
-  const e = document.getElementById(id);
-  if (!e) throw new Error(`Missing element #${id}`);
-  return e;
-}
+import { el } from "./dom";
 
 const SPEED_OPTIONS = [0.5, 1, 2];
 
