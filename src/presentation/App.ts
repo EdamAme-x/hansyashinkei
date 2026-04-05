@@ -193,7 +193,7 @@ export class App {
         this.bestScore = this.world.score;
         this.audio.playNewBest();
       }
-      this.hud.showGameOver(this.world.score, this.bestScore, isNewBest);
+      this.hud.showGameOver(this.world.score, this.bestScore, isNewBest, this.gameConfig.balls.length);
       this.saveRecording(isNewBest).catch(() => {});
     }
 

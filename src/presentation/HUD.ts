@@ -22,6 +22,7 @@ export class HUD {
   private readonly shareBtn = el("share-btn");
   private speedUpTimer = 0;
   private lastScore = 0;
+  private lastModeBalls = 2;
 
   constructor() {
     this.shareBtn.addEventListener("click", () => this.share());
@@ -58,8 +59,9 @@ export class HUD {
     }, 1500);
   }
 
-  showGameOver(score: number, best: number, isNewBest: boolean): void {
+  showGameOver(score: number, best: number, isNewBest: boolean, ballCount: number): void {
     this.lastScore = score;
+    this.lastModeBalls = ballCount;
     this.finalScore.textContent = `${score}`;
     this.bestScore.textContent = `BEST ${best}`;
     this.newBestLabel.classList.toggle("hidden", !isNewBest);
@@ -68,7 +70,8 @@ export class HUD {
   }
 
   private share(): void {
-    const text = `反射神経 スコア${this.lastScore}!\nここからプレイ\n${GAME_URL}`;
+    const mode = `${this.lastModeBalls} Balls`;
+    const text = `反射神経 スコア ${this.lastScore} でした！(${mode})\n${GAME_URL}`;
     const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener");
   }
