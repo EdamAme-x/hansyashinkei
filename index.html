@@ -272,8 +272,21 @@
       #keybind-screen.hidden { display: none; }
       #keybind-screen h2 {
         font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
       }
+      .keybind-tabs {
+        display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+      }
+      .keybind-tab-btn {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 0.12em;
+        padding: 0.4em 1em; border-radius: 5px; cursor: pointer; opacity: 0.45;
+        transition: background 0.15s, opacity 0.15s;
+      }
+      .keybind-tab-btn:hover, .keybind-tab-btn:focus-visible { background: rgba(255,255,255,0.1); opacity: 0.65; }
+      .keybind-tab-btn.active { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5); opacity: 1; }
+      #keybind-panel-classic.hidden, #keybind-panel-triple.hidden { display: none; }
       .keybind-row {
         display: flex; align-items: center; gap: 1.2rem;
         margin-bottom: 1rem; font-size: 0.85rem;
@@ -604,26 +617,67 @@
 
       <div id="keybind-screen" class="hidden" role="dialog" aria-label="キー設定">
         <h2>KEYBINDS</h2>
-        <div class="keybind-row">
-          <span class="keybind-label" id="lbl-left-1">LEFT 1</span>
-          <span id="keybind-left-1-key" class="keybind-key" aria-labelledby="lbl-left-1">F</span>
-          <button id="keybind-left-1-btn" class="keybind-set" aria-label="左キー1を設定">SET</button>
+        <div class="keybind-tabs">
+          <button id="keybind-tab-classic" class="keybind-tab-btn active">2 BALLS</button>
+          <button id="keybind-tab-triple" class="keybind-tab-btn">3 BALLS</button>
         </div>
-        <div class="keybind-row">
-          <span class="keybind-label" id="lbl-left-2">LEFT 2</span>
-          <span id="keybind-left-2-key" class="keybind-key" aria-labelledby="lbl-left-2">←</span>
-          <button id="keybind-left-2-btn" class="keybind-set" aria-label="左キー2を設定">SET</button>
+
+        <div id="keybind-panel-classic">
+          <div class="keybind-row">
+            <span class="keybind-label">LEFT 1</span>
+            <span id="keybind-c-left-1-key" class="keybind-key">F</span>
+            <button id="keybind-c-left-1-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">LEFT 2</span>
+            <span id="keybind-c-left-2-key" class="keybind-key">←</span>
+            <button id="keybind-c-left-2-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">RIGHT 1</span>
+            <span id="keybind-c-right-1-key" class="keybind-key">J</span>
+            <button id="keybind-c-right-1-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">RIGHT 2</span>
+            <span id="keybind-c-right-2-key" class="keybind-key">→</span>
+            <button id="keybind-c-right-2-btn" class="keybind-set">SET</button>
+          </div>
         </div>
-        <div class="keybind-row">
-          <span class="keybind-label" id="lbl-right-1">RIGHT 1</span>
-          <span id="keybind-right-1-key" class="keybind-key" aria-labelledby="lbl-right-1">J</span>
-          <button id="keybind-right-1-btn" class="keybind-set" aria-label="右キー1を設定">SET</button>
+
+        <div id="keybind-panel-triple" class="hidden">
+          <div class="keybind-row">
+            <span class="keybind-label">LEFT 1</span>
+            <span id="keybind-t-left-1-key" class="keybind-key">F</span>
+            <button id="keybind-t-left-1-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">LEFT 2</span>
+            <span id="keybind-t-left-2-key" class="keybind-key">←</span>
+            <button id="keybind-t-left-2-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">MID 1</span>
+            <span id="keybind-t-mid-1-key" class="keybind-key">B</span>
+            <button id="keybind-t-mid-1-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">MID 2</span>
+            <span id="keybind-t-mid-2-key" class="keybind-key">↓</span>
+            <button id="keybind-t-mid-2-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">RIGHT 1</span>
+            <span id="keybind-t-right-1-key" class="keybind-key">J</span>
+            <button id="keybind-t-right-1-btn" class="keybind-set">SET</button>
+          </div>
+          <div class="keybind-row">
+            <span class="keybind-label">RIGHT 2</span>
+            <span id="keybind-t-right-2-key" class="keybind-key">→</span>
+            <button id="keybind-t-right-2-btn" class="keybind-set">SET</button>
+          </div>
         </div>
-        <div class="keybind-row">
-          <span class="keybind-label" id="lbl-right-2">RIGHT 2</span>
-          <span id="keybind-right-2-key" class="keybind-key" aria-labelledby="lbl-right-2">→</span>
-          <button id="keybind-right-2-btn" class="keybind-set" aria-label="右キー2を設定">SET</button>
-        </div>
+
         <div class="keybind-actions">
           <button id="keybind-reset" aria-label="キー設定をリセット">RESET</button>
           <button id="keybind-close" aria-label="キー設定を閉じる">CLOSE</button>

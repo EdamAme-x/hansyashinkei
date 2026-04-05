@@ -3,30 +3,51 @@ import { saveInputConfig, codeToLabel, createDefaultInputConfig } from "./InputC
 import type { KVStore } from "@domain/repositories/KVStore";
 import { el } from "./dom";
 
-// slot: "left-1", "left-2", "right-1", "right-2"
 type Slot = { ballIndex: number; idx: number };
+type Tab = "classic" | "triple";
 
-const SLOTS: { id: string; slot: Slot }[] = [
-  { id: "left-1", slot: { ballIndex: 0, idx: 0 } },
-  { id: "left-2", slot: { ballIndex: 0, idx: 1 } },
-  { id: "right-1", slot: { ballIndex: 1, idx: 0 } },
-  { id: "right-2", slot: { ballIndex: 1, idx: 1 } },
+interface SlotDef {
+  id: string;
+  slot: Slot;
+}
+
+const CLASSIC_SLOTS: SlotDef[] = [
+  { id: "c-left-1", slot: { ballIndex: 0, idx: 0 } },
+  { id: "c-left-2", slot: { ballIndex: 0, idx: 1 } },
+  { id: "c-right-1", slot: { ballIndex: 1, idx: 0 } },
+  { id: "c-right-2", slot: { ballIndex: 1, idx: 1 } },
 ];
+
+const TRIPLE_SLOTS: SlotDef[] = [
+  { id: "t-left-1", slot: { ballIndex: 0, idx: 0 } },
+  { id: "t-left-2", slot: { ballIndex: 0, idx: 1 } },
+  { id: "t-mid-1", slot: { ballIndex: 2, idx: 0 } },
+  { id: "t-mid-2", slot: { ballIndex: 2, idx: 1 } },
+  { id: "t-right-1", slot: { ballIndex: 1, idx: 0 } },
+  { id: "t-right-2", slot: { ballIndex: 1, idx: 1 } },
+];
+
+const ALL_SLOTS = [...CLASSIC_SLOTS, ...TRIPLE_SLOTS];
 
 export class KeybindUI {
   private readonly screen = el("keybind-screen");
   private readonly resetBtn = el("keybind-reset");
   private readonly closeBtn = el("keybind-close");
+  private readonly tabClassicBtn = el("keybind-tab-classic");
+  private readonly tabTripleBtn = el("keybind-tab-triple");
+  private readonly panelClassic = el("keybind-panel-classic");
+  private readonly panelTriple = el("keybind-panel-triple");
 
   private config: InputConfig;
   private readonly kv: KVStore;
   private readonly onUpdate: (config: InputConfig) => void;
   private readonly onClose: () => void;
+  private currentTab: Tab = "classic";
   private listeningSlot: Slot | null = null;
   private keyHandler: ((e: KeyboardEvent) => void) | null = null;
 
-  private readonly keyEls: Map<string, HTMLElement> = new Map();
-  private readonly btnEls: Map<string, HTMLElement> = new Map();
+  private readonly keyEls = new Map<string, HTMLElement>();
+  private readonly btnEls = new Map<string, HTMLElement>();
 
   constructor(
     config: InputConfig,
@@ -39,13 +60,15 @@ export class KeybindUI {
     this.onUpdate = onUpdate;
     this.onClose = onClose;
 
-    for (const { id, slot } of SLOTS) {
+    for (const { id, slot } of ALL_SLOTS) {
       this.keyEls.set(id, el(`keybind-${id}-key`));
       const btn = el(`keybind-${id}-btn`);
       this.btnEls.set(id, btn);
       btn.addEventListener("click", () => this.startListening(slot));
     }
 
+    this.tabClassicBtn.addEventListener("click", () => this.switchTab("classic"));
+    this.tabTripleBtn.addEventListener("click", () => this.switchTab("triple"));
     this.resetBtn.addEventListener("click", () => this.resetToDefault());
     this.closeBtn.addEventListener("click", () => this.hide());
     this.render();
@@ -66,6 +89,16 @@ export class KeybindUI {
     this.onClose();
   }
 
+  private switchTab(tab: Tab): void {
+    this.stopListening();
+    this.currentTab = tab;
+    this.tabClassicBtn.classList.toggle("active", tab === "classic");
+    this.tabTripleBtn.classList.toggle("active", tab === "triple");
+    this.panelClassic.classList.toggle("hidden", tab !== "classic");
+    this.panelTriple.classList.toggle("hidden", tab !== "triple");
+    this.render();
+  }
+
   private getBindingsFor(ballIndex: number): string[] {
     return this.config.dodge
       .filter((b) => b.ballIndex === ballIndex)
@@ -73,14 +106,16 @@ export class KeybindUI {
   }
 
   private render(): void {
-    for (const { id, slot } of SLOTS) {
+    const slots = this.currentTab === "classic" ? CLASSIC_SLOTS : TRIPLE_SLOTS;
+
+    for (const { id, slot } of slots) {
       const codes = this.getBindingsFor(slot.ballIndex);
       const code = codes[slot.idx];
       const keyEl = this.keyEls.get(id);
       if (keyEl) keyEl.textContent = code ? codeToLabel(code) : "—";
     }
 
-    for (const { id, slot } of SLOTS) {
+    for (const { id, slot } of slots) {
       const btn = this.btnEls.get(id);
       const isListening = this.listeningSlot?.ballIndex === slot.ballIndex
         && this.listeningSlot?.idx === slot.idx;
