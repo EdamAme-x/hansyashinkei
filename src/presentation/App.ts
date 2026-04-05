@@ -387,6 +387,7 @@ export class App {
       const rightCodes = this.inputConfig.dodge
         .filter((b) => b.ballIndex === 1)
         .map((b) => codeToLabel(b.code));
+      // triple: ball0=left, ball1=right(J/→), ball2=middle(B/↓)
       const left = leftCodes.join("/") || "?";
       const mid = midCodes.join("/") || "?";
       const right = rightCodes.join("/") || "?";

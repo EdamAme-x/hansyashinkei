@@ -88,8 +88,8 @@ export function createTripleConfig(): GameConfig {
     laneCount: 6,
     balls: [
       { homeLane: 1, dodgeLane: 0 },
-      { homeLane: 3, dodgeLane: 2 },
       { homeLane: 4, dodgeLane: 5 },
+      { homeLane: 3, dodgeLane: 2 },
     ],
     wallsPerWave: 3,
     baseSpeed: 32.472,
