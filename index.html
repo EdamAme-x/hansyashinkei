@@ -337,22 +337,13 @@
         color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
         font-weight: 700; letter-spacing: 0.1em;
         padding: 0.7em 1.2em; border-radius: 5px; cursor: pointer;
-        text-align: left;
+        text-align: center;
       }
       .settings-item:hover, .settings-item:focus-visible { background: rgba(255,255,255,0.08); }
       .settings-row {
         display: flex; gap: 0.6rem; width: 100%;
       }
       .settings-row .settings-item { flex: 1; text-align: center; }
-      .settings-migrate-section {
-        width: 100%; margin-top: 0.4rem; padding-top: 0.6rem;
-        border-top: 1px solid rgba(255,255,255,0.08);
-      }
-      .settings-migrate-warn {
-        font-size: 0.6rem; opacity: 0.4; line-height: 1.6;
-        margin-bottom: 0.5rem; text-align: center;
-        font-family: 'Noto Sans JP', sans-serif;
-      }
       #settings-close {
         background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
         color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
@@ -773,10 +764,7 @@
             <button id="settings-import" class="settings-item">IMPORT</button>
           </div>
           <input type="file" id="save-import-file" accept=".hss" style="display:none" />
-          <div class="settings-migrate-section">
-            <p class="settings-migrate-warn">別のデバイスへデータを完全移行します<br/>エクスポート後、このデバイスのデータは全て削除されます</p>
-            <button id="settings-export-migrate" class="settings-item">MIGRATE DEVICE</button>
-          </div>
+          <button id="settings-export-migrate" class="settings-item">MIGRATE DEVICE</button>
         </div>
         <button id="settings-close" aria-label="閉じる">CLOSE</button>
       </div>
