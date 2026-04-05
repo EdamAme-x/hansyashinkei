@@ -59,6 +59,21 @@ export class DeviceKeyStore {
     }
   }
 
+  async deleteKey(): Promise<void> {
+    try {
+      const db = await openDb();
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).delete(KEY_ID);
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      // ignore
+    }
+    this.key = null;
+  }
+
   async encrypt(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
     if (!this.key) return data; // passthrough when crypto unavailable
 

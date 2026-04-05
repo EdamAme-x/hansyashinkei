@@ -23,6 +23,10 @@ import type { IImageStore } from "@domain/repositories/ImageStore";
 import type { ModeRepository } from "@domain/repositories/ModeRepository";
 import type { KVStore } from "@domain/repositories/KVStore";
 import type { ManageSave } from "@application/usecases/ManageSave";
+import type { ManageAchievement } from "@application/usecases/ManageAchievement";
+import { AchievementUI } from "./AchievementUI";
+import { AchievementToast } from "./AchievementToast";
+import { getSkinDef } from "@domain/entities/SkinDefs";
 import { downloadBlob } from "./dom";
 
 interface RecordingSession {
@@ -43,8 +47,11 @@ export class App {
   private readonly manageSave: ManageSave;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
+  private readonly manageAchievement: ManageAchievement;
   private readonly bestScoreRepo: BestScoreRepository;
   private readonly modeRepo: ModeRepository;
+  private readonly achievementUI: AchievementUI;
+  private readonly achievementToast: AchievementToast;
   private readonly _classicConfig: GameConfig;
   private activeMode: GameMode = "classic";
   private inputConfig: InputConfig;
@@ -75,6 +82,7 @@ export class App {
     manageSave: ManageSave,
     modeRepo: ModeRepository,
     kv: KVStore,
+    manageAchievement: ManageAchievement,
   ) {
     const theme = themeManager.current;
     this._classicConfig = gameConfig;
@@ -107,6 +115,22 @@ export class App {
     );
 
     this.themeUI = new ThemeUI(themeManager, imageStore);
+    this.manageAchievement = manageAchievement;
+    this.achievementToast = new AchievementToast();
+    this.achievementUI = new AchievementUI(manageAchievement);
+    this.achievementUI.onSkinChanged = (skinId) => {
+      this.renderer.applyActiveSkin(getSkinDef(skinId));
+      this.renderDirty = true;
+    };
+
+    // Load active skin on startup
+    manageAchievement.getActiveSkinId().then((skinId) => {
+      this.renderer.applyActiveSkin(getSkinDef(skinId));
+      this.renderDirty = true;
+    }).catch(() => {});
+
+    // Verify achievements on startup (async, non-blocking)
+    manageAchievement.verifyAllOnLoad().catch(() => {});
 
     // Real-time theme update
     themeManager.onChange((newTheme) => {
@@ -212,6 +236,7 @@ export class App {
     }
     this.hud.showGameOver(this.world.score, this.bestScore, isNewBest, this.gameConfig.balls.length);
     this.saveRecording(isNewBest).catch(() => {});
+    // Achievement evaluation happens after saveRecording stores the score
   }
 
   private onEnterTitle(): void {
@@ -261,6 +286,17 @@ export class App {
     }
 
     await this.manageReplay.prune(this.bestReplayId);
+
+    // Evaluate achievements after score + replay are stored
+    try {
+      const score = { id: scoreId, value: finalScore, timestamp: Date.now(), replayId, mode: this.activeMode };
+      const unlocked = await this.manageAchievement.evaluateAndUnlock(score);
+      if (unlocked.length > 0) {
+        this.achievementToast.show(unlocked);
+      }
+    } catch {
+      // non-critical
+    }
   }
 
   private watchReplay(replay: Replay): void {
@@ -352,9 +388,29 @@ export class App {
       this.themeUI.show();
     });
 
-    document.getElementById("settings-export")?.addEventListener("click", async () => {
+    document.getElementById("settings-achievements")?.addEventListener("click", () => {
+      settingsScreen?.classList.add("hidden");
+      this.achievementUI.show();
+    });
+
+    // Settings-only export (no data destruction)
+    document.getElementById("settings-export-settings")?.addEventListener("click", async () => {
+      const data = await this.manageSave.exportSettings();
+      downloadBlob(new Uint8Array(data), `hs-settings-${Date.now()}.hss`);
+    });
+
+    // Full migration export (destroys all browser data after download)
+    document.getElementById("settings-export-migrate")?.addEventListener("click", async () => {
+      const ok = window.confirm(
+        "MIGRATE: Export all data and DELETE everything on this device.\n\n" +
+        "After export, this device's data will be permanently erased.\n" +
+        "Continue?",
+      );
+      if (!ok) return;
       const data = await this.manageSave.exportSave();
-      downloadBlob(new Uint8Array(data), `hs-${Date.now()}.hss`);
+      downloadBlob(new Uint8Array(data), `hs-migrate-${Date.now()}.hss`);
+      await this.manageSave.nukeAfterExport();
+      location.reload();
     });
 
     const importInput = document.getElementById("save-import-file") as HTMLInputElement | null;
@@ -439,6 +495,7 @@ export class App {
 
       // Close overlay screens with Esc/Backspace (innermost first)
       if (e.code === "Escape" || e.code === "Backspace") {
+        if (this.achievementUI.isOpen()) { this.achievementUI.hide(); return; }
         if (this.themeUI.isOpen()) { this.themeUI.hide(); return; }
         if (this.keybindUI.isOpen()) { this.keybindUI.hide(); return; }
         if (this.historyUI.isOpen()) { this.historyUI.hide(); return; }
@@ -616,6 +673,7 @@ export class App {
       }
 
       if (this.sm.state === GameState.Playing || this.renderDirty) {
+        this.renderer.updateSkinPulse(now / 1000);
         this.renderer.render();
         this.renderDirty = false;
       }

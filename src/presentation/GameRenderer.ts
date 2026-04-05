@@ -1,14 +1,16 @@
 import {
   AmbientLight, DirectionalLight, PointLight,
   Mesh, Group, LineSegments, Object3D,
-  BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
+  BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry, OctahedronGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
   TextureLoader, SRGBColorSpace, CanvasTexture,
 } from "three";
+import type { BufferGeometry } from "three";
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
+import type { AchievementSkin, BallShape } from "@domain/entities/Achievement";
 import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
 const LANE_LENGTH = 250;
@@ -46,6 +48,9 @@ export class GameRenderer {
   // Track objects per category for cleanup on reconfigure
   private laneMeshes: Object3D[] = [];
   private lights: Object3D[] = [];
+
+  // Achievement skin
+  private activeSkin: AchievementSkin | null = null;
 
   constructor(container: HTMLElement, config: GameConfig, theme: ThemeConfig) {
     this.config = config;
@@ -145,24 +150,34 @@ export class GameRenderer {
 
   private buildBalls(): void {
     const { ballRadius, ballY } = this.config.render;
-    const ballGeo = new SphereGeometry(ballRadius, 32, 32);
     const { ballSkins } = this.scene;
 
     for (let i = 0; i < this.config.balls.length; i++) {
-      const skin = ballSkins[i] ?? ballSkins[ballSkins.length - 1];
+      const aSkin = this.activeSkin;
+      const themeSkin = ballSkins[i] ?? ballSkins[ballSkins.length - 1];
+
+      const geo = aSkin
+        ? createBallGeometry(aSkin.shape, ballRadius)
+        : new SphereGeometry(ballRadius, 32, 32);
 
       const mat = new MeshStandardMaterial({
-        color: skin.color,
-        metalness: skin.metalness,
-        roughness: skin.roughness,
+        color: aSkin?.color ?? themeSkin.color,
+        metalness: aSkin?.metalness ?? themeSkin.metalness,
+        roughness: aSkin?.roughness ?? themeSkin.roughness,
+        emissive: new Color(aSkin?.emissiveColor ?? 0x000000),
+        emissiveIntensity: aSkin?.emissiveIntensity ?? 0,
       });
 
-      const mesh = new Mesh(ballGeo, mat);
+      const mesh = new Mesh(geo, mat);
       mesh.position.set(this.laneX(this.config.balls[i].homeLane), ballY, 0);
       this.adapter.add(mesh);
       this.ballMeshes.push(mesh);
 
-      const glow = new PointLight(skin.glowColor, skin.glowIntensity, 8);
+      const glow = new PointLight(
+        aSkin?.glowColor ?? themeSkin.glowColor,
+        aSkin?.glowIntensity ?? themeSkin.glowIntensity,
+        8,
+      );
       glow.position.set(this.laneX(this.config.balls[i].homeLane), ballY + 0.4, 0);
       this.adapter.add(glow);
       this.ballGlows.push(glow);
@@ -449,6 +464,48 @@ export class GameRenderer {
     this.activeWallMeshes.clear();
   }
 
+  /** Apply an achievement skin to all balls. Swaps geometry if shape differs. */
+  applyActiveSkin(skin: AchievementSkin): void {
+    this.activeSkin = skin;
+    const { ballRadius } = this.config.render;
+
+    for (let i = 0; i < this.ballMeshes.length; i++) {
+      const mesh = this.ballMeshes[i];
+      const mat = mesh.material as MeshStandardMaterial;
+      mat.color.set(skin.color);
+      mat.metalness = skin.metalness;
+      mat.roughness = skin.roughness;
+      mat.emissive.set(skin.emissiveColor);
+      mat.emissiveIntensity = skin.emissiveIntensity;
+      mat.needsUpdate = true;
+
+      this.ballGlows[i].color.set(skin.glowColor);
+      this.ballGlows[i].intensity = skin.glowIntensity;
+
+      // Swap geometry if shape changed
+      const newGeo = createBallGeometry(skin.shape, ballRadius);
+      if (mesh.geometry.type !== newGeo.type || shapeKey(skin.shape) !== shapeKey(currentShape(mesh))) {
+        mesh.geometry.dispose();
+        mesh.geometry = newGeo;
+      } else {
+        newGeo.dispose();
+      }
+    }
+    this.adapter.render();
+  }
+
+  /** Pulse emissive/glow for animated skins. Call from render loop. */
+  updateSkinPulse(time: number): void {
+    const skin = this.activeSkin;
+    if (!skin || skin.pulseSpeed === 0) return;
+    const pulse = (Math.sin(time * skin.pulseSpeed) + 1) / 2;
+    for (let i = 0; i < this.ballMeshes.length; i++) {
+      const mat = this.ballMeshes[i].material as MeshStandardMaterial;
+      mat.emissiveIntensity = skin.emissiveIntensity * (0.5 + 0.5 * pulse);
+      this.ballGlows[i].intensity = skin.glowIntensity * (0.7 + 0.3 * pulse);
+    }
+  }
+
   dispose(): void {
     this.clearShards();
     this.shardGeometry.dispose();
@@ -459,4 +516,20 @@ export class GameRenderer {
     this.wallEdgesMaterial.dispose();
     this.adapter.dispose();
   }
+}
+
+function createBallGeometry(shape: BallShape, radius: number): BufferGeometry {
+  switch (shape) {
+    case "cube": return new BoxGeometry(radius * 1.5, radius * 1.5, radius * 1.5);
+    case "spiky": return new OctahedronGeometry(radius * 1.2, 1);
+    default: return new SphereGeometry(radius, 32, 32);
+  }
+}
+
+function shapeKey(shape: BallShape): string { return shape; }
+
+function currentShape(mesh: Mesh): BallShape {
+  if (mesh.geometry instanceof BoxGeometry) return "cube";
+  if (mesh.geometry instanceof OctahedronGeometry) return "spiky";
+  return "sphere";
 }

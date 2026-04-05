@@ -1,5 +1,5 @@
 const DB_NAME = "hs";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance: IDBDatabase | null = null;
 
@@ -24,6 +24,9 @@ export function openGameDb(): Promise<IDBDatabase> {
       }
       if (oldVersion < 4) {
         db.createObjectStore("images", { keyPath: "id" });
+      }
+      if (oldVersion < 5) {
+        db.createObjectStore("achievements", { keyPath: "id" });
       }
     };
 

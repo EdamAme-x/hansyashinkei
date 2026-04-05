@@ -404,6 +404,101 @@
         font-size: 0.65rem; opacity: 0.4; min-width: 2.5rem;
       }
 
+      /* Achievement screen */
+      #achievement-screen {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 3rem 1rem;
+        z-index: 20; pointer-events: auto;
+        background: rgba(0,0,0,0.95);
+        overflow-y: auto;
+      }
+      #achievement-screen.hidden { display: none; }
+      #achievement-screen h2 {
+        font-size: 1.5rem; font-weight: 900; letter-spacing: 0.2em;
+        margin-bottom: 1rem;
+      }
+      .achievement-tabs {
+        display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+      }
+      .achievement-tab {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        font-weight: 700; letter-spacing: 0.12em;
+        padding: 0.4em 1em; border-radius: 5px; cursor: pointer; opacity: 0.45;
+        transition: background 0.15s, opacity 0.15s;
+      }
+      .achievement-tab:hover, .achievement-tab:focus-visible { background: rgba(255,255,255,0.1); opacity: 0.65; }
+      .achievement-tab.active { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5); opacity: 1; }
+
+      .achievement-card {
+        padding: 0.7rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+        width: 100%; max-width: 500px;
+      }
+      .achievement-card.locked { opacity: 0.35; }
+      .achievement-card-label {
+        font-size: 0.9rem; font-weight: 900; letter-spacing: 0.1em;
+      }
+      .achievement-card.unlocked .achievement-card-label { color: #ffd700; }
+      .achievement-card-desc {
+        font-size: 0.7rem; opacity: 0.5; margin-top: 0.2rem;
+      }
+      .achievement-card-reward {
+        font-size: 0.65rem; opacity: 0.7; margin-top: 0.15rem; color: #aaa;
+      }
+
+      /* Skin selector */
+      #achievement-skins {
+        display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center;
+        width: 100%; max-width: 500px;
+      }
+      #achievement-skins.hidden { display: none; }
+      .skin-option {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 0.6rem; border: 1px solid rgba(255,255,255,0.15);
+        background: transparent; color: #fff; cursor: pointer;
+        border-radius: 6px; min-width: 5rem;
+        font-family: 'Orbitron', sans-serif;
+      }
+      .skin-option.active { border-color: #ffd700; }
+      .skin-option.locked { opacity: 0.25; cursor: not-allowed; }
+      .skin-option:hover:not(.locked) { background: rgba(255,255,255,0.06); }
+      .skin-preview {
+        width: 2.2rem; height: 2.2rem; border-radius: 50%;
+        margin-bottom: 0.3rem;
+      }
+      .skin-option-name {
+        font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+      }
+      #achievement-close {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+        margin-top: 1.5rem;
+      }
+      #achievement-close:hover { background: rgba(255,255,255,0.12); }
+
+      /* Achievement toast */
+      #achievement-toast {
+        position: fixed; bottom: 5rem; right: 1.5rem;
+        z-index: 50; pointer-events: none;
+        display: flex; flex-direction: column; gap: 0.5rem;
+      }
+      .achievement-toast-item {
+        background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.25);
+        border-left: 3px solid #ffd700;
+        border-radius: 8px; padding: 0.7em 1.2em;
+        color: #fff; font-family: 'Orbitron', sans-serif;
+        opacity: 0; transform: translateX(1rem);
+        transition: opacity 0.3s, transform 0.3s;
+        min-width: 200px;
+      }
+      .achievement-toast-item.visible { opacity: 1; transform: translateX(0); }
+      .achievement-toast-title { font-size: 0.55rem; color: #ffd700; letter-spacing: 0.15em; }
+      .achievement-toast-label { font-size: 0.9rem; font-weight: 900; margin: 0.2em 0; }
+      .achievement-toast-skin { font-size: 0.6rem; color: #aaa; }
+
       /* Mode selector */
       .mode-selector {
         display: flex; gap: 0.5rem; margin-top: 0.8rem; pointer-events: auto;
@@ -608,8 +703,10 @@
           <button id="settings-keys" class="settings-item">KEYS</button>
           <button id="settings-sound" class="settings-item"><span id="settings-sound-label">SOUND ON</span></button>
           <button id="settings-theme" class="settings-item">CUSTOMIZE</button>
-          <button id="settings-export" class="settings-item">EXPORT SAVE</button>
-          <button id="settings-import" class="settings-item">IMPORT SAVE</button>
+          <button id="settings-achievements" class="settings-item">ACHIEVEMENTS</button>
+          <button id="settings-export-settings" class="settings-item">EXPORT SETTINGS</button>
+          <button id="settings-export-migrate" class="settings-item">MIGRATE DEVICE</button>
+          <button id="settings-import" class="settings-item">IMPORT</button>
           <input type="file" id="save-import-file" accept=".hss" style="display:none" />
         </div>
         <button id="settings-close" aria-label="閉じる">CLOSE</button>
@@ -709,7 +806,20 @@
 
         <button id="theme-close" aria-label="閉じる">CLOSE</button>
       </div>
+
+      <div id="achievement-screen" class="hidden" role="dialog" aria-label="アチーブメント">
+        <h2>ACHIEVEMENTS</h2>
+        <div class="achievement-tabs">
+          <button id="achievement-tab-gallery" class="achievement-tab active">GALLERY</button>
+          <button id="achievement-tab-skins" class="achievement-tab">SKINS</button>
+        </div>
+        <div id="achievement-gallery"></div>
+        <div id="achievement-skins" class="hidden"></div>
+        <button id="achievement-close" aria-label="閉じる">CLOSE</button>
+      </div>
     </div>
+
+    <div id="achievement-toast" aria-live="assertive" aria-atomic="false"></div>
 
     <span id="app-version" aria-label="バージョン"></span>
 
