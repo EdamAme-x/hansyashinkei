@@ -134,6 +134,16 @@ export const ACHIEVEMENT_DEFS: readonly AchievementDef[] = [
     rewardSkinId: "skin_jackpot",
     hidden: true,
   },
+
+  // ── Stub: condition TBD ──
+  {
+    id: "invisible",
+    label: "INVISIBLE",
+    description: "???",
+    condition: { type: "exact_score", value: -1 }, // unreachable stub
+    rewardSkinId: "skin_invisible",
+    hidden: true,
+  },
 ];
 
 export function getAchievementDef(id: string): AchievementDef | undefined {

@@ -165,6 +165,16 @@ export const SKIN_DEFS: readonly AchievementSkin[] = [
     glowColor: 0xffee00, glowIntensity: 3.0,
     pulseSpeed: 5.0,
   }),
+  S({
+    id: "skin_invisible",
+    label: "INVISIBLE",
+    description: "見えない",
+    shape: "sphere",
+    color: 0x000000, metalness: 0, roughness: 1,
+    emissiveColor: 0x000000, emissiveIntensity: 0,
+    glowColor: 0x000000, glowIntensity: 0,
+    pulseSpeed: 0,
+  }),
 ];
 
 export function getSkinDef(id: string): AchievementSkin {

@@ -477,13 +477,16 @@ export class GameRenderer {
       mat.roughness = skin.roughness;
       mat.emissive.set(skin.emissiveColor);
       mat.emissiveIntensity = skin.emissiveIntensity;
+      const invisible = skin.id === "skin_invisible";
+      mat.transparent = invisible;
+      mat.opacity = invisible ? 0 : 1;
       mat.needsUpdate = true;
 
       this.ballGlows[i].color.set(skin.glowColor);
       this.ballGlows[i].intensity = skin.glowIntensity;
 
       // Update shard color to match skin
-      this.shardMaterial.color.set(skin.glowColor);
+      this.shardMaterial.color.set(invisible ? 0xffffff : skin.glowColor);
 
       // Swap geometry if shape changed
       const newGeo = createBallGeometry(skin.shape, ballRadius);
