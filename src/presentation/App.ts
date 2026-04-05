@@ -491,7 +491,7 @@ export class App {
     const cursor = document.getElementById("custom-cursor");
     if (!cursor || this.isTouchOnly) return;
 
-    const TRAIL_COUNT = 8;
+    const TRAIL_COUNT = 12;
     const trails: HTMLElement[] = [];
     for (let i = 0; i < TRAIL_COUNT; i++) {
       const t = document.createElement("div");
@@ -503,6 +503,7 @@ export class App {
 
     let mx = -100;
     let my = -100;
+    let hidden = false;
     const positions: { x: number; y: number }[] = Array.from(
       { length: TRAIL_COUNT },
       () => ({ x: -100, y: -100 }),
@@ -516,22 +517,24 @@ export class App {
     });
 
     const animateTrails = () => {
-      for (let i = trails.length - 1; i > 0; i--) {
-        positions[i].x = positions[i - 1].x;
-        positions[i].y = positions[i - 1].y;
+      // Each trail follows the one ahead with lerp for smooth lag
+      positions[0].x += (mx - positions[0].x) * 0.5;
+      positions[0].y += (my - positions[0].y) * 0.5;
+      for (let i = 1; i < TRAIL_COUNT; i++) {
+        positions[i].x += (positions[i - 1].x - positions[i].x) * 0.45;
+        positions[i].y += (positions[i - 1].y - positions[i].y) * 0.45;
       }
-      positions[0].x = mx;
-      positions[0].y = my;
 
       for (let i = 0; i < trails.length; i++) {
         const t = trails[i];
         const p = positions[i];
+        const size = 12 - i * 0.8;
+        const alpha = hidden ? 0 : 0.45 * (1 - i / trails.length);
         t.style.left = `${p.x}px`;
         t.style.top = `${p.y}px`;
-        const alpha = 0.35 * (1 - i / trails.length);
-        const scale = 1 - i * 0.08;
+        t.style.width = `${size}px`;
+        t.style.height = `${size}px`;
         t.style.opacity = String(alpha);
-        t.style.transform = `translate(-50%,-50%) scale(${scale})`;
       }
       requestAnimationFrame(animateTrails);
     };
@@ -539,9 +542,8 @@ export class App {
 
     // Hide cursor during gameplay
     this.sm.onStateChange((_prev, next) => {
-      const hide = next === GameState.Playing;
-      cursor.classList.toggle("hide", hide);
-      for (const t of trails) t.style.opacity = hide ? "0" : t.style.opacity;
+      hidden = next === GameState.Playing;
+      cursor.classList.toggle("hide", hidden);
     });
   }
 

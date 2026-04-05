@@ -38,19 +38,28 @@
       /* Custom cursor */
       #custom-cursor {
         position: fixed; z-index: 9999; pointer-events: none;
-        width: 16px; height: 16px; border-radius: 50%;
-        background: #fff; opacity: 0.9;
+        width: 14px; height: 14px; border-radius: 50%;
+        background: #fff; opacity: 0.85;
         transform: translate(-50%, -50%);
         transition: opacity 0.2s;
-        mix-blend-mode: difference;
       }
       #custom-cursor.hide { opacity: 0; }
       .cursor-trail {
         position: fixed; z-index: 9998; pointer-events: none;
-        width: 10px; height: 10px; border-radius: 50%;
-        background: rgba(255,255,255,0.4);
+        border-radius: 50%;
+        background: rgba(255,255,255,0.5);
         transform: translate(-50%, -50%);
-        mix-blend-mode: difference;
+      }
+
+      /* Button hover bounce */
+      button, .settings-item, .mode-btn, .start-btn, .share-btn,
+      .history-btn, .keybind-set, .theme-file-btn, .theme-clear-btn {
+        transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
+      }
+      button:hover, .settings-item:hover, .mode-btn:hover, .start-btn:hover,
+      .share-btn:hover, .history-btn:hover, .keybind-set:hover,
+      .theme-file-btn:hover, .theme-clear-btn:hover {
+        transform: scale(1.04);
       }
 
       @media (pointer: coarse) {
