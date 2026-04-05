@@ -78,6 +78,11 @@ function checkCondition(def: AchievementDef, ctx: EvalContext): EvalResult | nul
       if (streak < condition.count) return null;
       return scoreResult(def.id, newScore, condition.type, streak);
     }
+
+    case "exact_score": {
+      if (newScore.value !== condition.value) return null;
+      return scoreResult(def.id, newScore, condition.type, newScore.value);
+    }
   }
 }
 

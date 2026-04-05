@@ -100,6 +100,40 @@ export const ACHIEVEMENT_DEFS: readonly AchievementDef[] = [
     rewardSkinId: "skin_cube",
     hidden: false,
   },
+
+  // ── Exact score (hidden) ──
+  {
+    id: "exact_42",
+    label: "THE ANSWER",
+    description: "スコアぴったり42で死ぬ",
+    condition: { type: "exact_score", value: 42 },
+    rewardSkinId: "skin_galaxy",
+    hidden: true,
+  },
+  {
+    id: "exact_69",
+    label: "NICE",
+    description: "スコアぴったり69で死ぬ",
+    condition: { type: "exact_score", value: 69 },
+    rewardSkinId: "skin_rose",
+    hidden: true,
+  },
+  {
+    id: "exact_314",
+    label: "PI",
+    description: "スコアぴったり314で死ぬ",
+    condition: { type: "exact_score", value: 314 },
+    rewardSkinId: "skin_pi",
+    hidden: true,
+  },
+  {
+    id: "exact_777",
+    label: "JACKPOT",
+    description: "スコアぴったり777で死ぬ",
+    condition: { type: "exact_score", value: 777 },
+    rewardSkinId: "skin_jackpot",
+    hidden: true,
+  },
 ];
 
 export function getAchievementDef(id: string): AchievementDef | undefined {

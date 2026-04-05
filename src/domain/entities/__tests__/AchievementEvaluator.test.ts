@@ -43,7 +43,13 @@ const STREAK_3: AchievementDef = {
   rewardSkinId: "skin_f",
 };
 
-const ALL_DEFS = [CLASSIC_50, TRIPLE_30, ANY_100, PLAYS_3, SUM_100, STREAK_3];
+const EXACT_42: AchievementDef = {
+  id: "e42", label: "E42", description: "", hidden: true,
+  condition: { type: "exact_score", value: 42 },
+  rewardSkinId: "skin_g",
+};
+
+const ALL_DEFS = [CLASSIC_50, TRIPLE_30, ANY_100, PLAYS_3, SUM_100, STREAK_3, EXACT_42];
 
 describe("evaluateAchievements", () => {
   it("returns nothing when no conditions are met", () => {
@@ -151,5 +157,22 @@ describe("evaluateAchievements", () => {
       scores: [s], newScore: s, alreadyUnlocked: new Set(),
     });
     expect(results).toHaveLength(2);
+  });
+
+  it("unlocks exact_score when score matches exactly", () => {
+    const s = score("s1", 42);
+    const results = evaluateAchievements([EXACT_42], {
+      scores: [s], newScore: s, alreadyUnlocked: new Set(),
+    });
+    expect(results).toHaveLength(1);
+    expect(results[0].defId).toBe("e42");
+  });
+
+  it("does not unlock exact_score when score differs", () => {
+    const s = score("s1", 43);
+    const results = evaluateAchievements([EXACT_42], {
+      scores: [s], newScore: s, alreadyUnlocked: new Set(),
+    });
+    expect(results).toHaveLength(0);
   });
 });

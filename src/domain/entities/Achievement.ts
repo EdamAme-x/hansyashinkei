@@ -29,7 +29,8 @@ export type AchievementCondition =
   | { readonly type: "score_any_mode"; readonly threshold: number }
   | { readonly type: "total_plays"; readonly threshold: number }
   | { readonly type: "total_score_sum"; readonly threshold: number }
-  | { readonly type: "win_streak"; readonly minScore: number; readonly count: number; readonly mode?: GameMode };
+  | { readonly type: "win_streak"; readonly minScore: number; readonly count: number; readonly mode?: GameMode }
+  | { readonly type: "exact_score"; readonly value: number };
 
 // ── Achievement definition (static master data) ──
 
