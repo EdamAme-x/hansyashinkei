@@ -346,6 +346,10 @@ export class App {
       e.stopPropagation();
       this.showHistory();
     });
+    document.getElementById("btn-achievements")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.achievementUI.show();
+    });
     document.getElementById("back-to-title-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.sm.dispatch(GameEvent.BackToTitle);
@@ -388,10 +392,7 @@ export class App {
       this.themeUI.show();
     });
 
-    document.getElementById("settings-achievements")?.addEventListener("click", () => {
-      settingsScreen?.classList.add("hidden");
-      this.achievementUI.show();
-    });
+    // (achievements button is on title screen, not settings)
 
     // Settings-only export (no data destruction)
     document.getElementById("settings-export-settings")?.addEventListener("click", async () => {
@@ -399,18 +400,57 @@ export class App {
       downloadBlob(new Uint8Array(data), `hs-settings-${Date.now()}.hss`);
     });
 
-    // Full migration export (destroys all browser data after download)
-    document.getElementById("settings-export-migrate")?.addEventListener("click", async () => {
-      const ok = window.confirm(
-        "MIGRATE: Export all data and DELETE everything on this device.\n\n" +
-        "After export, this device's data will be permanently erased.\n" +
-        "Continue?",
-      );
-      if (!ok) return;
+    // Full migration export with arithmetic quiz confirmation
+    const migrateOverlay = document.getElementById("migrate-confirm");
+    const migrateQuizLabel = document.getElementById("migrate-quiz-label");
+    const migrateQuizInput = document.getElementById("migrate-quiz-input") as HTMLInputElement | null;
+    const migrateCancel = document.getElementById("migrate-cancel");
+    const migrateGo = document.getElementById("migrate-go");
+    let migrateAnswer = 0;
+
+    document.getElementById("settings-export-migrate")?.addEventListener("click", () => {
+      const ops = ["+", "-", "*"] as const;
+      const op = ops[Math.floor(Math.random() * ops.length)];
+      let a: number, b: number;
+      if (op === "*") {
+        a = 2 + Math.floor(Math.random() * 8);
+        b = 2 + Math.floor(Math.random() * 8);
+      } else if (op === "-") {
+        a = 10 + Math.floor(Math.random() * 90);
+        b = 1 + Math.floor(Math.random() * a);
+      } else {
+        a = 10 + Math.floor(Math.random() * 90);
+        b = 10 + Math.floor(Math.random() * 90);
+      }
+      migrateAnswer = op === "+" ? a + b : op === "-" ? a - b : a * b;
+      if (migrateQuizLabel) migrateQuizLabel.textContent = `${a} ${op === "*" ? "×" : op} ${b} = ?`;
+      if (migrateQuizInput) { migrateQuizInput.value = ""; migrateQuizInput.classList.remove("wrong"); }
+      migrateOverlay?.classList.remove("hidden");
+      migrateQuizInput?.focus();
+    });
+
+    migrateCancel?.addEventListener("click", () => {
+      migrateOverlay?.classList.add("hidden");
+    });
+
+    const doMigrate = async () => {
+      const val = parseInt(migrateQuizInput?.value ?? "", 10);
+      if (val !== migrateAnswer) {
+        migrateQuizInput?.classList.add("wrong");
+        setTimeout(() => migrateQuizInput?.classList.remove("wrong"), 400);
+        return;
+      }
+      migrateOverlay?.classList.add("hidden");
       const data = await this.manageSave.exportSave();
       downloadBlob(new Uint8Array(data), `hs-migrate-${Date.now()}.hss`);
       await this.manageSave.nukeAfterExport();
       location.reload();
+    };
+
+    migrateGo?.addEventListener("click", doMigrate);
+    migrateQuizInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doMigrate();
+      if (e.key === "Escape") migrateOverlay?.classList.add("hidden");
     });
 
     const importInput = document.getElementById("save-import-file") as HTMLInputElement | null;

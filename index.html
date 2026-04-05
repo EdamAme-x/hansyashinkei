@@ -340,6 +340,19 @@
         text-align: left;
       }
       .settings-item:hover, .settings-item:focus-visible { background: rgba(255,255,255,0.08); }
+      .settings-row {
+        display: flex; gap: 0.6rem; width: 100%;
+      }
+      .settings-row .settings-item { flex: 1; text-align: center; }
+      .settings-migrate-section {
+        width: 100%; margin-top: 0.4rem; padding-top: 0.6rem;
+        border-top: 1px solid rgba(255,255,255,0.08);
+      }
+      .settings-migrate-warn {
+        font-size: 0.6rem; opacity: 0.4; line-height: 1.6;
+        margin-bottom: 0.5rem; text-align: center;
+        font-family: 'Noto Sans JP', sans-serif;
+      }
       #settings-close {
         background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
         color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
@@ -347,6 +360,55 @@
         padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
       }
       #settings-close:hover { background: rgba(255,255,255,0.12); }
+      .migrate-confirm-overlay {
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.85);
+      }
+      .migrate-confirm-overlay.hidden { display: none; }
+      .migrate-confirm-box {
+        background: #111; border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; padding: 2rem; max-width: 360px; width: 90%;
+        text-align: center;
+      }
+      .migrate-confirm-box h3 {
+        font-size: 1rem; font-weight: 900; letter-spacing: 0.15em;
+        margin-bottom: 1rem; color: #ff4444;
+      }
+      .migrate-confirm-box p {
+        font-size: 0.7rem; opacity: 0.6; line-height: 1.7; margin-bottom: 1rem;
+        font-family: 'Noto Sans JP', sans-serif;
+      }
+      .migrate-confirm-box .migrate-quiz {
+        font-size: 1.2rem; font-weight: 900; letter-spacing: 0.1em;
+        margin-bottom: 0.8rem;
+      }
+      .migrate-confirm-box input {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 1rem;
+        font-weight: 700; text-align: center; width: 5rem;
+        padding: 0.4em; border-radius: 5px; outline: none;
+      }
+      .migrate-confirm-box input:focus { border-color: rgba(255,255,255,0.6); }
+      .migrate-confirm-box input.wrong {
+        border-color: #ff4444; animation: shake 0.3s;
+      }
+      @keyframes shake {
+        0%,100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+      }
+      .migrate-confirm-btns {
+        display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.2rem;
+      }
+      .migrate-confirm-btns button {
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 4px; cursor: pointer;
+      }
+      .migrate-confirm-btns button:hover { background: rgba(255,255,255,0.12); }
+      .migrate-confirm-btns .migrate-go { border-color: #ff4444; color: #ff4444; }
 
       /* Theme screen */
       #theme-screen {
@@ -644,6 +706,9 @@
 
         <div class="title-buttons">
           <button id="btn-history" aria-label="スコア履歴を表示">HISTORY</button>
+          <button id="btn-achievements" aria-label="実績">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+          </button>
           <button id="btn-settings" aria-label="設定">SETTINGS</button>
         </div>
 
@@ -703,11 +768,15 @@
           <button id="settings-keys" class="settings-item">KEYS</button>
           <button id="settings-sound" class="settings-item"><span id="settings-sound-label">SOUND ON</span></button>
           <button id="settings-theme" class="settings-item">CUSTOMIZE</button>
-          <button id="settings-achievements" class="settings-item">ACHIEVEMENTS</button>
-          <button id="settings-export-settings" class="settings-item">EXPORT SETTINGS</button>
-          <button id="settings-export-migrate" class="settings-item">MIGRATE DEVICE</button>
-          <button id="settings-import" class="settings-item">IMPORT</button>
+          <div class="settings-row">
+            <button id="settings-export-settings" class="settings-item">EXPORT</button>
+            <button id="settings-import" class="settings-item">IMPORT</button>
+          </div>
           <input type="file" id="save-import-file" accept=".hss" style="display:none" />
+          <div class="settings-migrate-section">
+            <p class="settings-migrate-warn">別のデバイスへデータを完全移行します<br/>エクスポート後、このデバイスのデータは全て削除されます</p>
+            <button id="settings-export-migrate" class="settings-item">MIGRATE DEVICE</button>
+          </div>
         </div>
         <button id="settings-close" aria-label="閉じる">CLOSE</button>
       </div>
@@ -820,6 +889,19 @@
     </div>
 
     <div id="achievement-toast" aria-live="assertive" aria-atomic="false"></div>
+
+    <div id="migrate-confirm" class="migrate-confirm-overlay hidden" role="dialog" aria-label="移行確認">
+      <div class="migrate-confirm-box">
+        <h3>MIGRATE DEVICE</h3>
+        <p>全データをエクスポートし、このデバイスのデータを<strong>完全に削除</strong>します。<br/>この操作は取り消せません。</p>
+        <div class="migrate-quiz" id="migrate-quiz-label"></div>
+        <input id="migrate-quiz-input" type="text" inputmode="numeric" autocomplete="off" placeholder="?" />
+        <div class="migrate-confirm-btns">
+          <button id="migrate-cancel">CANCEL</button>
+          <button id="migrate-go" class="migrate-go">MIGRATE</button>
+        </div>
+      </div>
+    </div>
 
     <span id="app-version" aria-label="バージョン"></span>
 
