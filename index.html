@@ -40,7 +40,7 @@
       .overlay {
         position: absolute; inset: 0;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 10; pointer-events: none;
+        z-index: 10; pointer-events: none; overflow-y: auto;
         background: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 100%);
       }
       .overlay.hidden { display: none; }
@@ -393,7 +393,7 @@
 
       /* Mode selector */
       .mode-selector {
-        display: flex; gap: 0.5rem; margin-top: 1.2rem; pointer-events: auto;
+        display: flex; gap: 0.5rem; margin-top: 0.8rem; pointer-events: auto;
       }
       .mode-btn {
         background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18);

@@ -42,8 +42,6 @@ export class App {
   private readonly manageReplay: ManageReplay;
   private readonly bestScoreRepo: BestScoreRepository;
   private readonly _classicConfig: GameConfig;
-  private readonly container: HTMLElement;
-  private readonly themeManager: ThemeManager;
   private activeMode: GameMode = "classic";
   private inputConfig: InputConfig;
 
@@ -74,8 +72,6 @@ export class App {
   ) {
     const theme = themeManager.current;
     this._classicConfig = gameConfig;
-    this.container = container;
-    this.themeManager = themeManager;
     this.inputConfig = inputConfig;
     this.renderer = new GameRenderer(container, gameConfig, theme);
     this.audio = new AudioManager(theme.audio);
@@ -273,16 +269,8 @@ export class App {
     if (this.activeMode === mode) return;
     this.activeMode = mode;
 
-    // Rebuild renderer for new lane count
-    this.renderer.dispose();
-    const theme = this.themeManager.current;
-    this.renderer = new GameRenderer(this.container, this.gameConfig, theme);
-
-    // Re-register theme listener — it captures the renderer reference via closure,
-    // but since we replaced this.renderer, new events will use the new instance.
-    // (The old listener registered in constructor still fires but updates the replaced renderer)
-    // We re-apply theme immediately for the new renderer.
-    this.renderer.applyTheme(theme);
+    // Reconfigure renderer in-place (no canvas replacement)
+    this.renderer.reconfigure(this.gameConfig);
 
     // Reset world for new config
     this.world = createGameWorld(this.gameConfig, mulberry32(generateSeed()));

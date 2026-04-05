@@ -1,6 +1,6 @@
 import {
   AmbientLight, DirectionalLight, PointLight,
-  Mesh, Group, LineSegments,
+  Mesh, Group, LineSegments, Object3D,
   BoxGeometry, SphereGeometry, PlaneGeometry, EdgesGeometry,
   MeshStandardMaterial, MeshBasicMaterial, LineBasicMaterial,
   Color, AdditiveBlending, Vector3,
@@ -24,24 +24,28 @@ interface Shard {
 export class GameRenderer {
   readonly adapter: ThreeSceneAdapter;
 
-  private readonly config: GameConfig;
-  private readonly scene: SceneTheme;
-  private readonly laneWidth: number;
-  private readonly laneOffset: number;
-  private readonly ballMeshes: Mesh[] = [];
-  private readonly ballGlows: PointLight[] = [];
+  private config: GameConfig;
+  private scene: SceneTheme;
+  private laneWidth: number;
+  private laneOffset: number;
+  private ballMeshes: Mesh[] = [];
+  private ballGlows: PointLight[] = [];
   private readonly shards: Shard[] = [];
   private readonly shardGeometry: BoxGeometry;
   private readonly shardMaterial: MeshBasicMaterial;
   private deathAnimId = 0;
-  private readonly wallMeshPool: Group[] = [];
-  private readonly activeWallMeshes = new Map<number, Group>();
+  private wallMeshPool: Group[] = [];
+  private activeWallMeshes = new Map<number, Group>();
 
-  private readonly wallGeometry: BoxGeometry;
-  private readonly wallEdgesGeometry: EdgesGeometry;
-  private readonly wallMaterial: MeshStandardMaterial;
-  private readonly wallEdgesMaterial: LineBasicMaterial;
+  private wallGeometry: BoxGeometry;
+  private wallEdgesGeometry: EdgesGeometry;
+  private wallMaterial: MeshStandardMaterial;
+  private wallEdgesMaterial: LineBasicMaterial;
   private wallTexGeneration = 0;
+
+  // Track objects per category for cleanup on reconfigure
+  private laneMeshes: Object3D[] = [];
+  private lights: Object3D[] = [];
 
   constructor(container: HTMLElement, config: GameConfig, theme: ThemeConfig) {
     this.config = config;
@@ -51,17 +55,7 @@ export class GameRenderer {
     this.laneOffset = ((config.laneCount - 1) / 2) * laneWidth;
     this.adapter = new ThreeSceneAdapter(container, theme.scene);
 
-    const ambient = new AmbientLight(0xffffff, 0.3);
-    this.adapter.add(ambient);
-
-    const dirLight = new DirectionalLight(0xffffff, 1.0);
-    dirLight.position.set(3, 20, 10);
-    this.adapter.add(dirLight);
-
-    const rimLight = new DirectionalLight(0xffffff, 0.4);
-    rimLight.position.set(-2, 8, -10);
-    this.adapter.add(rimLight);
-
+    this.buildLights();
     this.buildLanes();
     this.buildBalls();
 
@@ -96,8 +90,57 @@ export class GameRenderer {
     });
   }
 
+  /** Switch to a different game config (e.g. classic → triple) without replacing the canvas. */
+  reconfigure(config: GameConfig): void {
+    this.config = config;
+    this.laneWidth = config.render.laneWidth;
+    this.laneOffset = ((config.laneCount - 1) / 2) * this.laneWidth;
+
+    // Remove old lanes & balls from scene
+    for (const obj of this.laneMeshes) this.adapter.remove(obj);
+    this.laneMeshes = [];
+    for (const m of this.ballMeshes) this.adapter.remove(m);
+    for (const g of this.ballGlows) this.adapter.remove(g);
+    this.ballMeshes = [];
+    this.ballGlows = [];
+
+    // Remove old walls
+    this.clearWalls();
+    for (const g of this.wallMeshPool) this.adapter.remove(g);
+    this.wallMeshPool = [];
+
+    // Rebuild wall geometry for new lane width
+    this.wallGeometry.dispose();
+    this.wallEdgesGeometry.dispose();
+    const { laneWidth, wallHeight, wallDepth } = config.render;
+    this.wallGeometry = new BoxGeometry(laneWidth * 0.88, wallHeight, wallDepth);
+    this.wallEdgesGeometry = new EdgesGeometry(this.wallGeometry);
+
+    // Rebuild lanes & balls
+    this.buildLanes();
+    this.buildBalls();
+
+    this.adapter.render();
+  }
+
   private laneX(lane: number): number {
     return lane * this.laneWidth - this.laneOffset;
+  }
+
+  private buildLights(): void {
+    const ambient = new AmbientLight(0xffffff, 0.3);
+    this.adapter.add(ambient);
+    this.lights.push(ambient);
+
+    const dirLight = new DirectionalLight(0xffffff, 1.0);
+    dirLight.position.set(3, 20, 10);
+    this.adapter.add(dirLight);
+    this.lights.push(dirLight);
+
+    const rimLight = new DirectionalLight(0xffffff, 0.4);
+    rimLight.position.set(-2, 8, -10);
+    this.adapter.add(rimLight);
+    this.lights.push(rimLight);
   }
 
   private buildBalls(): void {
@@ -132,23 +175,20 @@ export class GameRenderer {
     const s = this.scene;
 
     // Alpha gradient: opaque near camera, transparent at far end.
-    // Needs segments along Y so the gradient interpolates smoothly.
     const fadeCanvas = document.createElement("canvas");
     fadeCanvas.width = 1;
     fadeCanvas.height = 256;
     const fadeCtx = fadeCanvas.getContext("2d");
     if (fadeCtx) {
       const grad = fadeCtx.createLinearGradient(0, 0, 0, 256);
-      // UV y=0 is far end, y=1 is near camera (after -PI/2 rotation)
-      grad.addColorStop(0, "#000");    // far: fully transparent
-      grad.addColorStop(0.20, "#fff"); // fade in over 20%
-      grad.addColorStop(1, "#fff");    // near camera: opaque
+      grad.addColorStop(0, "#000");
+      grad.addColorStop(0.20, "#fff");
+      grad.addColorStop(1, "#fff");
       fadeCtx.fillStyle = grad;
       fadeCtx.fillRect(0, 0, 1, 256);
     }
     const fadeTex = new CanvasTexture(fadeCanvas);
 
-    // Use enough Y segments for smooth gradient (32)
     const groundGeo = new PlaneGeometry(laneWidth * laneCount + 2, LANE_LENGTH, 1, 32);
     const groundMat = new MeshBasicMaterial({
       color: 0x0a0a0a,
@@ -158,6 +198,7 @@ export class GameRenderer {
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, -0.02, -LANE_LENGTH / 2 + 10);
     this.adapter.add(ground);
+    this.laneMeshes.push(ground);
 
     for (let i = 0; i < laneCount; i++) {
       const stripGeo = new PlaneGeometry(laneWidth * 0.92, LANE_LENGTH, 1, 32);
@@ -169,6 +210,7 @@ export class GameRenderer {
       strip.rotation.x = -Math.PI / 2;
       strip.position.set(this.laneX(i), -0.01, -LANE_LENGTH / 2 + 10);
       this.adapter.add(strip);
+      this.laneMeshes.push(strip);
     }
 
     for (let i = 0; i <= laneCount; i++) {
@@ -182,6 +224,7 @@ export class GameRenderer {
       line.rotation.x = -Math.PI / 2;
       line.position.set(x, 0.01, -LANE_LENGTH / 2 + 10);
       this.adapter.add(line);
+      this.laneMeshes.push(line);
     }
 
     const zoneGeo = new PlaneGeometry(laneWidth * laneCount + 1, 0.1);
@@ -196,6 +239,7 @@ export class GameRenderer {
     zoneLine.rotation.x = -Math.PI / 2;
     zoneLine.position.set(0, 0.02, 0);
     this.adapter.add(zoneLine);
+    this.laneMeshes.push(zoneLine);
   }
 
   private getWallGroup(): Group {
@@ -324,8 +368,6 @@ export class GameRenderer {
     const ball = this.ballMeshes[ballIndex];
     if (!ball) return;
 
-    // Clear any in-progress death animation before starting a new one,
-    // otherwise the old rAF loop keeps running and orphaned shards accumulate.
     this.clearShards();
 
     const origin = ball.position.clone();
