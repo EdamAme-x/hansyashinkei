@@ -1,38 +1,32 @@
 import type { ManageAchievement } from "@application/usecases/ManageAchievement";
+import type { AchievementRecord } from "@domain/entities/Achievement";
 import { ACHIEVEMENT_DEFS } from "@domain/entities/AchievementDefs";
-import { SKIN_DEFS, getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
+import { getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
+
+function hex(n: number): string {
+  return `#${n.toString(16).padStart(6, "0")}`;
+}
+
+function formatDate(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${y}/${m}/${day} ${h}:${min}`;
+}
 
 export class AchievementUI {
   private readonly screen: HTMLElement;
-  private readonly galleryEl: HTMLElement;
-  private readonly skinsEl: HTMLElement;
-  private readonly tabGallery: HTMLElement;
-  private readonly tabSkins: HTMLElement;
+  private readonly listEl: HTMLElement;
 
   onSkinChanged: ((skinId: string) => void) | null = null;
 
   constructor(private readonly manage: ManageAchievement) {
     this.screen = document.getElementById("achievement-screen") as HTMLElement;
-    this.galleryEl = document.getElementById("achievement-gallery") as HTMLElement;
-    this.skinsEl = document.getElementById("achievement-skins") as HTMLElement;
-    this.tabGallery = document.getElementById("achievement-tab-gallery") as HTMLElement;
-    this.tabSkins = document.getElementById("achievement-tab-skins") as HTMLElement;
-
+    this.listEl = document.getElementById("achievement-list") as HTMLElement;
     document.getElementById("achievement-close")?.addEventListener("click", () => this.hide());
-
-    this.tabGallery.addEventListener("click", () => {
-      this.tabGallery.classList.add("active");
-      this.tabSkins.classList.remove("active");
-      this.galleryEl.classList.remove("hidden");
-      this.skinsEl.classList.add("hidden");
-    });
-
-    this.tabSkins.addEventListener("click", () => {
-      this.tabSkins.classList.add("active");
-      this.tabGallery.classList.remove("active");
-      this.skinsEl.classList.remove("hidden");
-      this.galleryEl.classList.add("hidden");
-    });
   }
 
   async show(): Promise<void> {
@@ -49,80 +43,159 @@ export class AchievementUI {
   }
 
   private async render(): Promise<void> {
-    const unlockedIds = await this.manage.getUnlockedIds();
+    const records = await this.manage.getAllRecords();
+    const recordMap = new Map<string, AchievementRecord>();
+    for (const r of records) {
+      if (r.verified) recordMap.set(r.id, r);
+    }
     const activeSkinId = await this.manage.getActiveSkinId();
 
-    this.renderGallery(unlockedIds);
-    this.renderSkins(unlockedIds, activeSkinId);
-  }
+    this.listEl.textContent = "";
 
-  private renderGallery(unlockedIds: Set<string>): void {
-    this.galleryEl.textContent = "";
+    // Default skin equip button at the top
+    const defaultCard = this.buildDefaultSkinCard(activeSkinId);
+    this.listEl.appendChild(defaultCard);
+
     for (const def of ACHIEVEMENT_DEFS) {
-      const unlocked = unlockedIds.has(def.id);
+      const record = recordMap.get(def.id);
+      const unlocked = !!record;
+      const skin = getSkinDef(def.rewardSkinId);
+      const isActive = activeSkinId === def.rewardSkinId;
+
       const card = document.createElement("div");
-      card.className = `achievement-card ${unlocked ? "unlocked" : "locked"}`;
+      card.className = `ach-card ${unlocked ? "unlocked" : "locked"}`;
 
-      const label = document.createElement("div");
-      label.className = "achievement-card-label";
-      label.textContent = unlocked || !def.hidden ? def.label : "???";
+      // Left: skin preview circle
+      const showSkin = unlocked || !def.hidden;
+      const preview = document.createElement("button");
+      preview.className = `ach-preview ${unlocked ? "" : "locked"} ${isActive ? "equipped" : ""}`;
+      preview.style.backgroundColor = showSkin ? hex(skin.color) : "#111";
+      if (unlocked && skin.emissiveIntensity > 0) {
+        preview.style.boxShadow = `0 0 10px ${hex(skin.glowColor)}`;
+      }
+      if (!showSkin) {
+        preview.textContent = "?";
+        preview.style.color = "rgba(255,255,255,0.15)";
+        preview.style.fontSize = "1rem";
+        preview.style.fontWeight = "900";
+        preview.style.lineHeight = "2.4rem";
+        preview.style.textAlign = "center";
+      }
+      if (unlocked && isActive) {
+        preview.style.outline = `2px solid #ffd700`;
+        preview.style.outlineOffset = "2px";
+      }
 
-      const desc = document.createElement("div");
-      desc.className = "achievement-card-desc";
-      desc.textContent = unlocked || !def.hidden ? def.description : "Hidden achievement";
-
-      const reward = document.createElement("div");
-      reward.className = "achievement-card-reward";
       if (unlocked) {
-        const skin = getSkinDef(def.rewardSkinId);
-        reward.textContent = `SKIN: ${skin.label}`;
-      }
-
-      card.appendChild(label);
-      card.appendChild(desc);
-      card.appendChild(reward);
-      this.galleryEl.appendChild(card);
-    }
-  }
-
-  private renderSkins(unlockedIds: Set<string>, activeSkinId: string): void {
-    this.skinsEl.textContent = "";
-
-    const availableSkinIds = new Set<string>([DEFAULT_SKIN_ID]);
-    for (const def of ACHIEVEMENT_DEFS) {
-      if (unlockedIds.has(def.id)) availableSkinIds.add(def.rewardSkinId);
-    }
-
-    for (const skin of SKIN_DEFS) {
-      const available = availableSkinIds.has(skin.id);
-      const isActive = skin.id === activeSkinId;
-
-      const btn = document.createElement("button");
-      btn.className = `skin-option ${available ? "available" : "locked"} ${isActive ? "active" : ""}`;
-
-      const preview = document.createElement("div");
-      preview.className = "skin-preview";
-      preview.style.backgroundColor = `#${skin.color.toString(16).padStart(6, "0")}`;
-      if (skin.emissiveIntensity > 0) {
-        preview.style.boxShadow = `0 0 8px #${skin.glowColor.toString(16).padStart(6, "0")}`;
-      }
-
-      const name = document.createElement("div");
-      name.className = "skin-option-name";
-      name.textContent = available ? skin.label : "LOCKED";
-
-      btn.appendChild(preview);
-      btn.appendChild(name);
-
-      if (available) {
-        btn.addEventListener("click", async () => {
-          await this.manage.setActiveSkin(skin.id);
+        preview.addEventListener("click", async () => {
+          await this.manage.setActiveSkin(def.rewardSkinId);
           await this.render();
-          this.onSkinChanged?.(skin.id);
+          this.onSkinChanged?.(def.rewardSkinId);
         });
       }
 
-      this.skinsEl.appendChild(btn);
+      // Right: info
+      const info = document.createElement("div");
+      info.className = "ach-info";
+
+      const label = document.createElement("div");
+      label.className = "ach-label";
+      label.textContent = unlocked || !def.hidden ? def.label : "???";
+
+      const desc = document.createElement("div");
+      desc.className = "ach-desc";
+      desc.textContent = unlocked || !def.hidden ? def.description : "Hidden achievement";
+
+      const meta = document.createElement("div");
+      meta.className = "ach-meta";
+
+      if (unlocked) {
+        const skinName = document.createElement("span");
+        skinName.className = "ach-skin-name";
+        skinName.textContent = skin.label;
+
+        const date = document.createElement("span");
+        date.className = "ach-date";
+        date.textContent = formatDate(record.proof.unlockedAt);
+
+        if (isActive) {
+          const badge = document.createElement("span");
+          badge.className = "ach-equipped-badge";
+          badge.textContent = "EQUIPPED";
+          meta.appendChild(badge);
+        }
+
+        meta.appendChild(skinName);
+        meta.appendChild(date);
+      } else {
+        const lockLabel = document.createElement("span");
+        lockLabel.className = "ach-skin-name";
+        lockLabel.textContent = def.hidden ? "???" : "LOCKED";
+        meta.appendChild(lockLabel);
+      }
+
+      info.appendChild(label);
+      info.appendChild(desc);
+      info.appendChild(meta);
+
+      card.appendChild(preview);
+      card.appendChild(info);
+      this.listEl.appendChild(card);
     }
+  }
+
+  private buildDefaultSkinCard(activeSkinId: string): HTMLElement {
+    const skin = getSkinDef(DEFAULT_SKIN_ID);
+    const isActive = activeSkinId === DEFAULT_SKIN_ID;
+
+    const card = document.createElement("div");
+    card.className = "ach-card unlocked";
+
+    const preview = document.createElement("button");
+    preview.className = `ach-preview ${isActive ? "equipped" : ""}`;
+    preview.style.backgroundColor = hex(skin.color);
+    if (isActive) {
+      preview.style.outline = "2px solid #ffd700";
+      preview.style.outlineOffset = "2px";
+    }
+    preview.addEventListener("click", async () => {
+      await this.manage.setActiveSkin(DEFAULT_SKIN_ID);
+      await this.render();
+      this.onSkinChanged?.(DEFAULT_SKIN_ID);
+    });
+
+    const info = document.createElement("div");
+    info.className = "ach-info";
+
+    const label = document.createElement("div");
+    label.className = "ach-label";
+    label.textContent = "DEFAULT";
+
+    const desc = document.createElement("div");
+    desc.className = "ach-desc";
+    desc.textContent = "Standard ball";
+
+    const meta = document.createElement("div");
+    meta.className = "ach-meta";
+
+    if (isActive) {
+      const badge = document.createElement("span");
+      badge.className = "ach-equipped-badge";
+      badge.textContent = "EQUIPPED";
+      meta.appendChild(badge);
+    }
+
+    const skinName = document.createElement("span");
+    skinName.className = "ach-skin-name";
+    skinName.textContent = skin.label;
+    meta.appendChild(skinName);
+
+    info.appendChild(label);
+    info.appendChild(desc);
+    info.appendChild(meta);
+
+    card.appendChild(preview);
+    card.appendChild(info);
+    return card;
   }
 }
