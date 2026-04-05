@@ -1,6 +1,5 @@
 import { StateMachine, GameState, GameEvent } from "@domain/entities/StateMachine";
 import type { GameConfig } from "@domain/entities/GameConfig";
-import { createTripleConfig } from "@domain/entities/GameConfig";
 import type { GameMode } from "@domain/entities/GameMode";
 import type { Replay, ReplayEvent } from "@domain/entities/Replay";
 import { createReplay } from "@domain/entities/Replay";
@@ -53,11 +52,12 @@ export class App {
   private readonly achievementUI: AchievementUI;
   private readonly achievementToast: AchievementToast;
   private readonly _classicConfig: GameConfig;
+  private readonly _tripleConfig: GameConfig;
   private activeMode: GameMode = "classic";
   private inputConfig: InputConfig;
 
   private get gameConfig(): GameConfig {
-    return this.activeMode === "triple" ? createTripleConfig() : this._classicConfig;
+    return this.activeMode === "triple" ? this._tripleConfig : this._classicConfig;
   }
 
   private world: GameWorldState;
@@ -76,6 +76,7 @@ export class App {
     manageReplay: ManageReplay,
     bestScoreRepo: BestScoreRepository,
     gameConfig: GameConfig,
+    tripleConfig: GameConfig,
     inputConfig: InputConfig,
     themeManager: ThemeManager,
     imageStore: IImageStore,
@@ -86,6 +87,7 @@ export class App {
   ) {
     const theme = themeManager.current;
     this._classicConfig = gameConfig;
+    this._tripleConfig = tripleConfig;
     this.modeRepo = modeRepo;
     this.activeMode = modeRepo.load();
     this.inputConfig = inputConfig;

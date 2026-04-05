@@ -13,7 +13,7 @@ import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
 import { AchievementSigner } from "@infrastructure/crypto/AchievementSigner";
 import { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
 import { ImageStore } from "@infrastructure/storage/ImageStore";
-import { createDefaultConfig } from "@domain/entities/GameConfig";
+import { createDefaultConfig, createTripleConfig } from "@domain/entities/GameConfig";
 import { applyDevParams } from "@infrastructure/dev/DevParams";
 import { loadInputConfig, saveInputConfig } from "@presentation/InputConfig";
 import { ThemeManager } from "@presentation/ThemeManager";
@@ -87,11 +87,13 @@ async function main() {
   );
 
   const gameConfig = createDefaultConfig();
+  const tripleConfig = createTripleConfig();
   const inputConfig = loadInputConfig(kv);
   applyDevParams(gameConfig, inputConfig);
+  applyDevParams(tripleConfig, inputConfig);
 
   const modeRepo = new LocalStorageModeRepository(kv);
-  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, inputConfig, themeManager, imageStore, manageSave, modeRepo, kv, manageAchievement);
+  new App(container, manageScore, manageReplay, bestScoreRepo, gameConfig, tripleConfig, inputConfig, themeManager, imageStore, manageSave, modeRepo, kv, manageAchievement);
 }
 
 function dataUrlToFile(dataUrl: string): File {
