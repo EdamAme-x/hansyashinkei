@@ -48,6 +48,10 @@ export class ThemeUI {
     this.screen.classList.remove("hidden");
   }
 
+  isOpen(): boolean {
+    return !this.screen.classList.contains("hidden");
+  }
+
   hide(): void {
     this.screen.classList.add("hidden");
   }

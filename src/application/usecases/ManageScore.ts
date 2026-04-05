@@ -14,7 +14,12 @@ function computeStats(scores: Score[]): ScoreStats {
   const totalPlays = scores.length;
   const totalScore = scores.reduce((sum, s) => sum + s.value, 0);
   const bestScore = scores.reduce((best, s) => Math.max(best, s.value), 0);
-  const avgScore = totalPlays > 0 ? Math.round(totalScore / totalPlays) : 0;
+  const recent = scores
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 20);
+  const avgScore = recent.length > 0
+    ? Math.round(recent.reduce((sum, s) => sum + s.value, 0) / recent.length)
+    : 0;
   return { totalPlays, totalScore, bestScore, avgScore };
 }
 

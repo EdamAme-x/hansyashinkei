@@ -417,9 +417,21 @@ export class App {
     const pressed = new Set<string>();
 
     // Keyboard
+    const settingsEl = document.getElementById("settings-screen");
+
     window.addEventListener("keydown", (e) => {
       if (pressed.has(e.code)) return;
       pressed.add(e.code);
+
+      // Close overlay screens with Esc/Backspace (innermost first)
+      if (e.code === "Escape" || e.code === "Backspace") {
+        if (this.themeUI.isOpen()) { this.themeUI.hide(); return; }
+        if (this.keybindUI.isOpen()) { this.keybindUI.hide(); return; }
+        if (this.historyUI.isOpen()) { this.historyUI.hide(); return; }
+        if (settingsEl && !settingsEl.classList.contains("hidden")) {
+          settingsEl.classList.add("hidden"); return;
+        }
+      }
 
       const { dodge: dodgeBindings, start: startCodes } = this.inputConfig;
 

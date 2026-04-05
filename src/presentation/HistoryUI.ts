@@ -177,6 +177,10 @@ export class HistoryUI {
     }
   }
 
+  isOpen(): boolean {
+    return !this.screen.classList.contains("hidden");
+  }
+
   hide(): void {
     this.screen.classList.add("hidden");
     this.onClose();
