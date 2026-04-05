@@ -27,6 +27,7 @@ type Transition = {
 const transitions: Transition[] = [
   { from: GameState.Title, event: GameEvent.Start, to: GameState.Playing },
   { from: GameState.Playing, event: GameEvent.Die, to: GameState.GameOver },
+  { from: GameState.Playing, event: GameEvent.BackToTitle, to: GameState.Title },
   { from: GameState.GameOver, event: GameEvent.Restart, to: GameState.Playing },
   { from: GameState.GameOver, event: GameEvent.BackToTitle, to: GameState.Title },
   { from: GameState.Title, event: GameEvent.WatchReplay, to: GameState.Watching },

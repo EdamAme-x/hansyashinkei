@@ -199,6 +199,10 @@ export class App {
 
     if (state === GameState.Title) {
       this.audio.stopBgm();
+      this.renderer.clearWalls();
+      this.renderer.clearShards();
+      this.renderer.showBalls(true);
+      this.recording = null;
       this.loadBestScore(this.activeMode).catch(() => {});
     }
 
@@ -446,6 +450,10 @@ export class App {
       }
 
       if (this.sm.state === GameState.Playing) {
+        if (e.code === "Escape" || e.code === "Backspace") {
+          this.sm.dispatch(GameEvent.BackToTitle);
+          return;
+        }
         for (const binding of dodgeBindings) {
           if (e.code === binding.code) {
             this.recordDodge(binding.ballIndex);
