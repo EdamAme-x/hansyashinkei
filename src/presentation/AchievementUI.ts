@@ -2,10 +2,7 @@ import type { ManageAchievement } from "@application/usecases/ManageAchievement"
 import type { AchievementRecord } from "@domain/entities/Achievement";
 import { ACHIEVEMENT_DEFS } from "@domain/entities/AchievementDefs";
 import { getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
-
-function hex(n: number): string {
-  return `#${n.toString(16).padStart(6, "0")}`;
-}
+import { renderSkinPreview, renderLockedPreview } from "./SkinPreviewRenderer";
 
 function formatDate(ts: number): string {
   const d = new Date(ts);
@@ -52,38 +49,34 @@ export class AchievementUI {
 
     this.listEl.textContent = "";
 
-    // Default skin equip button at the top
-    const defaultCard = this.buildDefaultSkinCard(activeSkinId);
-    this.listEl.appendChild(defaultCard);
+    // Default skin card
+    this.listEl.appendChild(this.buildDefaultSkinCard(activeSkinId));
 
     for (const def of ACHIEVEMENT_DEFS) {
       const record = recordMap.get(def.id);
       const unlocked = !!record;
       const skin = getSkinDef(def.rewardSkinId);
       const isActive = activeSkinId === def.rewardSkinId;
+      const showSkin = unlocked || !def.hidden;
 
       const card = document.createElement("div");
       card.className = `ach-card ${unlocked ? "unlocked" : "locked"}`;
 
-      // Left: skin preview circle
-      const showSkin = unlocked || !def.hidden;
+      // Preview — 3D rendered image
       const preview = document.createElement("button");
       preview.className = `ach-preview ${unlocked ? "" : "locked"} ${isActive ? "equipped" : ""}`;
-      preview.style.backgroundColor = showSkin ? hex(skin.color) : "#111";
-      if (unlocked && skin.emissiveIntensity > 0) {
-        preview.style.boxShadow = `0 0 10px ${hex(skin.glowColor)}`;
-      }
+
+      const img = document.createElement("img");
+      img.className = "ach-preview-img";
+      img.alt = showSkin ? skin.label : "?";
+      img.src = showSkin ? renderSkinPreview(skin) : renderLockedPreview();
+      preview.appendChild(img);
+
       if (!showSkin) {
-        preview.textContent = "?";
-        preview.style.color = "rgba(255,255,255,0.15)";
-        preview.style.fontSize = "1rem";
-        preview.style.fontWeight = "900";
-        preview.style.lineHeight = "2.4rem";
-        preview.style.textAlign = "center";
-      }
-      if (unlocked && isActive) {
-        preview.style.outline = `2px solid #ffd700`;
-        preview.style.outlineOffset = "2px";
+        const q = document.createElement("div");
+        q.className = "ach-preview-lock";
+        q.textContent = "?";
+        preview.appendChild(q);
       }
 
       if (unlocked) {
@@ -94,7 +87,7 @@ export class AchievementUI {
         });
       }
 
-      // Right: info
+      // Info
       const info = document.createElement("div");
       info.className = "ach-info";
 
@@ -110,14 +103,6 @@ export class AchievementUI {
       meta.className = "ach-meta";
 
       if (unlocked) {
-        const skinName = document.createElement("span");
-        skinName.className = "ach-skin-name";
-        skinName.textContent = skin.label;
-
-        const date = document.createElement("span");
-        date.className = "ach-date";
-        date.textContent = formatDate(record.proof.unlockedAt);
-
         if (isActive) {
           const badge = document.createElement("span");
           badge.className = "ach-equipped-badge";
@@ -125,7 +110,14 @@ export class AchievementUI {
           meta.appendChild(badge);
         }
 
+        const skinName = document.createElement("span");
+        skinName.className = "ach-skin-name";
+        skinName.textContent = skin.label;
         meta.appendChild(skinName);
+
+        const date = document.createElement("span");
+        date.className = "ach-date";
+        date.textContent = formatDate(record.proof.unlockedAt);
         meta.appendChild(date);
       } else {
         const lockLabel = document.createElement("span");
@@ -153,11 +145,13 @@ export class AchievementUI {
 
     const preview = document.createElement("button");
     preview.className = `ach-preview ${isActive ? "equipped" : ""}`;
-    preview.style.backgroundColor = hex(skin.color);
-    if (isActive) {
-      preview.style.outline = "2px solid #ffd700";
-      preview.style.outlineOffset = "2px";
-    }
+
+    const img = document.createElement("img");
+    img.className = "ach-preview-img";
+    img.alt = skin.label;
+    img.src = renderSkinPreview(skin);
+    preview.appendChild(img);
+
     preview.addEventListener("click", async () => {
       await this.manage.setActiveSkin(DEFAULT_SKIN_ID);
       await this.render();
