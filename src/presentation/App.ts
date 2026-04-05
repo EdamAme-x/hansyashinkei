@@ -773,11 +773,12 @@ export class App {
 
       if (this.sm.state === GameState.Playing) {
         const speedMult = getSkinSpeedMultiplier(this.activeSkinId);
-        tick(this.world, dt * speedMult);
+        const gameDt = dt * speedMult;
+        tick(this.world, gameDt);
         this.hud.updateScore(this.world.score);
 
         if (this.recording) {
-          this.recording.dts.push(dt);
+          this.recording.dts.push(gameDt);
           this.recording.frameCount++;
         }
 

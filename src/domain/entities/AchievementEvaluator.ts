@@ -93,7 +93,22 @@ function checkCondition(def: AchievementDef, ctx: EvalContext): EvalResult | nul
     }
 
     case "random_chance": {
-      if (Math.random() * condition.denominator >= 1) return null;
+      // Single roll with CSRNG
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      if (buf[0] % condition.denominator !== 0) return null;
+
+      // Anti-tamper: verify CSRNG isn't hooked by checking 16 additional rolls
+      // If all 16 are also "wins", the RNG is almost certainly compromised
+      // (probability of legitimate all-wins: 1/denominator^16 ≈ impossible)
+      const verify = new Uint32Array(16);
+      crypto.getRandomValues(verify);
+      let allWins = true;
+      for (let i = 0; i < verify.length; i++) {
+        if (verify[i] % condition.denominator !== 0) { allWins = false; break; }
+      }
+      if (allWins) return null; // RNG is compromised
+
       return scoreResult(def.id, newScore, condition.type, 1);
     }
   }
