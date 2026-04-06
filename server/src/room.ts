@@ -243,28 +243,26 @@ export class RoomDurableObject {
       return;
     }
 
-    // Reject if already joined
-    if (this.findPlayerIndex(ws) !== -1) {
+    // Reject if already joined (has meta = already sent join message)
+    const slot = this.findPlayerIndex(ws);
+    if (slot === -1) {
+      this.send(ws, { type: "error", message: "Room full" });
+      return;
+    }
+    if (this.playerMeta[slot]) {
       this.send(ws, { type: "error", message: "Already joined" });
       return;
     }
 
-    // Find slot from WS tags
-    const idx = this.findSlotByWs(ws);
-    if (idx === -1) {
-      this.send(ws, { type: "error", message: "Room full" });
-      return;
-    }
+    this.playerMeta[slot] = { username: validName, keyPart, inputCount: 0, inputWindowStart: Date.now() };
 
-    this.playerMeta[idx] = { username: validName, keyPart, inputCount: 0, inputWindowStart: Date.now() };
-
-    this.send(ws, { type: "joined", playerIndex: idx as 0 | 1, roomId: this.roomId, mode: this.mode });
+    this.send(ws, { type: "joined", playerIndex: slot as 0 | 1, roomId: this.roomId, mode: this.mode });
 
     // Check if both players have joined
     if (this.playerMeta[0] && this.playerMeta[1]) {
-      const other = this.playerMeta[1 - idx];
+      const other = this.playerMeta[1 - slot];
       if (other) {
-        const otherWs = this.getPlayerWs(1 - idx);
+        const otherWs = this.getPlayerWs(1 - slot);
         if (otherWs) this.send(otherWs, { type: "opponent_joined", username: validName });
         this.send(ws, { type: "opponent_joined", username: other.username });
       }
@@ -312,11 +310,6 @@ export class RoomDurableObject {
     if (tags.includes("p0")) return 0;
     if (tags.includes("p1")) return 1;
     return -1;
-  }
-
-  /** Find the slot assigned to this WS (same as findPlayerIndex but for pre-join). */
-  private findSlotByWs(ws: WebSocket): number {
-    return this.findPlayerIndex(ws);
   }
 
   private async startGame(): Promise<void> {
