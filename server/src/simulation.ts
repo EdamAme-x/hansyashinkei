@@ -201,6 +201,7 @@ export class VsSimulation {
     return {
       hp: p.hp,
       score: p.world.score,
+      speed: p.world.speed,
       alive: p.world.alive,
       invincibleUntilFrame: p.invincibleUntilFrame,
       dodging: p.world.balls.map((b) => b.dodging),

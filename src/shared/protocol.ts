@@ -8,6 +8,7 @@ import type { GameMode } from "../domain/entities/GameMode";
 export interface VsPlayerState {
   hp: number;
   score: number;
+  speed: number;
   alive: boolean;
   invincibleUntilFrame: number;
   dodging: boolean[];

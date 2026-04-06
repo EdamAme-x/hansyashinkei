@@ -56,6 +56,11 @@ export class VsApp {
   private animationId = 0;
   private localFrame = 0;
 
+  // Interpolation
+  private selfSpeed = 0;
+  private oppSpeed = 0;
+  private cachedHmacKey: CryptoKey | null = null;
+
   // Recording
   private seed = 0;
   private recordDts: number[] = [];
@@ -252,14 +257,16 @@ export class VsApp {
 
   private async verifyAndApplyState(msg: Extract<ServerMessage, { type: "state" }>): Promise<void> {
     if (this.combinedKey && msg.hmac) {
+      if (!this.cachedHmacKey) {
+        const keyBuf = new Uint8Array(this.combinedKey.buffer, this.combinedKey.byteOffset, this.combinedKey.byteLength) as Uint8Array<ArrayBuffer>;
+        this.cachedHmacKey = await crypto.subtle.importKey("raw", keyBuf, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+      }
       const payload = JSON.stringify({ frame: msg.frame, players: msg.players, orbs: msg.orbs });
-      const keyBuf = new Uint8Array(this.combinedKey.buffer, this.combinedKey.byteOffset, this.combinedKey.byteLength) as Uint8Array<ArrayBuffer>;
-      const cryptoKey = await crypto.subtle.importKey("raw", keyBuf, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
       const sigBin = atob(msg.hmac);
       const sigBytes = new Uint8Array(sigBin.length);
       for (let i = 0; i < sigBin.length; i++) sigBytes[i] = sigBin.charCodeAt(i);
       const sigBuf = new Uint8Array(sigBytes.buffer, sigBytes.byteOffset, sigBytes.byteLength) as Uint8Array<ArrayBuffer>;
-      const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuf, new TextEncoder().encode(payload));
+      const valid = await crypto.subtle.verify("HMAC", this.cachedHmacKey, sigBuf, new TextEncoder().encode(payload));
       if (!valid) console.warn("[VS] HMAC verification failed");
     }
 
@@ -268,8 +275,10 @@ export class VsApp {
     this.selfState = self;
     this.opponentState = opp;
     this.localFrame = msg.frame;
+    this.selfSpeed = self.speed;
+    this.oppSpeed = opp.speed;
 
-    // Apply server walls to local worlds for rendering
+    // Snap walls to server position (overwrite interpolation drift)
     if (this.selfWorld) {
       this.selfWorld.walls = self.walls.map((w, i) => ({
         id: i, waveId: 0, lane: w.lane, z: w.z, passed: false,
@@ -321,11 +330,27 @@ export class VsApp {
   }
 
   private startLoop(): void {
+    let lastTime = performance.now();
     const loop = (now: number) => {
       this.animationId = requestAnimationFrame(loop);
       if (this.phase !== "playing") return;
 
-      // Render self (walls/balls come from server state applied in verifyAndApplyState)
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      // Interpolate wall positions between server updates
+      if (this.selfWorld && this.selfSpeed > 0) {
+        for (const wall of this.selfWorld.walls) {
+          wall.z += this.selfSpeed * dt;
+        }
+      }
+      if (this.opponentWorld && this.oppSpeed > 0) {
+        for (const wall of this.opponentWorld.walls) {
+          wall.z += this.oppSpeed * dt;
+        }
+      }
+
+      // Render self
       if (this.selfRenderer && this.selfWorld) {
         const invincible = this.selfState && this.selfState.invincibleUntilFrame > this.localFrame;
         this.selfRenderer.showBalls(invincible ? Math.floor(now / 120) % 2 === 0 : true);
