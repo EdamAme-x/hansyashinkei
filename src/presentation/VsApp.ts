@@ -4,7 +4,7 @@ import type { ReplayEvent } from "@domain/entities/Replay";
 import { createReplay } from "@domain/entities/Replay";
 import { createVsScore } from "@domain/entities/Score";
 import type { ServerMessage } from "@shared/protocol";
-import { VS_FIXED_DT, VS_MAX_HP } from "@shared/protocol";
+import { VS_FIXED_DT, VS_MAX_HP, VS_ORB_CHANCE } from "@shared/protocol";
 import { WsClient } from "./WsClient";
 import { GameRenderer } from "./GameRenderer";
 import type { ThemeConfig } from "@domain/entities/ThemeConfig";
@@ -57,6 +57,12 @@ export class VsApp {
   private lastTime = 0;
   private accumulator = 0;
   private localFrame = 0;
+
+  // Orbs (client-side)
+  private orbs: { id: number; lane: number; z: number }[] = [];
+  private orbIdGen = 0;
+  private orbPrng: (() => number) | null = null;
+  private lastScoredWaveCount = 0;
 
   // Recording
   private seed = 0;
@@ -203,6 +209,10 @@ export class VsApp {
     // Local deterministic worlds — same seed = same walls
     this.selfWorld = createGameWorld(config, mulberry32(seed));
     this.opponentWorld = createGameWorld(config, mulberry32(seed));
+    this.orbPrng = mulberry32((seed + 0x12345678) >>> 0);
+    this.orbs = [];
+    this.orbIdGen = 0;
+    this.lastScoredWaveCount = 0;
 
     this.selfRenderer = new GameRenderer(this.selfContainer, config, this.theme);
     this.selfRenderer.applyActiveSkin(getSkinDef(this.activeSkinId));
@@ -233,12 +243,6 @@ export class VsApp {
       }
     }
 
-    // Sync orbs
-    const selfOrbs = msg.orbs.filter((o) => o.targetPlayer === this.playerIndex);
-    const oppOrbs = msg.orbs.filter((o) => o.targetPlayer !== this.playerIndex);
-    this.selfRenderer?.syncOrbs(selfOrbs);
-    this.opponentRenderer?.syncOrbs(oppOrbs);
-
     this.updateHpDisplay();
   }
 
@@ -266,9 +270,64 @@ export class VsApp {
       // Fixed timestep local tick — same as server, same seed = identical walls
       while (this.accumulator >= VS_FIXED_DT) {
         if (this.selfWorld) {
-          this.selfWorld.alive = true; // VS: don't die from walls locally
-          tick(this.selfWorld, VS_FIXED_DT);
+          const prevScore = this.selfWorld.score;
           this.selfWorld.alive = true;
+          tick(this.selfWorld, VS_FIXED_DT);
+
+          // Detect wall hit (tick sets alive=false)
+          if (!this.selfWorld.alive) {
+            this.ws.send({ type: "wall_hit" });
+            this.selfWorld.alive = true;
+          }
+
+          // Detect wall pass (score increased)
+          const passCount = this.selfWorld.score - prevScore;
+          for (let p = 0; p < passCount; p++) {
+            this.ws.send({ type: "wall_pass" });
+          }
+
+          // Orb spawning on wave pass
+          const newWaveCount = this.selfWorld.scoredWaves.size;
+          if (this.orbPrng && newWaveCount > this.lastScoredWaveCount && this.gameConfig) {
+            for (let w = this.lastScoredWaveCount; w < newWaveCount; w++) {
+              if (this.orbPrng() < VS_ORB_CHANCE) {
+                const validLanes = this.gameConfig.balls.map((b) => b.homeLane);
+                const wallLanes = new Set(this.selfWorld.walls.filter((wl) => wl.z < -60).map((wl) => wl.lane));
+                const safeLanes = validLanes.filter((l) => !wallLanes.has(l));
+                if (safeLanes.length > 0) {
+                  const lane = safeLanes[Math.floor(this.orbPrng() * safeLanes.length)];
+                  this.orbs.push({ id: this.orbIdGen++, lane, z: this.gameConfig.spawnZ });
+                }
+              }
+            }
+            this.lastScoredWaveCount = newWaveCount;
+          }
+
+          // Move orbs + check collection
+          const hitZone = this.gameConfig?.hitZone ?? 0.55;
+          for (let oi = this.orbs.length - 1; oi >= 0; oi--) {
+            const orb = this.orbs[oi];
+            orb.z += this.selfWorld.speed * VS_FIXED_DT;
+            // Collection check
+            if (orb.z >= -hitZone && orb.z <= hitZone) {
+              for (const ball of this.selfWorld.balls) {
+                if (ball.lane === orb.lane) {
+                  this.ws.send({ type: "orb_collect" });
+                  this.orbs.splice(oi, 1);
+                  break;
+                }
+              }
+            }
+            // Despawn
+            if (orb.z > (this.gameConfig?.despawnZ ?? 5)) {
+              this.orbs.splice(oi, 1);
+            }
+          }
+
+          // Sync orbs to renderer
+          this.selfRenderer?.syncOrbs(this.orbs.map((o) => ({
+            id: o.id, lane: o.lane, z: o.z, collected: false, targetPlayer: this.playerIndex,
+          })));
         }
         if (this.opponentWorld) {
           this.opponentWorld.alive = true;

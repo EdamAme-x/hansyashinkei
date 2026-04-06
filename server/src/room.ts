@@ -2,7 +2,7 @@ import { createDefaultConfig, createTripleConfig } from "@domain/entities/GameCo
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { GameMode } from "@domain/entities/GameMode";
 import type { ClientMessage, ServerMessage } from "@shared/protocol";
-import { VS_FIXED_DT, VS_BROADCAST_INTERVAL, VS_MAX_INPUTS_PER_SECOND, VS_FRAME_TOLERANCE } from "@shared/protocol";
+import { VS_FIXED_DT } from "@shared/protocol";
 import { VsSimulation } from "@server/simulation";
 import type { VsGameEvent } from "@server/simulation";
 import { combineKeys, base64Decode, base64Encode, hmacSign, validateUsername, xorEncrypt } from "@server/auth";
@@ -158,7 +158,16 @@ export class RoomDurableObject {
         await this.handleReady(ws);
         break;
       case "input":
-        this.handleInput(ws, msg.frame, msg.action, msg.ballIndex);
+        this.handleInput(ws, msg.action, msg.ballIndex);
+        break;
+      case "wall_hit":
+        this.handleReport(ws, "wall_hit");
+        break;
+      case "orb_collect":
+        this.handleReport(ws, "orb_collect");
+        break;
+      case "wall_pass":
+        this.handleReport(ws, "wall_pass");
         break;
     }
   }
@@ -207,23 +216,7 @@ export class RoomDurableObject {
     }
 
     if (this.roomState === "playing" && this.simulation && !this.simulation.finished) {
-      const allEvents: VsGameEvent[] = [];
-      for (let i = 0; i < VS_BROADCAST_INTERVAL; i++) {
-        const result = this.simulation.step();
-        allEvents.push(...result.events);
-        if (this.simulation.finished) break;
-      }
-
-      if (this.simulation.finished) {
-        this.roomState = "finished";
-        this.broadcastEncrypted({
-          type: "game_over",
-          winner: this.simulation.winner,
-          players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
-        });
-        await this.saveMeta();
-        return;
-      }
+      this.simulation.step();
 
       const statePayload = JSON.stringify({
         frame: this.simulation.frame,
@@ -240,14 +233,6 @@ export class RoomDurableObject {
         orbs: this.simulation.getOrbStates(),
         hmac,
       });
-
-      for (const ev of allEvents) {
-        if (ev.type === "damage") {
-          this.broadcastEncrypted({ type: "damage", targetPlayer: ev.player, amount: ev.amount, source: ev.source as "wall" | "orb" });
-        } else {
-          this.broadcastEncrypted({ type: "heal", targetPlayer: ev.player, amount: ev.amount });
-        }
-      }
 
       await this.state.storage.setAlarm(Date.now() + 50);
       return;
@@ -324,28 +309,49 @@ export class RoomDurableObject {
     }
   }
 
-  private handleInput(ws: WebSocket, frame: number, action: "dodge" | "undodge", ballIndex: number): void {
+  private handleInput(ws: WebSocket, action: "dodge" | "undodge", ballIndex: number): void {
     if (this.roomState !== "playing" || !this.simulation) return;
+    const idx = this.findPlayerIndex(ws);
+    if (idx === -1) return;
+    if (!this.config || ballIndex < 0 || ballIndex >= this.config.balls.length) return;
+    this.simulation.applyDodge(idx as 0 | 1, ballIndex, action === "dodge");
+  }
 
+  private handleReport(ws: WebSocket, reportType: "wall_hit" | "orb_collect" | "wall_pass"): void {
+    if (this.roomState !== "playing" || !this.simulation) return;
     const idx = this.findPlayerIndex(ws);
     if (idx === -1) return;
 
-    const meta = this.playerMeta[idx];
-    if (!meta) return;
-
-    const now = Date.now();
-    if (now - meta.inputWindowStart > 1000) {
-      meta.inputCount = 0;
-      meta.inputWindowStart = now;
+    let event: import("@server/simulation").VsGameEvent | null = null;
+    switch (reportType) {
+      case "wall_hit":
+        event = this.simulation.reportWallHit(idx as 0 | 1);
+        break;
+      case "orb_collect":
+        event = this.simulation.reportOrbCollect(idx as 0 | 1);
+        break;
+      case "wall_pass":
+        event = this.simulation.reportWallPass(idx as 0 | 1);
+        break;
     }
-    if (meta.inputCount >= VS_MAX_INPUTS_PER_SECOND) return;
-    meta.inputCount++;
 
-    if (Math.abs(frame - this.simulation.frame) > VS_FRAME_TOLERANCE) return;
-    if (!this.config || ballIndex < 0 || ballIndex >= this.config.balls.length) return;
-    if (action !== "dodge" && action !== "undodge") return;
+    if (event) {
+      if (event.type === "damage") {
+        this.broadcastEncrypted({ type: "damage", targetPlayer: event.player, amount: event.amount, source: event.source as "wall" | "orb" });
+      } else {
+        this.broadcastEncrypted({ type: "heal", targetPlayer: event.player, amount: event.amount });
+      }
+    }
 
-    this.simulation.applyInput(idx as 0 | 1, action, ballIndex);
+    if (this.simulation.finished) {
+      this.roomState = "finished";
+      this.broadcastEncrypted({
+        type: "game_over",
+        winner: this.simulation.winner,
+        players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
+      });
+      this.saveMeta().catch(() => {});
+    }
   }
 
   /** Find which player slot a WebSocket belongs to, using tags. */
@@ -368,7 +374,7 @@ export class RoomDurableObject {
     crypto.getRandomValues(seedBuf);
     this.seed = seedBuf[0];
 
-    this.simulation = new VsSimulation(this.seed, this.config);
+    this.simulation = new VsSimulation(this.config.balls.length);
     this.roomState = "playing";
     await this.saveMeta();
 

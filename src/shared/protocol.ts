@@ -27,7 +27,10 @@ export interface VsOrbState {
 export type ClientMessage =
   | { type: "join"; username: string; keyPart: string }
   | { type: "ready" }
-  | { type: "input"; frame: number; action: "dodge" | "undodge"; ballIndex: number };
+  | { type: "input"; frame: number; action: "dodge" | "undodge"; ballIndex: number }
+  | { type: "wall_hit" }
+  | { type: "orb_collect" }
+  | { type: "wall_pass" };
 
 // ── Server → Client messages ──
 
