@@ -210,6 +210,7 @@ export class GameRenderer {
         edgeMat.opacity = 0.6;
         const edges = new LineSegments(edgeGeo, edgeMat);
         edges.position.copy(mesh.position);
+        edges.userData.ballIndex = i;
         this.adapter.add(edges);
         this.ballEdges.push(edges);
       }
@@ -335,12 +336,9 @@ export class GameRenderer {
     }
     // Sync edge positions with ball meshes
     for (const edge of this.ballEdges) {
-      // Find the closest ball mesh by Y (edges share the same Y as their ball)
-      for (const m of this.ballMeshes) {
-        if (Math.abs(edge.position.y - m.position.y) < 0.01) {
-          edge.position.x = m.position.x;
-          break;
-        }
+      const idx: number = edge.userData.ballIndex as number;
+      if (idx !== undefined && this.ballMeshes[idx]) {
+        edge.position.x = this.ballMeshes[idx].position.x;
       }
     }
 
@@ -581,6 +579,7 @@ export class GameRenderer {
         edgeMat.opacity = 0.6;
         const edges = new LineSegments(edgeGeo, edgeMat);
         edges.position.copy(mesh.position);
+        edges.userData.ballIndex = i;
         this.adapter.add(edges);
         this.ballEdges.push(edges);
       }

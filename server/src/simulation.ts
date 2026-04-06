@@ -86,11 +86,10 @@ export class VsSimulation {
 
       // Pre-tick: force alive so tick doesn't abort on wall collision
       player.world.alive = true;
-      const prevAlive = true;
       tick(player.world, VS_FIXED_DT);
 
       // Wall collision: tick sets alive=false when ball hits wall
-      if (!player.world.alive && prevAlive) {
+      if (!player.world.alive) {
         if (this.frame >= player.invincibleUntilFrame) {
           player.hp = Math.max(0, player.hp - VS_WALL_DAMAGE);
           player.invincibleUntilFrame = this.frame + VS_INVINCIBLE_FRAMES;
@@ -214,6 +213,7 @@ export class VsSimulation {
       lane: o.lane,
       z: o.z,
       collected: o.collected,
+      targetPlayer: o.targetPlayer,
     }));
   }
 }

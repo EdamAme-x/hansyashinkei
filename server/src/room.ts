@@ -169,12 +169,11 @@ export class RoomDurableObject {
 
       // Broadcast damage/heal events
       for (const ev of allEvents) {
-        this.broadcast({
-          type: ev.type,
-          targetPlayer: ev.player,
-          amount: ev.amount,
-          source: ev.source as "wall" | "orb",
-        });
+        if (ev.type === "damage") {
+          this.broadcast({ type: "damage", targetPlayer: ev.player, amount: ev.amount, source: ev.source as "wall" | "orb" });
+        } else {
+          this.broadcast({ type: "heal", targetPlayer: ev.player, amount: ev.amount });
+        }
       }
 
       // Schedule next tick batch (50ms = 20Hz)

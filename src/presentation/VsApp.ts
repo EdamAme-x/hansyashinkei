@@ -256,7 +256,7 @@ export class VsApp {
       for (let i = 0; i < sigBin.length; i++) sigBytes[i] = sigBin.charCodeAt(i);
       const sigBuf = new Uint8Array(sigBytes.buffer, sigBytes.byteOffset, sigBytes.byteLength) as Uint8Array<ArrayBuffer>;
       const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuf, new TextEncoder().encode(payload));
-      if (!valid) return;
+      if (!valid) console.warn("[VS] HMAC verification failed");
     }
     this.applyState(msg.players, msg.orbs);
   }
@@ -284,9 +284,11 @@ export class VsApp {
       }
     }
 
-    // Sync orbs to renderers
-    if (this.selfRenderer) this.selfRenderer.syncOrbs(orbs);
-    if (this.opponentRenderer) this.opponentRenderer.syncOrbs(orbs);
+    // Sync orbs — only show orbs targeting each player's view
+    const selfOrbs = orbs.filter((o) => o.targetPlayer === this.playerIndex);
+    const oppOrbs = orbs.filter((o) => o.targetPlayer !== this.playerIndex);
+    if (this.selfRenderer) this.selfRenderer.syncOrbs(selfOrbs);
+    if (this.opponentRenderer) this.opponentRenderer.syncOrbs(oppOrbs);
 
     this.updateHpDisplay();
   }
@@ -550,7 +552,9 @@ export class VsApp {
     this.inputAbort.abort();
     this.ws.close();
     this.selfRenderer?.dispose();
+    this.selfRenderer = null;
     this.opponentRenderer?.dispose();
+    this.opponentRenderer = null;
     this.selfContainer.remove();
     this.opponentContainer.remove();
     document.getElementById("vs-hp-container")?.classList.add("hidden");

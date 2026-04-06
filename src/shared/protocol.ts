@@ -18,6 +18,7 @@ export interface VsOrbState {
   lane: number;
   z: number;
   collected: boolean;
+  targetPlayer: 0 | 1;
 }
 
 // ── Client → Server messages ──
