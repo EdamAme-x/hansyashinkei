@@ -1,5 +1,8 @@
 import type { GameConfig } from "@domain/entities/GameConfig";
 import type { GameMode } from "@domain/entities/GameMode";
+import type { ReplayEvent } from "@domain/entities/Replay";
+import { createReplay } from "@domain/entities/Replay";
+import { createVsScore } from "@domain/entities/Score";
 import type { ServerMessage, VsPlayerState, VsOrbState } from "@shared/protocol";
 import { VS_FIXED_DT } from "@shared/protocol";
 import { createGameWorld, tick, dodge, undodge } from "@domain/entities/GameWorld";
@@ -10,6 +13,8 @@ import { GameRenderer } from "./GameRenderer";
 import type { ThemeConfig } from "@domain/entities/ThemeConfig";
 import type { InputConfig } from "./InputConfig";
 import type { ManageAchievement } from "@application/usecases/ManageAchievement";
+import type { ManageScore } from "@application/usecases/ManageScore";
+import type { ManageReplay } from "@application/usecases/ManageReplay";
 import { AchievementToast } from "./AchievementToast";
 import { AudioManager } from "./AudioManager";
 import { createRoom } from "@infrastructure/api/VsApiClient";
@@ -38,6 +43,12 @@ export class VsApp {
   private accumulator = 0;
   private lastTime = 0;
 
+  // Recording for replay
+  private seed = 0;
+  private recordDts: number[] = [];
+  private recordEvents: ReplayEvent[] = [];
+  private opponentName = "";
+
   // Renderers
   private selfRenderer: GameRenderer | null = null;
   private opponentRenderer: GameRenderer | null = null;
@@ -50,6 +61,8 @@ export class VsApp {
   private readonly inputConfig: InputConfig;
   private readonly audio: AudioManager;
   private readonly manageAchievement: ManageAchievement;
+  private readonly manageScore: ManageScore;
+  private readonly manageReplay: ManageReplay;
   private readonly achievementToast: AchievementToast;
   private readonly theme: ThemeConfig;
   private readonly username: string;
@@ -60,12 +73,16 @@ export class VsApp {
     inputConfig: InputConfig,
     audio: AudioManager,
     manageAchievement: ManageAchievement,
+    manageScore: ManageScore,
+    manageReplay: ManageReplay,
     username: string,
   ) {
     this.theme = theme;
     this.inputConfig = inputConfig;
     this.audio = audio;
     this.manageAchievement = manageAchievement;
+    this.manageScore = manageScore;
+    this.manageReplay = manageReplay;
     this.achievementToast = new AchievementToast();
     this.username = username;
     this.ws = new WsClient();
@@ -144,6 +161,7 @@ export class VsApp {
         break;
 
       case "opponent_joined":
+        this.opponentName = msg.username;
         this.updateOverlay(`${msg.username} が参加しました`);
         break;
 
@@ -168,11 +186,17 @@ export class VsApp {
         this.onHeal(msg.targetPlayer, msg.amount);
         break;
 
-      case "game_over":
+      case "game_over": {
         this.phase = "ended";
-        this.showResult(msg.winner === this.playerIndex ? "WIN" : "LOSE");
+        const won = msg.winner === this.playerIndex;
+        const vsResult = won ? "win" as const : "lose" as const;
+        const selfFinal = msg.players[this.playerIndex];
+        const oppFinal = msg.players[(1 - this.playerIndex) as 0 | 1];
+        this.showResult(won ? "WIN" : "LOSE");
+        this.saveVsResult(selfFinal.score, vsResult, oppFinal.score).catch(() => {});
         this.unlockVsAchievement();
         break;
+      }
 
       case "error":
         this.phase = "error";
@@ -183,7 +207,10 @@ export class VsApp {
 
   private startGame(seed: number, config: GameConfig): void {
     this.gameConfig = config;
+    this.seed = seed;
     this.phase = "playing";
+    this.recordDts = [];
+    this.recordEvents = [];
 
     // Hide overlay
     this.vsOverlay.classList.add("hidden");
@@ -250,6 +277,7 @@ export class VsApp {
         // Keep world alive for VS (HP is managed by server)
         this.selfVs.world.alive = true;
         tick(this.selfVs.world, VS_FIXED_DT);
+        this.recordDts.push(VS_FIXED_DT);
         this.localFrame++;
         this.accumulator -= VS_FIXED_DT;
       }
@@ -350,6 +378,7 @@ export class VsApp {
     if (ballIndex >= this.gameConfig.balls.length) return;
     dodge(this.selfVs.world, ballIndex);
     this.ws.send({ type: "input", frame: this.localFrame, action: "dodge", ballIndex });
+    this.recordEvents.push({ frame: this.localFrame, type: "dodge", ballIndex });
     this.audio.playDodge();
   }
 
@@ -358,6 +387,7 @@ export class VsApp {
     if (ballIndex >= this.gameConfig.balls.length) return;
     undodge(this.selfVs.world, ballIndex);
     this.ws.send({ type: "input", frame: this.localFrame, action: "undodge", ballIndex });
+    this.recordEvents.push({ frame: this.localFrame, type: "undodge", ballIndex });
   }
 
   // ── UI helpers ──
@@ -416,9 +446,34 @@ export class VsApp {
     }
   }
 
+  private async saveVsResult(
+    finalScore: number,
+    vsResult: "win" | "lose" | "disconnect",
+    opponentScore: number,
+  ): Promise<void> {
+    if (!this.gameConfig) return;
+
+    const replayId = crypto.randomUUID();
+    const replay = createReplay(
+      replayId, "", this.seed, this.gameConfig, finalScore,
+      this.recordDts, this.recordEvents,
+    );
+    await this.manageReplay.save(replay);
+
+    const scoreId = crypto.randomUUID();
+    const vsScore = createVsScore(
+      scoreId, finalScore, this.mode, vsResult,
+      this.opponentName, opponentScore, replayId,
+    );
+    await this.manageScore.record(
+      vsScore.value, vsScore.mode, vsScore.replayId, vsScore.vsResult,
+      vsScore.opponentName, vsScore.opponentScore,
+    );
+  }
+
   private async unlockVsAchievement(): Promise<void> {
     try {
-      const score = { id: crypto.randomUUID(), value: 0, timestamp: Date.now(), replayId: null, mode: this.mode as "classic" | "triple" };
+      const score = { kind: "solo" as const, id: crypto.randomUUID(), value: 0, timestamp: Date.now(), replayId: null, mode: this.mode as "classic" | "triple" };
       const unlocked = await this.manageAchievement.evaluateAndUnlock(score, 0, true);
       if (unlocked.length > 0) this.achievementToast.show(unlocked);
     } catch { /* non-critical */ }

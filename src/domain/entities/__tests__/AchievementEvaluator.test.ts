@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import { evaluateAchievements } from "@domain/entities/AchievementEvaluator";
 import type { AchievementDef } from "@domain/entities/Achievement";
 import type { Score } from "@domain/entities/Score";
+import { createScore } from "@domain/entities/Score";
 
 function score(id: string, value: number, mode: "classic" | "triple" = "classic", replayId: string | null = null): Score {
-  return { id, value, timestamp: Date.now(), replayId, mode };
+  return createScore(id, value, mode, replayId);
 }
 
 const CLASSIC_50: AchievementDef = {
@@ -122,9 +123,9 @@ describe("evaluateAchievements", () => {
 
   it("unlocks win_streak when recent games all meet threshold", () => {
     const now = Date.now();
-    const s1: Score = { id: "s1", value: 25, timestamp: now - 2000, replayId: null, mode: "classic" };
-    const s2: Score = { id: "s2", value: 30, timestamp: now - 1000, replayId: null, mode: "classic" };
-    const s3: Score = { id: "s3", value: 22, timestamp: now, replayId: null, mode: "classic" };
+    const s1: Score = { kind: "solo", id: "s1", value: 25, timestamp: now - 2000, replayId: null, mode: "classic" };
+    const s2: Score = { kind: "solo", id: "s2", value: 30, timestamp: now - 1000, replayId: null, mode: "classic" };
+    const s3: Score = { kind: "solo", id: "s3", value: 22, timestamp: now, replayId: null, mode: "classic" };
     const results = evaluateAchievements([STREAK_3], {
       scores: [s1, s2, s3], newScore: s3, alreadyUnlocked: new Set(),
     });
@@ -134,9 +135,9 @@ describe("evaluateAchievements", () => {
 
   it("does not unlock win_streak when broken by a low score", () => {
     const now = Date.now();
-    const s1: Score = { id: "s1", value: 25, timestamp: now - 2000, replayId: null, mode: "classic" };
-    const s2: Score = { id: "s2", value: 5, timestamp: now - 1000, replayId: null, mode: "classic" };
-    const s3: Score = { id: "s3", value: 30, timestamp: now, replayId: null, mode: "classic" };
+    const s1: Score = { kind: "solo", id: "s1", value: 25, timestamp: now - 2000, replayId: null, mode: "classic" };
+    const s2: Score = { kind: "solo", id: "s2", value: 5, timestamp: now - 1000, replayId: null, mode: "classic" };
+    const s3: Score = { kind: "solo", id: "s3", value: 30, timestamp: now, replayId: null, mode: "classic" };
     const results = evaluateAchievements([STREAK_3], {
       scores: [s1, s2, s3], newScore: s3, alreadyUnlocked: new Set(),
     });

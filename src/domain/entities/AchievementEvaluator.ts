@@ -122,7 +122,7 @@ function checkCondition(def: AchievementDef, ctx: EvalContext): EvalResult | nul
 }
 
 function scoreMode(s: Score): GameMode {
-  return s.mode ?? "classic";
+  return s.mode;
 }
 
 function scoreResult(

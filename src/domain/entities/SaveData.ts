@@ -5,7 +5,7 @@ import type { CustomThemeOverrides } from "./ThemeConfig";
 import type { GameMode } from "./GameMode";
 import type { AchievementRecord } from "./Achievement";
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface SaveData {
   readonly version: number;
@@ -77,6 +77,16 @@ export function migrate(data: SaveData): SaveData {
       ...d,
       achievements: (d as Partial<SaveData>).achievements ?? [],
       activeSkinId: (d as Partial<SaveData>).activeSkinId ?? "skin_default",
+    };
+  }
+
+  // v3 → v4: add kind:"solo" to scores missing it
+  if (d.version < 4) {
+    d = {
+      ...d,
+      scores: d.scores.map((s) =>
+        (s as unknown as Record<string, unknown>).kind ? s : { ...s, kind: "solo" as const },
+      ),
     };
   }
 

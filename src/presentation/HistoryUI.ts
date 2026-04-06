@@ -135,6 +135,22 @@ export class HistoryUI {
         li.appendChild(modeEl);
       }
 
+      // VS result badge
+      if (score.kind === "vs") {
+        const vsEl = document.createElement("span");
+        vsEl.className = "history-mode-badge";
+        const resultLabel = score.vsResult === "win" ? "WIN" : score.vsResult === "lose" ? "LOSE" : "DC";
+        vsEl.textContent = `VS ${resultLabel}`;
+        vsEl.style.color = score.vsResult === "win" ? "#44ff66" : score.vsResult === "lose" ? "#ff4466" : "#888";
+        li.appendChild(vsEl);
+
+        // Opponent info
+        const oppEl = document.createElement("span");
+        oppEl.className = "history-date";
+        oppEl.textContent = `vs ${score.opponentName} (${score.opponentScore})`;
+        li.appendChild(oppEl);
+      }
+
       const date = new Date(score.timestamp);
       const dateEl = document.createElement("span");
       dateEl.className = "history-date";

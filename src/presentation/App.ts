@@ -303,7 +303,7 @@ export class App {
 
     // Evaluate achievements after score + replay are stored
     try {
-      const score = { id: scoreId, value: finalScore, timestamp: Date.now(), replayId, mode: this.activeMode };
+      const score = { kind: "solo" as const, id: scoreId, value: finalScore, timestamp: Date.now(), replayId, mode: this.activeMode };
       const unlocked = await this.manageAchievement.evaluateAndUnlock(score, this.maxKeysPerSecond);
       if (unlocked.length > 0) {
         this.achievementToast.show(unlocked);

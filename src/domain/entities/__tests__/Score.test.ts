@@ -35,9 +35,9 @@ describe("buildHistory", () => {
   it("should sort scores by timestamp descending", () => {
     const now = Date.now();
     const scores = [
-      { id: "1", value: 10, timestamp: now - 2000, replayId: null },
-      { id: "2", value: 20, timestamp: now, replayId: null },
-      { id: "3", value: 15, timestamp: now - 1000, replayId: null },
+      { kind: "solo" as const, id: "1", value: 10, timestamp: now - 2000, replayId: null, mode: "classic" as const },
+      { kind: "solo" as const, id: "2", value: 20, timestamp: now, replayId: null, mode: "classic" as const },
+      { kind: "solo" as const, id: "3", value: 15, timestamp: now - 1000, replayId: null, mode: "classic" as const },
     ];
     const history = buildHistory(scores);
 

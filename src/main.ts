@@ -69,7 +69,7 @@ async function main() {
 
     const theme = themeManager.current;
     const audio = new AudioManager(theme.audio, kv);
-    const vsApp = new VsApp(container, theme, inputConfig, audio, manageAchievement, username);
+    const vsApp = new VsApp(container, theme, inputConfig, audio, manageAchievement, manageScore, manageReplay, username);
 
     if (vsParam === "") {
       // Create new room: hs.evex.land?vs
