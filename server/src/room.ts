@@ -180,6 +180,12 @@ export class RoomDurableObject {
       return;
     }
 
+    // Reject if this WS is already joined
+    if (this.findPlayerIndex(ws) !== -1) {
+      this.send(ws, { type: "error", message: "Already joined" });
+      return;
+    }
+
     const idx = this.players[0] === null ? 0 : this.players[1] === null ? 1 : -1;
     if (idx === -1) {
       this.send(ws, { type: "error", message: "Room full" });

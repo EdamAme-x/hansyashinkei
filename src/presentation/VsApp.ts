@@ -49,6 +49,11 @@ export class VsApp {
   private recordEvents: ReplayEvent[] = [];
   private opponentName = "";
 
+  private combinedKey: Uint8Array | null = null;
+
+  // Cleanup
+  private readonly inputAbort = new AbortController();
+
   // Renderers
   private selfRenderer: GameRenderer | null = null;
   private opponentRenderer: GameRenderer | null = null;
@@ -165,6 +170,13 @@ export class VsApp {
         this.updateOverlay(`${msg.username} が参加しました`);
         break;
 
+      case "key_exchange": {
+        const bin = atob(msg.combinedKey);
+        this.combinedKey = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) this.combinedKey[i] = bin.charCodeAt(i);
+        break;
+      }
+
       case "countdown":
         this.phase = "countdown";
         this.updateOverlay(msg.seconds > 0 ? String(msg.seconds) : "START!");
@@ -175,7 +187,7 @@ export class VsApp {
         break;
 
       case "state":
-        this.applyState(msg.frame, msg.players, msg.orbs);
+        this.verifyAndApplyState(msg).catch(() => {});
         break;
 
       case "damage":
@@ -231,6 +243,22 @@ export class VsApp {
 
     this.audio.startBgm();
     this.startLoop();
+  }
+
+  private async verifyAndApplyState(msg: Extract<ServerMessage, { type: "state" }>): Promise<void> {
+    // Verify HMAC if we have the combined key
+    if (this.combinedKey && msg.hmac) {
+      const payload = JSON.stringify({ frame: msg.frame, players: msg.players, orbs: msg.orbs });
+      const keyBuf = new Uint8Array(this.combinedKey.buffer, this.combinedKey.byteOffset, this.combinedKey.byteLength) as Uint8Array<ArrayBuffer>;
+      const cryptoKey = await crypto.subtle.importKey("raw", keyBuf, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+      const sigBin = atob(msg.hmac);
+      const sigBytes = new Uint8Array(sigBin.length);
+      for (let i = 0; i < sigBin.length; i++) sigBytes[i] = sigBin.charCodeAt(i);
+      const sigBuf = new Uint8Array(sigBytes.buffer, sigBytes.byteOffset, sigBytes.byteLength) as Uint8Array<ArrayBuffer>;
+      const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuf, new TextEncoder().encode(payload));
+      if (!valid) return; // Reject tampered state
+    }
+    this.applyState(msg.frame, msg.players, msg.orbs);
   }
 
   private applyState(_frame: number, players: [VsPlayerState, VsPlayerState], orbs: VsOrbState[]): void {
@@ -307,6 +335,7 @@ export class VsApp {
 
   private setupInput(): void {
     const pressed = new Set<string>();
+    const signal = this.inputAbort.signal;
 
     window.addEventListener("keydown", (e) => {
       if (this.phase !== "playing" || pressed.has(e.code)) return;
@@ -323,7 +352,7 @@ export class VsApp {
           this.doDodge(binding.ballIndex);
         }
       }
-    });
+    }, { signal });
 
     window.addEventListener("keyup", (e) => {
       pressed.delete(e.code);
@@ -334,7 +363,7 @@ export class VsApp {
           this.doUndodge(binding.ballIndex);
         }
       }
-    });
+    }, { signal });
 
     // Touch
     const activeTouches = new Map<number, number>();
@@ -357,7 +386,7 @@ export class VsApp {
         activeTouches.set(t.identifier, ball);
         this.doDodge(ball);
       }
-    }, { passive: false });
+    }, { passive: false, signal });
 
     const touchRelease = (e: TouchEvent) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
@@ -369,8 +398,8 @@ export class VsApp {
         }
       }
     };
-    window.addEventListener("touchend", touchRelease);
-    window.addEventListener("touchcancel", touchRelease);
+    window.addEventListener("touchend", touchRelease, { signal });
+    window.addEventListener("touchcancel", touchRelease, { signal });
   }
 
   private doDodge(ballIndex: number): void {
@@ -481,6 +510,7 @@ export class VsApp {
 
   dispose(): void {
     cancelAnimationFrame(this.animationId);
+    this.inputAbort.abort();
     this.ws.close();
     this.selfRenderer?.dispose();
     this.opponentRenderer?.dispose();
