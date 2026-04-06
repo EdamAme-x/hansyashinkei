@@ -43,8 +43,9 @@ export class RoomDurableObject {
       this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
     }
     // Restore playerMeta from storage
-    const pm = await this.state.storage.get<{ usernames: (string | null)[] }>("playerMeta");
+    const pm = await this.state.storage.get<{ usernames: (string | null)[]; ready: [boolean, boolean] }>("playerMeta");
     if (pm) {
+      if (pm.ready) this.readyFlags = pm.ready;
       for (let i = 0; i < 2; i++) {
         if (pm.usernames[i] && !this.playerMeta[i]) {
           // Player was joined before hibernation — restore minimal meta
@@ -70,6 +71,7 @@ export class RoomDurableObject {
   private async savePlayerMeta(): Promise<void> {
     await this.state.storage.put("playerMeta", {
       usernames: [this.playerMeta[0]?.username ?? null, this.playerMeta[1]?.username ?? null],
+      ready: this.readyFlags,
     });
   }
 
@@ -306,6 +308,7 @@ export class RoomDurableObject {
     if (idx === -1 || this.roomState !== "waiting") return;
 
     this.readyFlags[idx as 0 | 1] = true;
+    await this.savePlayerMeta();
 
     // Notify opponent
     const otherWs = this.getPlayerWs(1 - idx);

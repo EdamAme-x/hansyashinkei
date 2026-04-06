@@ -376,9 +376,15 @@ export class VsApp {
       if (rid) { rid.textContent = this.roomId; rid.style.display = ""; }
       if (cb) { cb.style.display = ""; cb.onclick = () => { navigator.clipboard.writeText(`${location.origin}?vs=${this.roomId}`).catch(() => {}); cb.textContent = "コピーしました!"; setTimeout(() => { cb.textContent = "URLをコピー"; }, 1500); }; }
       if (ru) ru.style.display = "";
+      // Show back button
+      let back = document.getElementById("vs-back-btn");
+      if (!back) { back = document.createElement("button"); back.id = "vs-back-btn"; back.className = "vs-copy-btn"; back.style.cssText = "margin-top:0.5rem;opacity:0.5"; back.textContent = "TITLE"; this.vsOverlay.appendChild(back); }
+      back.style.display = "";
+      back.onclick = () => { this.dispose(); location.href = "/"; };
     } else {
       if (rid) rid.style.display = "none"; if (cb) cb.style.display = "none";
       if (ru) ru.style.display = this.phase === "countdown" ? "" : "none";
+      const back = document.getElementById("vs-back-btn"); if (back) back.style.display = "none";
     }
   }
 
