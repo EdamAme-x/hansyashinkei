@@ -3,11 +3,8 @@ import type { GameMode } from "@domain/entities/GameMode";
 import type { ReplayEvent } from "@domain/entities/Replay";
 import { createReplay } from "@domain/entities/Replay";
 import { createVsScore } from "@domain/entities/Score";
-import type { ServerMessage, VsPlayerState, VsOrbState } from "@shared/protocol";
-import { VS_FIXED_DT } from "@shared/protocol";
-import { createGameWorld, tick, dodge, undodge, type GameWorldState } from "@domain/entities/GameWorld";
-import { mulberry32 } from "@domain/entities/Prng";
-import { createVsWorldState, applyServerState, type VsWorldState } from "@domain/entities/VsGameWorld";
+import type { ServerMessage, VsPlayerState } from "@shared/protocol";
+import { VS_FIXED_DT, VS_MAX_HP } from "@shared/protocol";
 import { WsClient } from "./WsClient";
 import { GameRenderer } from "./GameRenderer";
 import type { ThemeConfig } from "@domain/entities/ThemeConfig";
@@ -20,6 +17,9 @@ import { AchievementToast } from "./AchievementToast";
 import { AudioManager } from "./AudioManager";
 import { setupCustomCursor } from "./CustomCursor";
 import { getSkinDef } from "@domain/entities/SkinDefs";
+import type { GameWorldState } from "@domain/entities/GameWorld";
+import { createGameWorld } from "@domain/entities/GameWorld";
+import { mulberry32 } from "@domain/entities/Prng";
 
 type VsPhase = "connecting" | "waiting" | "countdown" | "playing" | "ended" | "error";
 
@@ -29,7 +29,6 @@ function base64Encode(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-// Solo UI elements to hide in VS mode
 const SOLO_UI_IDS = [
   "title-screen", "gameover-screen", "score-display", "speedup-display",
   "replay-bar", "replay-indicator", "history-screen", "settings-screen",
@@ -43,15 +42,21 @@ export class VsApp {
   private roomId = "";
   private mode: GameMode = "classic";
 
-  private selfVs: VsWorldState | null = null;
-  private opponentWorld: GameWorldState | null = null;
+  // Server-authoritative state
+  private selfState: VsPlayerState | null = null;
   private opponentState: VsPlayerState | null = null;
   private gameConfig: GameConfig | null = null;
+
+  // Local ball dodge state (for instant response)
+  private selfDodging: boolean[] = [];
+
+  // Rendering
+  private selfWorld: GameWorldState | null = null;
+  private opponentWorld: GameWorldState | null = null;
   private animationId = 0;
   private localFrame = 0;
-  private accumulator = 0;
-  private lastTime = 0;
 
+  // Recording
   private seed = 0;
   private recordDts: number[] = [];
   private recordEvents: ReplayEvent[] = [];
@@ -100,13 +105,8 @@ export class VsApp {
     this.username = username;
     this.ws = new WsClient();
 
-    // Hide solo UI
-    for (const id of SOLO_UI_IDS) {
-      const el = document.getElementById(id);
-      if (el) el.classList.add("hidden");
-    }
+    for (const id of SOLO_UI_IDS) document.getElementById(id)?.classList.add("hidden");
 
-    // Split containers
     this.selfContainer = document.createElement("div");
     this.selfContainer.id = "vs-self";
     this.opponentContainer = document.createElement("div");
@@ -122,22 +122,16 @@ export class VsApp {
 
     container.appendChild(this.selfContainer);
     container.appendChild(this.opponentContainer);
-
     this.vsOverlay = document.getElementById("vs-overlay") ?? document.createElement("div");
 
     this.ws.onMessage((msg) => this.handleMessage(msg));
     this.ws.onClose(() => {
-      if (this.phase === "playing") {
-        this.phase = "ended";
-        this.showResult("DISCONNECTED");
-      }
+      if (this.phase === "playing") { this.phase = "ended"; this.showResult("DISCONNECTED"); }
     });
 
     this.setupInput();
     this.setupResize();
     setupCustomCursor(() => this.phase === "playing");
-
-    // Load active skin
     manageAchievement.getActiveSkinId().then((id) => { this.activeSkinId = id; }).catch(() => {});
   }
 
@@ -235,27 +229,22 @@ export class VsApp {
     this.phase = "playing";
     this.recordDts = [];
     this.recordEvents = [];
+    this.localFrame = 0;
+    this.selfDodging = config.balls.map(() => false);
 
     this.vsOverlay.classList.add("hidden");
-
-    // Show HP bars
     document.getElementById("vs-hp-container")?.classList.remove("hidden");
 
-    // Create renderers
+    // Create renderers with skin
     this.selfRenderer = new GameRenderer(this.selfContainer, config, this.theme);
     this.selfRenderer.applyActiveSkin(getSkinDef(this.activeSkinId));
     if (!this.isMobile) {
       this.opponentRenderer = new GameRenderer(this.opponentContainer, config, this.theme);
     }
 
-    // Create local worlds — same seed for identical wall patterns
-    const selfWorld = createGameWorld(config, mulberry32(seed));
-    this.selfVs = createVsWorldState(selfWorld);
+    // Create minimal worlds for rendering (walls come from server, but renderer needs a GameWorldState)
+    this.selfWorld = createGameWorld(config, mulberry32(seed));
     this.opponentWorld = createGameWorld(config, mulberry32(seed));
-
-    this.localFrame = 0;
-    this.accumulator = 0;
-    this.lastTime = performance.now();
 
     this.audio.startBgm();
     this.startLoop();
@@ -273,110 +262,85 @@ export class VsApp {
       const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuf, new TextEncoder().encode(payload));
       if (!valid) console.warn("[VS] HMAC verification failed");
     }
-    this.applyState(msg.players, msg.orbs);
-  }
 
-  private applyState(players: [VsPlayerState, VsPlayerState], orbs: VsOrbState[]): void {
-    if (!this.selfVs) return;
+    const self = msg.players[this.playerIndex];
+    const opp = msg.players[(1 - this.playerIndex) as 0 | 1];
+    this.selfState = self;
+    this.opponentState = opp;
+    this.localFrame = msg.frame;
 
-    const selfState = players[this.playerIndex];
-    const opponentIdx = (1 - this.playerIndex) as 0 | 1;
-    this.opponentState = players[opponentIdx];
+    // Apply server walls to local worlds for rendering
+    if (this.selfWorld) {
+      this.selfWorld.walls = self.walls.map((w, i) => ({
+        id: i, waveId: 0, lane: w.lane, z: w.z, passed: false,
+      }));
+      // Apply LOCAL dodge state (not server's — avoids input lag)
+      for (let i = 0; i < this.selfWorld.balls.length; i++) {
+        const dodging = this.selfDodging[i] ?? false;
+        this.selfWorld.balls[i] = {
+          lane: dodging ? this.selfWorld.config.balls[i].dodgeLane : this.selfWorld.config.balls[i].homeLane,
+          dodging,
+        };
+      }
+      this.selfWorld.score = self.score;
+      this.selfWorld.speed = 0; // Not used for rendering
+    }
 
-    applyServerState(this.selfVs, selfState, orbs);
-
-    // Sync opponent ball positions from server state
-    if (this.opponentWorld && this.opponentState) {
-      for (let i = 0; i < this.opponentWorld.balls.length && i < this.opponentState.dodging.length; i++) {
-        const serverDodging = this.opponentState.dodging[i];
-        if (this.opponentWorld.balls[i].dodging !== serverDodging) {
-          if (serverDodging) {
-            dodge(this.opponentWorld, i);
-          } else {
-            undodge(this.opponentWorld, i);
-          }
-        }
+    if (this.opponentWorld) {
+      this.opponentWorld.walls = opp.walls.map((w, i) => ({
+        id: i, waveId: 0, lane: w.lane, z: w.z, passed: false,
+      }));
+      for (let i = 0; i < this.opponentWorld.balls.length; i++) {
+        const dodging = opp.dodging[i] ?? false;
+        this.opponentWorld.balls[i] = {
+          lane: dodging ? this.opponentWorld.config.balls[i].dodgeLane : this.opponentWorld.config.balls[i].homeLane,
+          dodging,
+        };
       }
     }
 
-    // Sync orbs — only show orbs targeting each player's view
-    const selfOrbs = orbs.filter((o) => o.targetPlayer === this.playerIndex);
-    const oppOrbs = orbs.filter((o) => o.targetPlayer !== this.playerIndex);
+    // Sync orbs
+    const selfOrbs = msg.orbs.filter((o) => o.targetPlayer === this.playerIndex);
+    const oppOrbs = msg.orbs.filter((o) => o.targetPlayer !== this.playerIndex);
     if (this.selfRenderer) this.selfRenderer.syncOrbs(selfOrbs);
     if (this.opponentRenderer) this.opponentRenderer.syncOrbs(oppOrbs);
 
     this.updateHpDisplay();
+    this.recordDts.push(VS_FIXED_DT);
   }
 
   private onDamage(target: 0 | 1, amount: number, source: "wall" | "orb"): void {
     const isSelf = target === this.playerIndex;
-    if (isSelf) {
-      this.showDamageFlash();
-      this.audio.playHit();
-    } else {
-      // Dealt damage to opponent
-      if (source === "orb") this.audio.playOrbDamage();
-    }
+    if (isSelf) { this.showDamageFlash(); this.audio.playHit(); }
+    else if (source === "orb") { this.audio.playOrbDamage(); }
     this.showDamageNumber(isSelf ? "self" : "opponent", amount);
   }
 
   private onHeal(target: 0 | 1, amount: number): void {
-    if (target === this.playerIndex && amount > 0) {
-      this.updateHpDisplay();
-    }
+    if (target === this.playerIndex && amount > 0) this.updateHpDisplay();
   }
 
   private startLoop(): void {
-    this.lastTime = performance.now();
-
     const loop = (now: number) => {
       this.animationId = requestAnimationFrame(loop);
-      if (this.phase !== "playing" || !this.selfVs) return;
+      if (this.phase !== "playing") return;
 
-      const elapsed = Math.min((now - this.lastTime) / 1000, 0.1);
-      this.lastTime = now;
-      this.accumulator += elapsed;
-
-      while (this.accumulator >= VS_FIXED_DT) {
-        this.selfVs.world.alive = true;
-        tick(this.selfVs.world, VS_FIXED_DT);
-
-        // Also tick opponent world for wall prediction
-        if (this.opponentWorld) {
-          this.opponentWorld.alive = true;
-          tick(this.opponentWorld, VS_FIXED_DT);
-        }
-
-        this.recordDts.push(VS_FIXED_DT);
-        this.localFrame++;
-        this.accumulator -= VS_FIXED_DT;
-      }
-
-      // Render self
-      if (this.selfRenderer) {
-        const invincible = this.selfVs.invincibleUntilFrame > this.localFrame;
-        if (invincible) {
-          this.selfRenderer.showBalls(Math.floor(now / 120) % 2 === 0);
-        } else {
-          this.selfRenderer.showBalls(true);
-        }
-        this.selfRenderer.sync(this.selfVs.world);
+      // Render self (walls/balls come from server state applied in verifyAndApplyState)
+      if (this.selfRenderer && this.selfWorld) {
+        const invincible = this.selfState && this.selfState.invincibleUntilFrame > this.localFrame;
+        this.selfRenderer.showBalls(invincible ? Math.floor(now / 120) % 2 === 0 : true);
+        this.selfRenderer.sync(this.selfWorld);
         this.selfRenderer.render();
       }
 
       // Render opponent
       if (this.opponentRenderer && this.opponentWorld) {
         const oppInvinc = this.opponentState && this.opponentState.invincibleUntilFrame > this.localFrame;
-        if (oppInvinc) {
-          this.opponentRenderer.showBalls(Math.floor(now / 120) % 2 === 0);
-        } else {
-          this.opponentRenderer.showBalls(true);
-        }
+        this.opponentRenderer.showBalls(oppInvinc ? Math.floor(now / 120) % 2 === 0 : true);
         this.opponentRenderer.sync(this.opponentWorld);
         this.opponentRenderer.render();
       }
     };
-
     this.animationId = requestAnimationFrame(loop);
   }
 
@@ -444,9 +408,8 @@ export class VsApp {
       timer = window.setTimeout(() => {
         const w = window.innerWidth;
         const h = window.innerHeight;
-        if (this.isMobile) {
-          this.selfRenderer?.resize(w, h);
-        } else {
+        if (this.isMobile) { this.selfRenderer?.resize(w, h); }
+        else {
           const half = Math.floor(w / 2);
           this.selfRenderer?.resize(half, h);
           this.opponentRenderer?.resize(half, h);
@@ -456,16 +419,29 @@ export class VsApp {
   }
 
   private doDodge(ballIndex: number): void {
-    if (!this.selfVs || !this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
-    dodge(this.selfVs.world, ballIndex);
+    if (!this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
+    this.selfDodging[ballIndex] = true;
+    // Immediate local update for responsive feel
+    if (this.selfWorld) {
+      this.selfWorld.balls[ballIndex] = {
+        lane: this.selfWorld.config.balls[ballIndex].dodgeLane,
+        dodging: true,
+      };
+    }
     this.ws.send({ type: "input", frame: this.localFrame, action: "dodge", ballIndex });
     this.recordEvents.push({ frame: this.localFrame, type: "dodge", ballIndex });
     this.audio.playDodge();
   }
 
   private doUndodge(ballIndex: number): void {
-    if (!this.selfVs || !this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
-    undodge(this.selfVs.world, ballIndex);
+    if (!this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
+    this.selfDodging[ballIndex] = false;
+    if (this.selfWorld) {
+      this.selfWorld.balls[ballIndex] = {
+        lane: this.selfWorld.config.balls[ballIndex].homeLane,
+        dodging: false,
+      };
+    }
     this.ws.send({ type: "input", frame: this.localFrame, action: "undodge", ballIndex });
     this.recordEvents.push({ frame: this.localFrame, type: "undodge", ballIndex });
   }
@@ -477,7 +453,6 @@ export class VsApp {
     const content = this.vsOverlay.querySelector(".vs-overlay-text");
     if (content) content.textContent = text;
 
-    // Show room ID + copy button + rules when waiting
     const roomIdEl = document.getElementById("vs-room-id");
     const copyBtn = document.getElementById("vs-copy-btn");
     const rulesEl = document.getElementById("vs-rules");
@@ -523,16 +498,15 @@ export class VsApp {
   }
 
   private updateReadyStatus(): void {
-    const btn = document.getElementById("vs-ready-btn");
-    if (this.opponentReady && btn) {
+    if (this.opponentReady) {
       const content = this.vsOverlay.querySelector(".vs-overlay-text");
       if (content) content.textContent = `${this.opponentName} は準備完了！`;
     }
   }
 
   private updateHpDisplay(): void {
-    const selfHp = this.selfVs?.hp ?? 0;
-    const oppHp = this.opponentState?.hp ?? 0;
+    const selfHp = this.selfState?.hp ?? VS_MAX_HP;
+    const oppHp = this.opponentState?.hp ?? VS_MAX_HP;
     const selfBar = document.getElementById("vs-self-hp-fill");
     const oppBar = document.getElementById("vs-opponent-hp-fill");
     const selfLabel = document.getElementById("vs-self-hp-value");

@@ -204,6 +204,7 @@ export class VsSimulation {
       alive: p.world.alive,
       invincibleUntilFrame: p.invincibleUntilFrame,
       dodging: p.world.balls.map((b) => b.dodging),
+      walls: p.world.walls.map((w) => ({ lane: w.lane, z: w.z })),
     };
   }
 

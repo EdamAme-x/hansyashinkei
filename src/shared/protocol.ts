@@ -11,6 +11,7 @@ export interface VsPlayerState {
   alive: boolean;
   invincibleUntilFrame: number;
   dodging: boolean[];
+  walls: { lane: number; z: number }[];
 }
 
 export interface VsOrbState {
