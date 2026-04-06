@@ -32,7 +32,18 @@ export class RoomDurableObject {
     this.state = state;
   }
 
+  private async ensureLoaded(): Promise<void> {
+    if (this.roomId) return;
+    const meta = await this.state.storage.get<{ mode: GameMode; roomId: string }>("roomMeta");
+    if (meta) {
+      this.mode = meta.mode;
+      this.roomId = meta.roomId;
+      this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
+    }
+  }
+
   async fetch(request: Request): Promise<Response> {
+    await this.ensureLoaded();
     const url = new URL(request.url);
 
     if (url.pathname === "/ws") {
@@ -65,6 +76,8 @@ export class RoomDurableObject {
       this.mode = body.mode;
       this.roomId = body.roomId;
       this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
+      // Persist to storage so state survives hibernation
+      await this.state.storage.put("roomMeta", { mode: this.mode, roomId: this.roomId });
       return new Response("OK");
     }
 
@@ -72,6 +85,7 @@ export class RoomDurableObject {
   }
 
   async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
+    await this.ensureLoaded();
     if (typeof data !== "string") return;
 
     let msg: ClientMessage;
