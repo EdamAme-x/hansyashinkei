@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - link "ゲーム開始へスキップ" [ref=e2]:
+    - /url: "#btn-start"
+  - application "反射神経ゲーム" [ref=e3]
+  - generic [ref=e31]:
+    - generic [ref=e32]: "ルーム: 03FH7 相手を待っています..."
+    - generic [ref=e33]: 03FH7
+    - button "URLをコピー" [ref=e34]
+    - generic [ref=e35]:
+      - paragraph [ref=e36]: "HP: 1000 でスタート"
+      - paragraph [ref=e37]:
+        - text: 壁にぶつかると
+        - strong [ref=e38]: "-200"
+        - text: (2秒間無敵)
+      - paragraph [ref=e39]:
+        - text: 壁を通過すると
+        - strong [ref=e40]: "+25"
+        - text: 回復
+      - paragraph [ref=e41]:
+        - text: 黄色のオーブを取ると相手に
+        - strong [ref=e42]: 75ダメージ
+      - paragraph [ref=e43]: 相手のHPを0にしたら勝ち！
+  - generic "バージョン": v2.3.0
+  - navigation "クレジット" [ref=e24]:
+    - link "𝕏 @evex_dev" [ref=e25]:
+      - /url: https://x.com/evex_dev
+    - link "GitHub" [ref=e26]:
+      - /url: https://github.com/EdamAme-x/hansyashinkei
+      - img [ref=e27]
+      - text: GitHub

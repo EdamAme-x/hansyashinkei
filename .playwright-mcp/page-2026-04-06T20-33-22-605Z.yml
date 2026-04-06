@@ -1,0 +1,13 @@
+- generic [active] [ref=e1]:
+  - link "ゲーム開始へスキップ" [ref=e2]:
+    - /url: "#btn-start"
+  - application "反射神経ゲーム" [ref=e3]
+  - generic [ref=e7]: ルーム作成中...
+  - generic "バージョン": v2.3.0
+  - navigation "クレジット" [ref=e8]:
+    - link "𝕏 @evex_dev" [ref=e9]:
+      - /url: https://x.com/evex_dev
+    - link "GitHub" [ref=e10]:
+      - /url: https://github.com/EdamAme-x/hansyashinkei
+      - img [ref=e11]
+      - text: GitHub

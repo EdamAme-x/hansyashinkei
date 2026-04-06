@@ -58,7 +58,12 @@ async function main() {
   const vsParam = url.searchParams.get("vs");
 
   if (vsParam !== null) {
-    // VS mode — setup cursor early (before modal)
+    // VS mode — hide solo UI and setup cursor early
+    for (const id of ["title-screen", "gameover-screen", "score-display", "speedup-display",
+      "replay-bar", "replay-indicator", "history-screen", "settings-screen",
+      "keybind-screen", "theme-screen", "achievement-screen"]) {
+      document.getElementById(id)?.classList.add("hidden");
+    }
     setupCustomCursor();
 
     // Need username

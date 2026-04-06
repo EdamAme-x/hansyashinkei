@@ -41,6 +41,21 @@ export class RoomDurableObject {
       this.roomState = meta.roomState;
       this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
     }
+    // Restore playerMeta from storage
+    const pm = await this.state.storage.get<{ usernames: (string | null)[] }>("playerMeta");
+    if (pm) {
+      for (let i = 0; i < 2; i++) {
+        if (pm.usernames[i] && !this.playerMeta[i]) {
+          // Player was joined before hibernation — restore minimal meta
+          this.playerMeta[i] = {
+            username: pm.usernames[i] as string,
+            keyPart: new Uint8Array(16), // key lost after hibernation, re-exchange needed
+            inputCount: 0,
+            inputWindowStart: Date.now(),
+          };
+        }
+      }
+    }
   }
 
   private async saveMeta(): Promise<void> {
@@ -48,6 +63,12 @@ export class RoomDurableObject {
       mode: this.mode,
       roomId: this.roomId,
       roomState: this.roomState,
+    });
+  }
+
+  private async savePlayerMeta(): Promise<void> {
+    await this.state.storage.put("playerMeta", {
+      usernames: [this.playerMeta[0]?.username ?? null, this.playerMeta[1]?.username ?? null],
     });
   }
 
@@ -255,6 +276,7 @@ export class RoomDurableObject {
     }
 
     this.playerMeta[slot] = { username: validName, keyPart, inputCount: 0, inputWindowStart: Date.now() };
+    await this.savePlayerMeta();
 
     this.send(ws, { type: "joined", playerIndex: slot as 0 | 1, roomId: this.roomId, mode: this.mode });
 
