@@ -107,8 +107,8 @@ export class RoomDurableObject {
     this.simulation.players[1].hp = ss.p1hp;
     this.simulation.players[0].score = ss.p0score;
     this.simulation.players[1].score = ss.p1score;
-    this.simulation.players[0].invincibleUntilFrame = ss.p0invinc;
-    this.simulation.players[1].invincibleUntilFrame = ss.p1invinc;
+    this.simulation.players[0].invincibleUntil = ss.p0invinc;
+    this.simulation.players[1].invincibleUntil = ss.p1invinc;
     this.simulation.frame = ss.frame;
     this.simulation.finished = ss.finished;
     this.simulation.winner = ss.winner;

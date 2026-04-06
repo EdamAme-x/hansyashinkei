@@ -341,7 +341,7 @@ export class VsApp {
 
       // Render self
       if (this.selfRenderer && this.selfWorld) {
-        const blink = this.selfInvincUntil > this.localFrame;
+        const blink = this.selfInvincUntil > Date.now();
         this.selfRenderer.showBalls(blink ? Math.floor(now / 120) % 2 === 0 : true);
         this.selfRenderer.sync(this.selfWorld);
         this.selfRenderer.render();
@@ -349,7 +349,7 @@ export class VsApp {
 
       // Render opponent
       if (this.opponentRenderer && this.opponentWorld) {
-        const blink = this.oppInvincUntil > this.localFrame;
+        const blink = this.oppInvincUntil > Date.now();
         this.opponentRenderer.showBalls(blink ? Math.floor(now / 120) % 2 === 0 : true);
         this.opponentRenderer.sync(this.opponentWorld);
         this.opponentRenderer.render();

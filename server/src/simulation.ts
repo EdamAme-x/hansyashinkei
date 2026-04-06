@@ -1,5 +1,7 @@
 import type { VsPlayerState, VsOrbState } from "@shared/protocol";
-import { VS_MAX_HP, VS_WALL_DAMAGE, VS_ORB_DAMAGE, VS_PASS_HEAL, VS_INVINCIBLE_FRAMES } from "@shared/protocol";
+import { VS_MAX_HP, VS_WALL_DAMAGE, VS_ORB_DAMAGE, VS_PASS_HEAL } from "@shared/protocol";
+
+const INVINCIBLE_MS = 2000; // 2 seconds
 
 export interface VsGameEvent {
   type: "damage" | "heal";
@@ -15,15 +17,10 @@ export interface VsStepResult {
 interface PlayerState {
   hp: number;
   score: number;
-  invincibleUntilFrame: number;
+  invincibleUntil: number; // timestamp ms
   dodging: boolean[];
 }
 
-/**
- * Server-side VS simulation.
- * Clients are authoritative for wall collision, orb collection, and wall pass.
- * Server just tracks HP and broadcasts events.
- */
 export class VsSimulation {
   players: [PlayerState, PlayerState];
   frame = 0;
@@ -32,8 +29,8 @@ export class VsSimulation {
 
   constructor(ballCount: number) {
     this.players = [
-      { hp: VS_MAX_HP, score: 0, invincibleUntilFrame: 0, dodging: Array(ballCount).fill(false) as boolean[] },
-      { hp: VS_MAX_HP, score: 0, invincibleUntilFrame: 0, dodging: Array(ballCount).fill(false) as boolean[] },
+      { hp: VS_MAX_HP, score: 0, invincibleUntil: 0, dodging: Array(ballCount).fill(false) as boolean[] },
+      { hp: VS_MAX_HP, score: 0, invincibleUntil: 0, dodging: Array(ballCount).fill(false) as boolean[] },
     ];
   }
 
@@ -41,17 +38,16 @@ export class VsSimulation {
     this.players[playerIndex].dodging[ballIndex] = dodging;
   }
 
-  /** Client reports wall hit. */
   reportWallHit(playerIndex: 0 | 1): VsGameEvent | null {
     const p = this.players[playerIndex];
-    if (this.frame < p.invincibleUntilFrame) return null;
+    const now = Date.now();
+    if (now < p.invincibleUntil) return null;
     p.hp = Math.max(0, p.hp - VS_WALL_DAMAGE);
-    p.invincibleUntilFrame = this.frame + VS_INVINCIBLE_FRAMES;
+    p.invincibleUntil = now + INVINCIBLE_MS;
     this.checkGameOver();
     return { type: "damage", player: playerIndex, amount: VS_WALL_DAMAGE, source: "wall" };
   }
 
-  /** Client reports orb collected → damage opponent. */
   reportOrbCollect(playerIndex: 0 | 1): VsGameEvent | null {
     const opponent = (1 - playerIndex) as 0 | 1;
     this.players[opponent].hp = Math.max(0, this.players[opponent].hp - VS_ORB_DAMAGE);
@@ -59,7 +55,6 @@ export class VsSimulation {
     return { type: "damage", player: opponent, amount: VS_ORB_DAMAGE, source: "orb" };
   }
 
-  /** Client reports wall pass → heal. */
   reportWallPass(playerIndex: 0 | 1): VsGameEvent | null {
     const p = this.players[playerIndex];
     const oldHp = p.hp;
@@ -91,7 +86,7 @@ export class VsSimulation {
       score: p.score,
       speed: 0,
       alive: true,
-      invincibleUntilFrame: p.invincibleUntilFrame,
+      invincibleUntilFrame: p.invincibleUntil, // repurposed as timestamp
       dodging: [...p.dodging],
     };
   }
