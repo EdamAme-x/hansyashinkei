@@ -643,8 +643,9 @@
       /* VS damage flash */
       #vs-damage-flash {
         position: fixed; inset: 0; z-index: 18;
-        background: rgba(255,0,0,0.15); pointer-events: none;
-        opacity: 0; transition: opacity 0.1s;
+        background: radial-gradient(ellipse at center, rgba(255,50,50,0.25) 0%, rgba(255,0,0,0.08) 70%, transparent 100%);
+        pointer-events: none;
+        opacity: 0; transition: opacity 0.15s;
       }
       #vs-damage-flash.hidden { display: none; }
       #vs-damage-flash.active { opacity: 1; }
@@ -657,11 +658,12 @@
       #vs-self-damage { left: 25%; transform: translateX(-50%); }
       #vs-opponent-damage { right: 25%; transform: translateX(50%); }
       .vs-damage-num {
-        font-size: 1.4rem; font-weight: 900; color: #ff4444;
-        text-shadow: 0 0 8px rgba(255,0,0,0.5);
-        opacity: 1; transition: opacity 0.6s, transform 0.6s;
+        font-size: 1.6rem; font-weight: 900;
+        color: #ff6666;
+        text-shadow: 0 0 12px rgba(255,60,60,0.6), 0 2px 4px rgba(0,0,0,0.5);
+        opacity: 1; transition: opacity 0.8s, transform 0.8s;
       }
-      .vs-damage-num.float-up { opacity: 0; transform: translateY(-2rem); }
+      .vs-damage-num.float-up { opacity: 0; transform: translateY(-3rem); }
 
       /* VS result */
       #vs-result {

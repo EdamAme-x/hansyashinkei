@@ -60,9 +60,12 @@ export class VsApp {
 
   // Orbs (client-side)
   private orbs: { id: number; lane: number; z: number }[] = [];
+  private oppOrbs: { id: number; lane: number; z: number }[] = [];
   private orbIdGen = 0;
   private orbPrng: (() => number) | null = null;
+  private oppOrbPrng: (() => number) | null = null;
   private lastScoredWaveCount = 0;
+  private oppLastScoredWaveCount = 0;
 
   // Recording
   private seed = 0;
@@ -210,9 +213,12 @@ export class VsApp {
     this.selfWorld = createGameWorld(config, mulberry32(seed));
     this.opponentWorld = createGameWorld(config, mulberry32(seed));
     this.orbPrng = mulberry32((seed + 0x12345678) >>> 0);
+    this.oppOrbPrng = mulberry32((seed + 0x12345678) >>> 0);
     this.orbs = [];
+    this.oppOrbs = [];
     this.orbIdGen = 0;
     this.lastScoredWaveCount = 0;
+    this.oppLastScoredWaveCount = 0;
 
     this.selfRenderer = new GameRenderer(this.selfContainer, config, this.theme);
     this.selfRenderer.applyActiveSkin(getSkinDef(this.activeSkinId));
@@ -303,36 +309,65 @@ export class VsApp {
             this.lastScoredWaveCount = newWaveCount;
           }
 
-          // Move orbs + check collection
-          const hitZone = this.gameConfig?.hitZone ?? 0.55;
+          // Move orbs + check collection (wider range for reliable pickup)
+          const orbPickupRange = 1.5;
           for (let oi = this.orbs.length - 1; oi >= 0; oi--) {
             const orb = this.orbs[oi];
             orb.z += this.selfWorld.speed * VS_FIXED_DT;
-            // Collection check
-            if (orb.z >= -hitZone && orb.z <= hitZone) {
+            if (orb.z >= -orbPickupRange && orb.z <= orbPickupRange) {
               for (const ball of this.selfWorld.balls) {
                 if (ball.lane === orb.lane) {
                   this.ws.send({ type: "orb_collect" });
+                  this.audio.playOrbDamage();
                   this.orbs.splice(oi, 1);
                   break;
                 }
               }
             }
-            // Despawn
-            if (orb.z > (this.gameConfig?.despawnZ ?? 5)) {
+            if (oi < this.orbs.length && this.orbs[oi]?.z > (this.gameConfig?.despawnZ ?? 5)) {
               this.orbs.splice(oi, 1);
             }
           }
 
-          // Sync orbs to renderer
           this.selfRenderer?.syncOrbs(this.orbs.map((o) => ({
             id: o.id, lane: o.lane, z: o.z, collected: false, targetPlayer: this.playerIndex,
           })));
         }
+
+        // Opponent world tick + orb spawning
         if (this.opponentWorld) {
           this.opponentWorld.alive = true;
           tick(this.opponentWorld, VS_FIXED_DT);
           this.opponentWorld.alive = true;
+
+          // Opponent orb spawning (same logic, separate PRNG instance)
+          const oppNewWaveCount = this.opponentWorld.scoredWaves.size;
+          if (this.oppOrbPrng && oppNewWaveCount > this.oppLastScoredWaveCount && this.gameConfig) {
+            for (let w = this.oppLastScoredWaveCount; w < oppNewWaveCount; w++) {
+              if (this.oppOrbPrng() < VS_ORB_CHANCE) {
+                const validLanes = this.gameConfig.balls.map((b) => b.homeLane);
+                const wallLanes = new Set(this.opponentWorld.walls.filter((wl) => wl.z < -60).map((wl) => wl.lane));
+                const safeLanes = validLanes.filter((l) => !wallLanes.has(l));
+                if (safeLanes.length > 0) {
+                  const lane = safeLanes[Math.floor(this.oppOrbPrng() * safeLanes.length)];
+                  this.oppOrbs.push({ id: this.orbIdGen++, lane, z: this.gameConfig.spawnZ });
+                }
+              }
+            }
+            this.oppLastScoredWaveCount = oppNewWaveCount;
+          }
+
+          // Move opponent orbs (no collection check — opponent's client handles that)
+          for (let oi = this.oppOrbs.length - 1; oi >= 0; oi--) {
+            this.oppOrbs[oi].z += this.opponentWorld.speed * VS_FIXED_DT;
+            if (this.oppOrbs[oi].z > (this.gameConfig?.despawnZ ?? 5)) {
+              this.oppOrbs.splice(oi, 1);
+            }
+          }
+
+          this.opponentRenderer?.syncOrbs(this.oppOrbs.map((o) => ({
+            id: o.id, lane: o.lane, z: o.z, collected: false, targetPlayer: (1 - this.playerIndex) as 0 | 1,
+          })));
         }
         this.recordDts.push(VS_FIXED_DT);
         this.localFrame++;
