@@ -11,6 +11,7 @@ import type { GameConfig } from "@domain/entities/GameConfig";
 import type { ThemeConfig, SceneTheme } from "@domain/entities/ThemeConfig";
 import type { GameWorldState } from "@domain/entities/GameWorld";
 import type { AchievementSkin, BallShape } from "@domain/entities/Achievement";
+import type { VsOrbState } from "@shared/protocol";
 import { ThreeSceneAdapter } from "./ThreeSceneAdapter";
 
 const LANE_LENGTH = 250;
@@ -46,6 +47,12 @@ export class GameRenderer {
   private wallEdgesMaterial: LineBasicMaterial;
   private wallTexGeneration = 0;
 
+  // Orb rendering
+  private orbMeshPool: Mesh[] = [];
+  private activeOrbMeshes = new Map<number, Mesh>();
+  private orbGeometry: SphereGeometry;
+  private orbMaterial: MeshStandardMaterial;
+
   // Track objects per category for cleanup on reconfigure
   private laneMeshes: Object3D[] = [];
   private lights: Object3D[] = [];
@@ -78,6 +85,15 @@ export class GameRenderer {
       transparent: true,
       blending: AdditiveBlending,
       depthWrite: false,
+    });
+    // Orb rendering
+    this.orbGeometry = new SphereGeometry(0.5, 16, 16);
+    this.orbMaterial = new MeshStandardMaterial({
+      color: 0xffaa00,
+      emissive: new Color(0xff8800),
+      emissiveIntensity: 0.8,
+      metalness: 0.6,
+      roughness: 0.2,
     });
     // Load initial wall texture if set
     if (this.scene.wallTextureUrl) {
@@ -491,6 +507,34 @@ export class GameRenderer {
     this.activeWallMeshes.clear();
   }
 
+  /** Sync orb meshes for VS mode. */
+  syncOrbs(orbs: VsOrbState[]): void {
+    const orbY = this.config.render.ballY;
+    const activeIds = new Set<number>();
+
+    for (const orb of orbs) {
+      if (orb.collected) continue;
+      activeIds.add(orb.id);
+
+      let mesh = this.activeOrbMeshes.get(orb.id);
+      if (!mesh) {
+        mesh = this.orbMeshPool.pop() ?? new Mesh(this.orbGeometry, this.orbMaterial.clone());
+        mesh.visible = true;
+        if (!mesh.parent) this.adapter.add(mesh);
+        this.activeOrbMeshes.set(orb.id, mesh);
+      }
+      mesh.position.set(this.laneX(orb.lane), orbY, orb.z);
+    }
+
+    for (const [id, mesh] of this.activeOrbMeshes) {
+      if (!activeIds.has(id)) {
+        mesh.visible = false;
+        this.orbMeshPool.push(mesh);
+        this.activeOrbMeshes.delete(id);
+      }
+    }
+  }
+
   /** Apply an achievement skin to all balls. Swaps geometry if shape differs. */
   applyActiveSkin(skin: AchievementSkin): void {
     this.activeSkin = skin;
@@ -564,6 +608,10 @@ export class GameRenderer {
     this.wallEdgesGeometry.dispose();
     this.wallMaterial.dispose();
     this.wallEdgesMaterial.dispose();
+    this.orbGeometry.dispose();
+    this.orbMaterial.dispose();
+    for (const m of this.orbMeshPool) { (m.material as MeshStandardMaterial).dispose(); }
+    for (const [, m] of this.activeOrbMeshes) { (m.material as MeshStandardMaterial).dispose(); }
     this.adapter.dispose();
   }
 }

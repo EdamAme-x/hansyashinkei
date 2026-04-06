@@ -133,8 +133,10 @@ export class RoomDurableObject {
 
     if (this.roomState === "playing" && this.simulation && !this.simulation.finished) {
       // Run simulation steps
+      const allEvents: import("@server/simulation").VsGameEvent[] = [];
       for (let i = 0; i < VS_BROADCAST_INTERVAL; i++) {
-        this.simulation.step();
+        const result = this.simulation.step();
+        allEvents.push(...result.events);
         if (this.simulation.finished) break;
       }
 
@@ -164,6 +166,16 @@ export class RoomDurableObject {
         orbs: this.simulation.getOrbStates(),
         hmac,
       });
+
+      // Broadcast damage/heal events
+      for (const ev of allEvents) {
+        this.broadcast({
+          type: ev.type,
+          targetPlayer: ev.player,
+          amount: ev.amount,
+          source: ev.source as "wall" | "orb",
+        });
+      }
 
       // Schedule next tick batch (50ms = 20Hz)
       await this.state.storage.setAlarm(Date.now() + 50);

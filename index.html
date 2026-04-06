@@ -606,6 +606,12 @@
         margin-top: 0.5rem;
       }
       .vs-copy-btn:hover { background: rgba(255,255,255,0.15); }
+      .vs-rules {
+        margin-top: 1.5rem; text-align: center;
+        font-family: 'Noto Sans JP', sans-serif;
+        font-size: 0.75rem; line-height: 2; opacity: 0.6;
+      }
+      .vs-rules strong { color: #ffd700; opacity: 1; }
 
       /* VS HP bars */
       .vs-hp-container {
@@ -1037,6 +1043,13 @@
       <div class="vs-overlay-text"></div>
       <div class="vs-room-id" id="vs-room-id"></div>
       <button class="vs-copy-btn" id="vs-copy-btn" style="display:none">URLをコピー</button>
+      <div class="vs-rules" id="vs-rules" style="display:none">
+        <p>HP: 1000 でスタート</p>
+        <p>壁にぶつかると <strong>-200</strong> (2秒間無敵)</p>
+        <p>壁を通過すると <strong>+25</strong> 回復</p>
+        <p>黄色のオーブを取ると相手に <strong>75ダメージ</strong></p>
+        <p>相手のHPを0にしたら勝ち！</p>
+      </div>
     </div>
 
     <div class="vs-hp-container hidden" id="vs-hp-container">

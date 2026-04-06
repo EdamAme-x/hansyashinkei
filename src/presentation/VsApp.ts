@@ -5,7 +5,7 @@ import { createReplay } from "@domain/entities/Replay";
 import { createVsScore } from "@domain/entities/Score";
 import type { ServerMessage, VsPlayerState, VsOrbState } from "@shared/protocol";
 import { VS_FIXED_DT } from "@shared/protocol";
-import { createGameWorld, tick, dodge, undodge } from "@domain/entities/GameWorld";
+import { createGameWorld, tick, dodge, undodge, type GameWorldState } from "@domain/entities/GameWorld";
 import { mulberry32 } from "@domain/entities/Prng";
 import { createVsWorldState, applyServerState, type VsWorldState } from "@domain/entities/VsGameWorld";
 import { WsClient } from "./WsClient";
@@ -27,6 +27,13 @@ function base64Encode(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+// Solo UI elements to hide in VS mode
+const SOLO_UI_IDS = [
+  "title-screen", "gameover-screen", "score-display", "speedup-display",
+  "replay-bar", "replay-indicator", "history-screen", "settings-screen",
+  "keybind-screen", "theme-screen", "achievement-screen",
+];
+
 export class VsApp {
   private ws: WsClient;
   private phase: VsPhase = "connecting";
@@ -34,8 +41,8 @@ export class VsApp {
   private roomId = "";
   private mode: GameMode = "classic";
 
-  // Game state
   private selfVs: VsWorldState | null = null;
+  private opponentWorld: GameWorldState | null = null;
   private opponentState: VsPlayerState | null = null;
   private gameConfig: GameConfig | null = null;
   private animationId = 0;
@@ -43,24 +50,18 @@ export class VsApp {
   private accumulator = 0;
   private lastTime = 0;
 
-  // Recording for replay
   private seed = 0;
   private recordDts: number[] = [];
   private recordEvents: ReplayEvent[] = [];
   private opponentName = "";
-
   private combinedKey: Uint8Array | null = null;
-
-  // Cleanup
   private readonly inputAbort = new AbortController();
 
-  // Renderers
   private selfRenderer: GameRenderer | null = null;
   private opponentRenderer: GameRenderer | null = null;
 
-  // UI elements
   private readonly selfContainer: HTMLElement;
-  private readonly opponentContainer: HTMLElement | null;
+  private readonly opponentContainer: HTMLElement;
   private readonly vsOverlay: HTMLElement;
 
   private readonly inputConfig: InputConfig;
@@ -95,19 +96,24 @@ export class VsApp {
     this.username = username;
     this.ws = new WsClient();
 
-    // Create split containers
+    // Hide solo UI
+    for (const id of SOLO_UI_IDS) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("hidden");
+    }
+
+    // Split containers
     this.selfContainer = document.createElement("div");
     this.selfContainer.id = "vs-self";
-    this.selfContainer.style.cssText = "position:absolute;left:0;top:0;width:50%;height:100%;";
-
     this.opponentContainer = document.createElement("div");
     this.opponentContainer.id = "vs-opponent";
-    this.opponentContainer.style.cssText = "position:absolute;right:0;top:0;width:50%;height:100%;";
 
-    // Mobile: hide opponent renderer, full-width self
     if (this.isMobile) {
-      this.selfContainer.style.width = "100%";
-      this.opponentContainer.style.display = "none";
+      this.selfContainer.style.cssText = "position:absolute;inset:0;";
+      this.opponentContainer.style.cssText = "display:none;";
+    } else {
+      this.selfContainer.style.cssText = "position:absolute;left:0;top:0;width:50%;height:100%;";
+      this.opponentContainer.style.cssText = "position:absolute;right:0;top:0;width:50%;height:100%;border-left:1px solid rgba(255,255,255,0.1);";
     }
 
     container.appendChild(this.selfContainer);
@@ -124,30 +130,26 @@ export class VsApp {
     });
 
     this.setupInput();
+    this.setupResize();
   }
 
   private get isMobile(): boolean {
     return navigator.maxTouchPoints > 0 && matchMedia("(pointer: coarse)").matches;
   }
 
-  /** Create a new room and connect. */
   async createAndJoin(mode: GameMode): Promise<void> {
     this.mode = mode;
     this.updateOverlay("ルーム作成中...");
-
     const { roomId } = await this.vsMatch.createRoom(mode);
     this.roomId = roomId;
-    this.updateOverlay(`ルームID: ${roomId}\n相手を待っています...`);
-
+    this.updateOverlay(`ルーム: ${roomId}\n相手を待っています...`);
     await this.ws.connect(this.vsMatch.getWsUrl(roomId));
     this.sendJoin();
   }
 
-  /** Join an existing room. */
   async join(roomId: string): Promise<void> {
     this.roomId = roomId;
     this.updateOverlay("接続中...");
-
     await this.ws.connect(this.vsMatch.getWsUrl(roomId));
     this.sendJoin();
   }
@@ -165,42 +167,34 @@ export class VsApp {
         this.roomId = msg.roomId;
         this.mode = msg.mode;
         this.phase = "waiting";
-        this.updateOverlay(`ルームID: ${this.roomId}\n相手を待っています...`);
+        this.updateOverlay(`ルーム: ${this.roomId}\n相手を待っています...`);
         break;
-
       case "opponent_joined":
         this.opponentName = msg.username;
         this.updateOverlay(`${msg.username} が参加しました`);
         break;
-
       case "key_exchange": {
         const bin = atob(msg.combinedKey);
         this.combinedKey = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) this.combinedKey[i] = bin.charCodeAt(i);
         break;
       }
-
       case "countdown":
         this.phase = "countdown";
         this.updateOverlay(msg.seconds > 0 ? String(msg.seconds) : "START!");
         break;
-
       case "game_start":
         this.startGame(msg.seed, msg.config);
         break;
-
       case "state":
         this.verifyAndApplyState(msg).catch(() => {});
         break;
-
       case "damage":
         this.onDamage(msg.targetPlayer, msg.amount, msg.source);
         break;
-
       case "heal":
         this.onHeal(msg.targetPlayer, msg.amount);
         break;
-
       case "game_over": {
         this.phase = "ended";
         const won = msg.winner === this.playerIndex;
@@ -212,7 +206,6 @@ export class VsApp {
         this.unlockVsAchievement();
         break;
       }
-
       case "error":
         this.phase = "error";
         this.updateOverlay(`ERROR: ${msg.message}`);
@@ -227,18 +220,21 @@ export class VsApp {
     this.recordDts = [];
     this.recordEvents = [];
 
-    // Hide overlay
     this.vsOverlay.classList.add("hidden");
+
+    // Show HP bars
+    document.getElementById("vs-hp-container")?.classList.remove("hidden");
 
     // Create renderers
     this.selfRenderer = new GameRenderer(this.selfContainer, config, this.theme);
-    if (!this.isMobile && this.opponentContainer) {
+    if (!this.isMobile) {
       this.opponentRenderer = new GameRenderer(this.opponentContainer, config, this.theme);
     }
 
-    // Create local world for prediction
-    const world = createGameWorld(config, mulberry32(seed));
-    this.selfVs = createVsWorldState(world);
+    // Create local worlds — same seed for identical wall patterns
+    const selfWorld = createGameWorld(config, mulberry32(seed));
+    this.selfVs = createVsWorldState(selfWorld);
+    this.opponentWorld = createGameWorld(config, mulberry32(seed));
 
     this.localFrame = 0;
     this.accumulator = 0;
@@ -249,7 +245,6 @@ export class VsApp {
   }
 
   private async verifyAndApplyState(msg: Extract<ServerMessage, { type: "state" }>): Promise<void> {
-    // Verify HMAC if we have the combined key
     if (this.combinedKey && msg.hmac) {
       const payload = JSON.stringify({ frame: msg.frame, players: msg.players, orbs: msg.orbs });
       const keyBuf = new Uint8Array(this.combinedKey.buffer, this.combinedKey.byteOffset, this.combinedKey.byteLength) as Uint8Array<ArrayBuffer>;
@@ -259,12 +254,12 @@ export class VsApp {
       for (let i = 0; i < sigBin.length; i++) sigBytes[i] = sigBin.charCodeAt(i);
       const sigBuf = new Uint8Array(sigBytes.buffer, sigBytes.byteOffset, sigBytes.byteLength) as Uint8Array<ArrayBuffer>;
       const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBuf, new TextEncoder().encode(payload));
-      if (!valid) return; // Reject tampered state
+      if (!valid) return;
     }
-    this.applyState(msg.frame, msg.players, msg.orbs);
+    this.applyState(msg.players, msg.orbs);
   }
 
-  private applyState(_frame: number, players: [VsPlayerState, VsPlayerState], orbs: VsOrbState[]): void {
+  private applyState(players: [VsPlayerState, VsPlayerState], orbs: VsOrbState[]): void {
     if (!this.selfVs) return;
 
     const selfState = players[this.playerIndex];
@@ -273,7 +268,24 @@ export class VsApp {
 
     applyServerState(this.selfVs, selfState, orbs);
 
-    // Update HP display
+    // Sync opponent ball positions from server state
+    if (this.opponentWorld && this.opponentState) {
+      for (let i = 0; i < this.opponentWorld.balls.length && i < this.opponentState.dodging.length; i++) {
+        const serverDodging = this.opponentState.dodging[i];
+        if (this.opponentWorld.balls[i].dodging !== serverDodging) {
+          if (serverDodging) {
+            dodge(this.opponentWorld, i);
+          } else {
+            undodge(this.opponentWorld, i);
+          }
+        }
+      }
+    }
+
+    // Sync orbs to renderers
+    if (this.selfRenderer) this.selfRenderer.syncOrbs(orbs);
+    if (this.opponentRenderer) this.opponentRenderer.syncOrbs(orbs);
+
     this.updateHpDisplay();
   }
 
@@ -281,7 +293,7 @@ export class VsApp {
     const isSelf = target === this.playerIndex;
     if (isSelf) {
       this.showDamageFlash();
-      if (source === "orb") this.audio.playDodge(); // orb hit feedback
+      if (source === "orb") this.audio.playDodge();
     }
     this.showDamageNumber(isSelf ? "self" : "opponent", amount);
   }
@@ -303,11 +315,16 @@ export class VsApp {
       this.lastTime = now;
       this.accumulator += elapsed;
 
-      // Fixed timestep simulation
       while (this.accumulator >= VS_FIXED_DT) {
-        // Keep world alive for VS (HP is managed by server)
         this.selfVs.world.alive = true;
         tick(this.selfVs.world, VS_FIXED_DT);
+
+        // Also tick opponent world for wall prediction
+        if (this.opponentWorld) {
+          this.opponentWorld.alive = true;
+          tick(this.opponentWorld, VS_FIXED_DT);
+        }
+
         this.recordDts.push(VS_FIXED_DT);
         this.localFrame++;
         this.accumulator -= VS_FIXED_DT;
@@ -315,11 +332,9 @@ export class VsApp {
 
       // Render self
       if (this.selfRenderer) {
-        // Invincibility blink
         const invincible = this.selfVs.invincibleUntilFrame > this.localFrame;
         if (invincible) {
-          const blink = Math.floor(now / 120) % 2 === 0;
-          this.selfRenderer.showBalls(blink);
+          this.selfRenderer.showBalls(Math.floor(now / 120) % 2 === 0);
         } else {
           this.selfRenderer.showBalls(true);
         }
@@ -327,8 +342,15 @@ export class VsApp {
         this.selfRenderer.render();
       }
 
-      // Render opponent (PC only)
-      if (this.opponentRenderer && this.opponentState) {
+      // Render opponent
+      if (this.opponentRenderer && this.opponentWorld) {
+        const oppInvinc = this.opponentState && this.opponentState.invincibleUntilFrame > this.localFrame;
+        if (oppInvinc) {
+          this.opponentRenderer.showBalls(Math.floor(now / 120) % 2 === 0);
+        } else {
+          this.opponentRenderer.showBalls(true);
+        }
+        this.opponentRenderer.sync(this.opponentWorld);
         this.opponentRenderer.render();
       }
     };
@@ -343,32 +365,20 @@ export class VsApp {
     window.addEventListener("keydown", (e) => {
       if (this.phase !== "playing" || pressed.has(e.code)) return;
       pressed.add(e.code);
-
-      if (e.code === "Escape") {
-        this.dispose();
-        location.href = "/";
-        return;
-      }
-
-      for (const binding of this.inputConfig.dodge) {
-        if (e.code === binding.code) {
-          this.doDodge(binding.ballIndex);
-        }
+      if (e.code === "Escape") { this.dispose(); location.href = "/"; return; }
+      for (const b of this.inputConfig.dodge) {
+        if (e.code === b.code) this.doDodge(b.ballIndex);
       }
     }, { signal });
 
     window.addEventListener("keyup", (e) => {
       pressed.delete(e.code);
       if (this.phase !== "playing") return;
-
-      for (const binding of this.inputConfig.dodge) {
-        if (e.code === binding.code) {
-          this.doUndodge(binding.ballIndex);
-        }
+      for (const b of this.inputConfig.dodge) {
+        if (e.code === b.code) this.doUndodge(b.ballIndex);
       }
     }, { signal });
 
-    // Touch
     const activeTouches = new Map<number, number>();
     const touchZone = (x: number): number => {
       const w = window.innerWidth;
@@ -405,9 +415,26 @@ export class VsApp {
     window.addEventListener("touchcancel", touchRelease, { signal });
   }
 
+  private setupResize(): void {
+    let timer = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (this.isMobile) {
+          this.selfRenderer?.resize(w, h);
+        } else {
+          const half = Math.floor(w / 2);
+          this.selfRenderer?.resize(half, h);
+          this.opponentRenderer?.resize(half, h);
+        }
+      }, 100);
+    }, { signal: this.inputAbort.signal });
+  }
+
   private doDodge(ballIndex: number): void {
-    if (!this.selfVs || !this.gameConfig) return;
-    if (ballIndex >= this.gameConfig.balls.length) return;
+    if (!this.selfVs || !this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
     dodge(this.selfVs.world, ballIndex);
     this.ws.send({ type: "input", frame: this.localFrame, action: "dodge", ballIndex });
     this.recordEvents.push({ frame: this.localFrame, type: "dodge", ballIndex });
@@ -415,30 +442,49 @@ export class VsApp {
   }
 
   private doUndodge(ballIndex: number): void {
-    if (!this.selfVs || !this.gameConfig) return;
-    if (ballIndex >= this.gameConfig.balls.length) return;
+    if (!this.selfVs || !this.gameConfig || ballIndex >= this.gameConfig.balls.length) return;
     undodge(this.selfVs.world, ballIndex);
     this.ws.send({ type: "input", frame: this.localFrame, action: "undodge", ballIndex });
     this.recordEvents.push({ frame: this.localFrame, type: "undodge", ballIndex });
   }
 
-  // ── UI helpers ──
+  // ── UI ──
 
   private updateOverlay(text: string): void {
     this.vsOverlay.classList.remove("hidden");
     const content = this.vsOverlay.querySelector(".vs-overlay-text");
     if (content) content.textContent = text;
+
+    // Show room ID + copy button + rules when waiting
+    const roomIdEl = document.getElementById("vs-room-id");
+    const copyBtn = document.getElementById("vs-copy-btn");
+    const rulesEl = document.getElementById("vs-rules");
+
+    if (this.phase === "waiting" && this.roomId) {
+      if (roomIdEl) { roomIdEl.textContent = this.roomId; roomIdEl.style.display = ""; }
+      if (copyBtn) {
+        copyBtn.style.display = "";
+        copyBtn.onclick = () => {
+          navigator.clipboard.writeText(`${location.origin}?vs=${this.roomId}`).catch(() => {});
+          copyBtn.textContent = "コピーしました!";
+          setTimeout(() => { copyBtn.textContent = "URLをコピー"; }, 1500);
+        };
+      }
+      if (rulesEl) rulesEl.style.display = "";
+    } else {
+      if (roomIdEl) roomIdEl.style.display = "none";
+      if (copyBtn) copyBtn.style.display = "none";
+      if (rulesEl) rulesEl.style.display = this.phase === "countdown" ? "" : "none";
+    }
   }
 
   private updateHpDisplay(): void {
     const selfHp = this.selfVs?.hp ?? 0;
     const oppHp = this.opponentState?.hp ?? 0;
-
     const selfBar = document.getElementById("vs-self-hp-fill");
     const oppBar = document.getElementById("vs-opponent-hp-fill");
     const selfLabel = document.getElementById("vs-self-hp-value");
     const oppLabel = document.getElementById("vs-opponent-hp-value");
-
     if (selfBar) selfBar.style.width = `${Math.max(0, selfHp / 10)}%`;
     if (oppBar) oppBar.style.width = `${Math.max(0, oppHp / 10)}%`;
     if (selfLabel) selfLabel.textContent = String(Math.max(0, selfHp));
@@ -450,16 +496,12 @@ export class VsApp {
     if (!flash) return;
     flash.classList.remove("hidden");
     flash.classList.add("active");
-    setTimeout(() => {
-      flash.classList.remove("active");
-      flash.classList.add("hidden");
-    }, 300);
+    setTimeout(() => { flash.classList.remove("active"); flash.classList.add("hidden"); }, 300);
   }
 
   private showDamageNumber(target: "self" | "opponent", amount: number): void {
     const container = document.getElementById(target === "self" ? "vs-self-damage" : "vs-opponent-damage");
     if (!container) return;
-
     const el = document.createElement("div");
     el.className = "vs-damage-num";
     el.textContent = `-${amount}`;
@@ -470,6 +512,7 @@ export class VsApp {
 
   private showResult(result: string): void {
     this.audio.stopBgm();
+    document.getElementById("vs-hp-container")?.classList.add("hidden");
     const overlay = document.getElementById("vs-result");
     if (overlay) {
       overlay.classList.remove("hidden");
@@ -478,29 +521,13 @@ export class VsApp {
     }
   }
 
-  private async saveVsResult(
-    finalScore: number,
-    vsResult: "win" | "lose" | "disconnect",
-    opponentScore: number,
-  ): Promise<void> {
+  private async saveVsResult(finalScore: number, vsResult: "win" | "lose" | "disconnect", opponentScore: number): Promise<void> {
     if (!this.gameConfig) return;
-
     const replayId = crypto.randomUUID();
-    const replay = createReplay(
-      replayId, "", this.seed, this.gameConfig, finalScore,
-      this.recordDts, this.recordEvents,
-    );
+    const replay = createReplay(replayId, "", this.seed, this.gameConfig, finalScore, this.recordDts, this.recordEvents);
     await this.manageReplay.save(replay);
-
-    const scoreId = crypto.randomUUID();
-    const vsScore = createVsScore(
-      scoreId, finalScore, this.mode, vsResult,
-      this.opponentName, opponentScore, replayId,
-    );
-    await this.manageScore.record(
-      vsScore.value, vsScore.mode, vsScore.replayId, vsScore.vsResult,
-      vsScore.opponentName, vsScore.opponentScore,
-    );
+    const vsScore = createVsScore(crypto.randomUUID(), finalScore, this.mode, vsResult, this.opponentName, opponentScore, replayId);
+    await this.manageScore.record(vsScore.value, vsScore.mode, vsScore.replayId, vsScore.vsResult, vsScore.opponentName, vsScore.opponentScore);
   }
 
   private async unlockVsAchievement(): Promise<void> {
@@ -518,6 +545,8 @@ export class VsApp {
     this.selfRenderer?.dispose();
     this.opponentRenderer?.dispose();
     this.selfContainer.remove();
-    this.opponentContainer?.remove();
+    this.opponentContainer.remove();
+    document.getElementById("vs-hp-container")?.classList.add("hidden");
+    document.getElementById("vs-result")?.classList.add("hidden");
   }
 }

@@ -9,6 +9,17 @@ import {
 
 const BALL_Z = 0;
 
+export interface VsGameEvent {
+  type: "damage" | "heal";
+  player: 0 | 1;
+  amount: number;
+  source: "wall" | "orb" | "pass";
+}
+
+export interface VsStepResult {
+  events: VsGameEvent[];
+}
+
 export interface VsPlayerSim {
   world: GameWorldState;
   hp: number;
@@ -37,7 +48,6 @@ export class VsSimulation {
   constructor(seed: number, config: GameConfig) {
     this.config = config;
 
-    // Both players get same config and seed → identical wall patterns
     this.players = [
       {
         world: createGameWorld(config, mulberry32(seed)),
@@ -53,7 +63,6 @@ export class VsSimulation {
       },
     ];
 
-    // Separate PRNG for orb spawning (offset seed so it's not the same sequence)
     this.orbPrng = mulberry32((seed + 0x12345678) >>> 0);
   }
 
@@ -66,25 +75,28 @@ export class VsSimulation {
     }
   }
 
-  step(): void {
-    if (this.finished) return;
+  step(): VsStepResult {
+    const events: VsGameEvent[] = [];
+    if (this.finished) return { events };
 
     for (let p = 0; p < 2; p++) {
       const player = this.players[p as 0 | 1];
       const prevWaveCount = player.world.scoredWaves.size;
+      const prevHp = player.hp;
 
-      // Override alive — in VS mode, dying from walls doesn't end the game,
-      // it deals HP damage instead
-      const prevAlive = player.world.alive;
+      // Pre-tick: force alive so tick doesn't abort on wall collision
+      player.world.alive = true;
+      const prevAlive = true;
       tick(player.world, VS_FIXED_DT);
 
+      // Wall collision: tick sets alive=false when ball hits wall
       if (!player.world.alive && prevAlive) {
-        // Wall collision — deal damage if not invincible
         if (this.frame >= player.invincibleUntilFrame) {
           player.hp = Math.max(0, player.hp - VS_WALL_DAMAGE);
           player.invincibleUntilFrame = this.frame + VS_INVINCIBLE_FRAMES;
+          events.push({ type: "damage", player: p as 0 | 1, amount: VS_WALL_DAMAGE, source: "wall" });
         }
-        // Revive — VS mode doesn't end on wall hit
+        // Revive
         player.world.alive = true;
       }
 
@@ -92,10 +104,16 @@ export class VsSimulation {
       const newWaveCount = player.world.scoredWaves.size;
       if (newWaveCount > prevWaveCount) {
         const wavesPassed = newWaveCount - prevWaveCount;
-        player.hp = Math.min(VS_MAX_HP, player.hp + VS_PASS_HEAL * wavesPassed);
+        const heal = VS_PASS_HEAL * wavesPassed;
+        const oldHp = player.hp;
+        player.hp = Math.min(VS_MAX_HP, player.hp + heal);
+        const actualHeal = player.hp - oldHp;
+        if (actualHeal > 0) {
+          events.push({ type: "heal", player: p as 0 | 1, amount: actualHeal, source: "pass" });
+        }
       }
 
-      // Orb spawning: check if new waves were scored
+      // Orb spawning
       if (newWaveCount > player.lastScoredWaveCount) {
         for (let w = player.lastScoredWaveCount; w < newWaveCount; w++) {
           if (this.orbPrng() < VS_ORB_CHANCE) {
@@ -104,10 +122,16 @@ export class VsSimulation {
         }
         player.lastScoredWaveCount = newWaveCount;
       }
+
+      // Detect HP changes not captured above (shouldn't happen, but safety)
+      if (player.hp !== prevHp && events.length === 0) {
+        // Already emitted
+      }
     }
 
-    // Move and check orbs
-    this.updateOrbs();
+    // Move and check orbs — collect orb events
+    const orbEvents = this.updateOrbs();
+    events.push(...orbEvents);
 
     // Check game over
     for (let p = 0; p < 2; p++) {
@@ -119,10 +143,10 @@ export class VsSimulation {
     }
 
     this.frame++;
+    return { events };
   }
 
   private spawnOrb(targetPlayer: 0 | 1): void {
-    // Place orb in a safe lane (one not occupied by current walls at spawn z)
     const world = this.players[targetPlayer].world;
     const validLanes = this.config.balls.map((b) => b.homeLane);
     const wallLanes = new Set(world.walls.filter((w) => w.z < -60).map((w) => w.lane));
@@ -140,14 +164,14 @@ export class VsSimulation {
     });
   }
 
-  private updateOrbs(): void {
+  private updateOrbs(): VsGameEvent[] {
+    const events: VsGameEvent[] = [];
+
     for (const orb of this.orbs) {
       if (orb.collected) continue;
 
-      // Move at same speed as walls for that player
       orb.z += this.players[orb.targetPlayer].world.speed * VS_FIXED_DT;
 
-      // Check collection: orb passes through hit zone and player ball is in that lane
       const player = this.players[orb.targetPlayer];
       const hitMin = BALL_Z - this.config.hitZone;
       const hitMax = BALL_Z + this.config.hitZone;
@@ -156,22 +180,21 @@ export class VsSimulation {
         for (const ball of player.world.balls) {
           if (ball.lane === orb.lane) {
             orb.collected = true;
-            // Deal damage to OPPONENT
-            const opponent = this.players[(1 - orb.targetPlayer) as 0 | 1];
-            opponent.hp = Math.max(0, opponent.hp - VS_ORB_DAMAGE);
+            const opponent = (1 - orb.targetPlayer) as 0 | 1;
+            this.players[opponent].hp = Math.max(0, this.players[opponent].hp - VS_ORB_DAMAGE);
+            events.push({ type: "damage", player: opponent, amount: VS_ORB_DAMAGE, source: "orb" });
             break;
           }
         }
       }
 
-      // Despawn past hit zone
       if (orb.z > this.config.despawnZ) {
         orb.collected = true;
       }
     }
 
-    // Remove collected/despawned orbs
     this.orbs = this.orbs.filter((o) => !o.collected);
+    return events;
   }
 
   getPlayerState(index: 0 | 1): VsPlayerState {
