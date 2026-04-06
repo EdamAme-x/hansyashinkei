@@ -179,6 +179,7 @@ export class VsApp {
         const bin = atob(msg.combinedKey);
         this.combinedKey = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) this.combinedKey[i] = bin.charCodeAt(i);
+        this.ws.setDecryptKey(this.combinedKey);
         break;
       }
       case "countdown":

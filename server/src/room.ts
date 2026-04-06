@@ -4,7 +4,7 @@ import type { GameMode } from "@domain/entities/GameMode";
 import type { ClientMessage, ServerMessage } from "@shared/protocol";
 import { VS_FIXED_DT, VS_BROADCAST_INTERVAL, VS_MAX_INPUTS_PER_SECOND, VS_FRAME_TOLERANCE } from "@shared/protocol";
 import { VsSimulation } from "@server/simulation";
-import { combineKeys, base64Decode, base64Encode, hmacSign, validateUsername } from "@server/auth";
+import { combineKeys, base64Decode, base64Encode, hmacSign, validateUsername, xorEncrypt } from "@server/auth";
 
 type RoomState = "waiting" | "countdown" | "playing" | "finished";
 
@@ -117,7 +117,7 @@ export class RoomDurableObject {
       const winner = (1 - idx) as 0 | 1;
       this.simulation.finished = true;
       this.simulation.winner = winner;
-      this.broadcast({ type: "game_over", winner, players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)] });
+      this.broadcastEncrypted({ type: "game_over", winner, players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)] });
     }
 
     // If countdown/waiting, cancel and notify remaining player
@@ -156,7 +156,7 @@ export class RoomDurableObject {
 
       if (this.simulation.finished) {
         this.roomState = "finished";
-        this.broadcast({
+        this.broadcastEncrypted({
           type: "game_over",
           winner: this.simulation.winner,
           players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
@@ -173,7 +173,7 @@ export class RoomDurableObject {
 
       const hmac = this.combinedKey ? await hmacSign(this.combinedKey, statePayload) : "";
 
-      this.broadcast({
+      this.broadcastEncrypted({
         type: "state",
         frame: this.simulation.frame,
         players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
@@ -184,9 +184,9 @@ export class RoomDurableObject {
       // Broadcast damage/heal events
       for (const ev of allEvents) {
         if (ev.type === "damage") {
-          this.broadcast({ type: "damage", targetPlayer: ev.player, amount: ev.amount, source: ev.source as "wall" | "orb" });
+          this.broadcastEncrypted({ type: "damage", targetPlayer: ev.player, amount: ev.amount, source: ev.source as "wall" | "orb" });
         } else {
-          this.broadcast({ type: "heal", targetPlayer: ev.player, amount: ev.amount });
+          this.broadcastEncrypted({ type: "heal", targetPlayer: ev.player, amount: ev.amount });
         }
       }
 
@@ -326,6 +326,25 @@ export class RoomDurableObject {
       if (!p) continue;
       try {
         p.ws.send(data);
+      } catch {
+        // Connection may be closed
+      }
+    }
+  }
+
+  /** Broadcast with XOR encryption using combinedKey. */
+  private broadcastEncrypted(msg: ServerMessage): void {
+    if (!this.combinedKey) {
+      this.broadcast(msg);
+      return;
+    }
+    const plaintext = JSON.stringify(msg);
+    const encrypted = xorEncrypt(this.combinedKey, plaintext);
+    const envelope = JSON.stringify({ type: "encrypted", data: encrypted });
+    for (const p of this.players) {
+      if (!p) continue;
+      try {
+        p.ws.send(envelope);
       } catch {
         // Connection may be closed
       }

@@ -60,6 +60,24 @@ export function base64Decode(str: string): Uint8Array {
   return bytes;
 }
 
+export function xorEncrypt(key: Uint8Array, data: string): string {
+  const bytes = new TextEncoder().encode(data);
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    out[i] = bytes[i] ^ key[i % key.length];
+  }
+  return base64Encode(out);
+}
+
+export function xorDecrypt(key: Uint8Array, encoded: string): string {
+  const bytes = base64Decode(encoded);
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    out[i] = bytes[i] ^ key[i % key.length];
+  }
+  return new TextDecoder().decode(out);
+}
+
 export function validateUsername(name: string): string | null {
   const trimmed = name.trim();
   if (trimmed.length < 1 || trimmed.length > 10) return null;

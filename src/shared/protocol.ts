@@ -39,7 +39,8 @@ export type ServerMessage =
   | { type: "damage"; targetPlayer: 0 | 1; amount: number; source: "wall" | "orb" }
   | { type: "heal"; targetPlayer: 0 | 1; amount: number }
   | { type: "game_over"; winner: 0 | 1; players: [VsPlayerState, VsPlayerState] }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "encrypted"; data: string };
 
 // ── VS Game constants ──
 
