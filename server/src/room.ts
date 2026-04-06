@@ -27,6 +27,7 @@ export class RoomDurableObject {
   private combinedKey: Uint8Array | null = null;
   private countdownRemaining = 3;
   private config: GameConfig | null = null;
+  private readyFlags: [boolean, boolean] = [false, false];
 
   constructor(state: DurableObjectState) {
     this.state = state;
@@ -150,6 +151,9 @@ export class RoomDurableObject {
     switch (msg.type) {
       case "join":
         await this.handleJoin(ws, msg.username, msg.keyPart);
+        break;
+      case "ready":
+        await this.handleReady(ws);
         break;
       case "input":
         this.handleInput(ws, msg.frame, msg.action, msg.ballIndex);
@@ -293,7 +297,22 @@ export class RoomDurableObject {
       this.combinedKey = combined;
       const keyB64 = base64Encode(combined);
       this.broadcast({ type: "key_exchange", combinedKey: keyB64 });
+      // Wait for both players to send "ready" before starting countdown
+    }
+  }
 
+  private async handleReady(ws: WebSocket): Promise<void> {
+    const idx = this.findPlayerIndex(ws);
+    if (idx === -1 || this.roomState !== "waiting") return;
+
+    this.readyFlags[idx as 0 | 1] = true;
+
+    // Notify opponent
+    const otherWs = this.getPlayerWs(1 - idx);
+    if (otherWs) this.send(otherWs, { type: "opponent_ready" });
+
+    // Both ready → start countdown
+    if (this.readyFlags[0] && this.readyFlags[1]) {
       this.roomState = "countdown";
       this.countdownRemaining = 3;
       this.broadcast({ type: "countdown", seconds: 3 });

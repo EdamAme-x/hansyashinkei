@@ -19,7 +19,8 @@ export function createVsWorldState(world: GameWorldState): VsWorldState {
   };
 }
 
-/** Apply authoritative server state to the local VS world. */
+/** Apply authoritative server state to the local VS world.
+ *  NOTE: Does NOT sync ball dodge state — that's kept local for responsiveness. */
 export function applyServerState(
   vs: VsWorldState,
   serverState: VsPlayerState,
@@ -28,17 +29,6 @@ export function applyServerState(
   vs.hp = serverState.hp;
   vs.invincibleUntilFrame = serverState.invincibleUntilFrame;
   vs.orbs = orbs;
-
-  // Sync ball dodge state from server
-  for (let i = 0; i < vs.world.balls.length && i < serverState.dodging.length; i++) {
-    const serverDodging = serverState.dodging[i];
-    if (vs.world.balls[i].dodging !== serverDodging) {
-      vs.world.balls[i] = {
-        lane: serverDodging
-          ? vs.world.config.balls[i].dodgeLane
-          : vs.world.config.balls[i].homeLane,
-        dodging: serverDodging,
-      };
-    }
-  }
+  // Ball dodge state is NOT synced from server — local input is authoritative
+  // to avoid input lag where server state overwrites local dodge before it roundtrips
 }

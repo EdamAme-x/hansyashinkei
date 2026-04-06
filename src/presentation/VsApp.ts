@@ -19,6 +19,7 @@ import type { VsMatchService } from "@application/usecases/VsMatchService";
 import { AchievementToast } from "./AchievementToast";
 import { AudioManager } from "./AudioManager";
 import { setupCustomCursor } from "./CustomCursor";
+import { getSkinDef } from "@domain/entities/SkinDefs";
 
 type VsPhase = "connecting" | "waiting" | "countdown" | "playing" | "ended" | "error";
 
@@ -74,6 +75,8 @@ export class VsApp {
   private readonly achievementToast: AchievementToast;
   private readonly theme: ThemeConfig;
   private readonly username: string;
+  private activeSkinId = "skin_default";
+  private opponentReady = false;
 
   constructor(
     container: HTMLElement,
@@ -133,6 +136,9 @@ export class VsApp {
     this.setupInput();
     this.setupResize();
     setupCustomCursor(() => this.phase === "playing");
+
+    // Load active skin
+    manageAchievement.getActiveSkinId().then((id) => { this.activeSkinId = id; }).catch(() => {});
   }
 
   private get isMobile(): boolean {
@@ -173,7 +179,12 @@ export class VsApp {
         break;
       case "opponent_joined":
         this.opponentName = msg.username;
-        this.updateOverlay(`${msg.username} が参加しました`);
+        this.updateOverlay(`${msg.username} が参加しました\n準備ができたらREADYを押してください`);
+        this.showReadyButton();
+        break;
+      case "opponent_ready":
+        this.opponentReady = true;
+        this.updateReadyStatus();
         break;
       case "key_exchange": {
         const bin = atob(msg.combinedKey);
@@ -232,6 +243,7 @@ export class VsApp {
 
     // Create renderers
     this.selfRenderer = new GameRenderer(this.selfContainer, config, this.theme);
+    this.selfRenderer.applyActiveSkin(getSkinDef(this.activeSkinId));
     if (!this.isMobile) {
       this.opponentRenderer = new GameRenderer(this.opponentContainer, config, this.theme);
     }
@@ -485,6 +497,36 @@ export class VsApp {
       if (roomIdEl) roomIdEl.style.display = "none";
       if (copyBtn) copyBtn.style.display = "none";
       if (rulesEl) rulesEl.style.display = this.phase === "countdown" ? "" : "none";
+    }
+  }
+
+  private showReadyButton(): void {
+    let btn = document.getElementById("vs-ready-btn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "vs-ready-btn";
+      btn.className = "vs-copy-btn";
+      btn.style.marginTop = "1rem";
+      btn.style.fontSize = "1.1rem";
+      btn.style.padding = "0.7em 3em";
+      btn.textContent = "READY";
+      this.vsOverlay.appendChild(btn);
+    }
+    btn.style.display = "";
+    btn.onclick = () => {
+      this.ws.send({ type: "ready" });
+      btn.textContent = "READY!";
+      btn.style.opacity = "0.5";
+      btn.style.pointerEvents = "none";
+      this.updateReadyStatus();
+    };
+  }
+
+  private updateReadyStatus(): void {
+    const btn = document.getElementById("vs-ready-btn");
+    if (this.opponentReady && btn) {
+      const content = this.vsOverlay.querySelector(".vs-overlay-text");
+      if (content) content.textContent = `${this.opponentName} は準備完了！`;
     }
   }
 

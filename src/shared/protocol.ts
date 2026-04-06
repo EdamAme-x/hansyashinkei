@@ -25,6 +25,7 @@ export interface VsOrbState {
 
 export type ClientMessage =
   | { type: "join"; username: string; keyPart: string }
+  | { type: "ready" }
   | { type: "input"; frame: number; action: "dodge" | "undodge"; ballIndex: number };
 
 // ── Server → Client messages ──
@@ -32,6 +33,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "joined"; playerIndex: 0 | 1; roomId: string; mode: GameMode }
   | { type: "opponent_joined"; username: string }
+  | { type: "opponent_ready" }
   | { type: "key_exchange"; combinedKey: string }
   | { type: "countdown"; seconds: number }
   | { type: "game_start"; seed: number; config: GameConfig; fixedDt: number }
