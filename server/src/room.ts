@@ -58,6 +58,10 @@ export class RoomDurableObject {
         }
       }
     }
+    // Restore simulation if game was in progress
+    if (this.roomState === "playing" && !this.simulation) {
+      await this.restoreSimulation();
+    }
   }
 
   private async saveMeta(): Promise<void> {
@@ -73,6 +77,41 @@ export class RoomDurableObject {
       usernames: [this.playerMeta[0]?.username ?? null, this.playerMeta[1]?.username ?? null],
       ready: this.readyFlags,
     });
+  }
+
+  private async saveSimState(): Promise<void> {
+    if (!this.simulation) return;
+    const p0 = this.simulation.getPlayerState(0);
+    const p1 = this.simulation.getPlayerState(1);
+    await this.state.storage.put("simState", {
+      p0hp: p0.hp, p1hp: p1.hp, p0score: p0.score, p1score: p1.score,
+      p0invinc: p0.invincibleUntilFrame, p1invinc: p1.invincibleUntilFrame,
+      frame: this.simulation.frame,
+      finished: this.simulation.finished, winner: this.simulation.winner,
+    });
+  }
+
+  private async restoreSimulation(): Promise<void> {
+    if (!this.config) return;
+    const ss = await this.state.storage.get<{
+      p0hp: number; p1hp: number; p0score: number; p1score: number;
+      p0invinc: number; p1invinc: number; frame: number;
+      finished: boolean; winner: 0 | 1;
+    }>("simState");
+    if (!ss) {
+      this.simulation = new VsSimulation(this.config.balls.length);
+      return;
+    }
+    this.simulation = new VsSimulation(this.config.balls.length);
+    this.simulation.players[0].hp = ss.p0hp;
+    this.simulation.players[1].hp = ss.p1hp;
+    this.simulation.players[0].score = ss.p0score;
+    this.simulation.players[1].score = ss.p1score;
+    this.simulation.players[0].invincibleUntilFrame = ss.p0invinc;
+    this.simulation.players[1].invincibleUntilFrame = ss.p1invinc;
+    this.simulation.frame = ss.frame;
+    this.simulation.finished = ss.finished;
+    this.simulation.winner = ss.winner;
   }
 
   /** Get WebSocket for a player tag ("p0" or "p1"). */
@@ -318,7 +357,8 @@ export class RoomDurableObject {
   }
 
   private handleReport(ws: WebSocket, reportType: "wall_hit" | "orb_collect" | "wall_pass"): void {
-    if (this.roomState !== "playing" || !this.simulation) return;
+    if (this.roomState !== "playing") return;
+    if (!this.simulation) return;
     const idx = this.findPlayerIndex(ws);
     if (idx === -1) return;
 
@@ -341,6 +381,7 @@ export class RoomDurableObject {
       } else {
         this.broadcastEncrypted({ type: "heal", targetPlayer: event.player, amount: event.amount });
       }
+      this.saveSimState().catch(() => {});
     }
 
     if (this.simulation.finished) {
