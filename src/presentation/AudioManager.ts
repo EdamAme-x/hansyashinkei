@@ -68,6 +68,31 @@ export class AudioManager {
     this.playSe(this.audio.se.start, 0.1);
   }
 
+  // VS mode sounds
+  playHit(): void {
+    this.playSe(this.audio.se.death, 0.08);
+  }
+
+  playOrbCollect(): void {
+    this.playSe(this.audio.se.speedUp, 0.08);
+  }
+
+  playCountdownTick(): void {
+    this.playSe(this.audio.se.dodge[0], 0.06);
+  }
+
+  playWin(): void {
+    this.playSe(this.audio.se.newBest, 0.15);
+  }
+
+  playLose(): void {
+    this.playSe(this.audio.se.death, 0.12);
+  }
+
+  playOrbDamage(): void {
+    this.playSe(this.audio.se.speedUp, 0.05);
+  }
+
   private playSe(url: string, volume: number): void {
     if (!this._enabled) return;
     const a = new Audio(url);

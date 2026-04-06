@@ -181,6 +181,8 @@ export class VsApp {
       }
       case "countdown":
         this.phase = "countdown";
+        if (msg.seconds > 0) this.audio.playCountdownTick();
+        else this.audio.playStart();
         this.updateOverlay(msg.seconds > 0 ? String(msg.seconds) : "START!");
         break;
       case "game_start":
@@ -293,7 +295,10 @@ export class VsApp {
     const isSelf = target === this.playerIndex;
     if (isSelf) {
       this.showDamageFlash();
-      if (source === "orb") this.audio.playDodge();
+      this.audio.playHit();
+    } else {
+      // Dealt damage to opponent
+      if (source === "orb") this.audio.playOrbDamage();
     }
     this.showDamageNumber(isSelf ? "self" : "opponent", amount);
   }
@@ -512,6 +517,8 @@ export class VsApp {
 
   private showResult(result: string): void {
     this.audio.stopBgm();
+    if (result === "WIN") this.audio.playWin();
+    else if (result === "LOSE") this.audio.playLose();
     document.getElementById("vs-hp-container")?.classList.add("hidden");
     const overlay = document.getElementById("vs-result");
     if (overlay) {
