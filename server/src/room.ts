@@ -4,12 +4,12 @@ import type { GameMode } from "@domain/entities/GameMode";
 import type { ClientMessage, ServerMessage } from "@shared/protocol";
 import { VS_FIXED_DT, VS_BROADCAST_INTERVAL, VS_MAX_INPUTS_PER_SECOND, VS_FRAME_TOLERANCE } from "@shared/protocol";
 import { VsSimulation } from "@server/simulation";
+import type { VsGameEvent } from "@server/simulation";
 import { combineKeys, base64Decode, base64Encode, hmacSign, validateUsername, xorEncrypt } from "@server/auth";
 
 type RoomState = "waiting" | "countdown" | "playing" | "finished";
 
-interface PlayerConn {
-  ws: WebSocket;
+interface PlayerMeta {
   username: string;
   keyPart: Uint8Array;
   inputCount: number;
@@ -19,7 +19,7 @@ interface PlayerConn {
 export class RoomDurableObject {
   private state: DurableObjectState;
   private roomState: RoomState = "waiting";
-  private players: (PlayerConn | null)[] = [null, null];
+  private playerMeta: (PlayerMeta | null)[] = [null, null];
   private mode: GameMode = "classic";
   private roomId = "";
   private simulation: VsSimulation | null = null;
@@ -34,12 +34,36 @@ export class RoomDurableObject {
 
   private async ensureLoaded(): Promise<void> {
     if (this.roomId) return;
-    const meta = await this.state.storage.get<{ mode: GameMode; roomId: string }>("roomMeta");
+    const meta = await this.state.storage.get<{ mode: GameMode; roomId: string; roomState: RoomState }>("roomMeta");
     if (meta) {
       this.mode = meta.mode;
       this.roomId = meta.roomId;
+      this.roomState = meta.roomState;
       this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
     }
+  }
+
+  private async saveMeta(): Promise<void> {
+    await this.state.storage.put("roomMeta", {
+      mode: this.mode,
+      roomId: this.roomId,
+      roomState: this.roomState,
+    });
+  }
+
+  /** Get WebSocket for a player tag ("p0" or "p1"). */
+  private getPlayerWs(index: number): WebSocket | null {
+    const tag = `p${index}`;
+    const sockets = this.state.getWebSockets(tag);
+    return sockets.length > 0 ? sockets[0] : null;
+  }
+
+  /** Count connected players. */
+  private connectedCount(): number {
+    let count = 0;
+    if (this.getPlayerWs(0)) count++;
+    if (this.getPlayerWs(1)) count++;
+    return count;
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -50,14 +74,21 @@ export class RoomDurableObject {
       if (this.roomState === "playing" || this.roomState === "finished") {
         return new Response("Game in progress", { status: 409 });
       }
-      if (this.players[0] && this.players[1]) {
+
+      // Check available slots
+      const p0 = this.getPlayerWs(0);
+      const p1 = this.getPlayerWs(1);
+      if (p0 && p1) {
         return new Response("Room full", { status: 409 });
       }
 
+      // Assign to first free slot
+      const slot = !p0 ? 0 : 1;
       const pair = new WebSocketPair();
       const [client, server] = [pair[0], pair[1]];
 
-      this.state.acceptWebSocket(server);
+      // Tag the WebSocket with player index for hibernation recovery
+      this.state.acceptWebSocket(server, [`p${slot}`]);
 
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -67,7 +98,7 @@ export class RoomDurableObject {
         roomId: this.roomId,
         mode: this.mode,
         state: this.roomState,
-        playerCount: this.players.filter(Boolean).length,
+        playerCount: this.connectedCount(),
       });
     }
 
@@ -75,9 +106,9 @@ export class RoomDurableObject {
       const body = await request.json() as { mode: GameMode; roomId: string };
       this.mode = body.mode;
       this.roomId = body.roomId;
+      this.roomState = "waiting";
       this.config = this.mode === "triple" ? createTripleConfig() : createDefaultConfig();
-      // Persist to storage so state survives hibernation
-      await this.state.storage.put("roomMeta", { mode: this.mode, roomId: this.roomId });
+      await this.saveMeta();
       return new Response("OK");
     }
 
@@ -106,25 +137,26 @@ export class RoomDurableObject {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    await this.ensureLoaded();
     const idx = this.findPlayerIndex(ws);
     if (idx === -1) return;
 
-    this.players[idx] = null;
+    this.playerMeta[idx] = null;
 
-    // If game is in progress and a player disconnects, opponent wins
     if (this.roomState === "playing" && this.simulation) {
       this.roomState = "finished";
       const winner = (1 - idx) as 0 | 1;
       this.simulation.finished = true;
       this.simulation.winner = winner;
       this.broadcastEncrypted({ type: "game_over", winner, players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)] });
+      await this.saveMeta();
     }
 
-    // If countdown/waiting, cancel and notify remaining player
     if (this.roomState === "countdown" || this.roomState === "waiting") {
       this.roomState = "waiting";
       this.countdownRemaining = 3;
       this.broadcast({ type: "error", message: "対戦相手が切断しました" });
+      await this.saveMeta();
     }
   }
 
@@ -133,6 +165,8 @@ export class RoomDurableObject {
   }
 
   async alarm(): Promise<void> {
+    await this.ensureLoaded();
+
     if (this.roomState === "countdown") {
       this.countdownRemaining--;
       this.broadcast({ type: "countdown", seconds: this.countdownRemaining });
@@ -146,8 +180,7 @@ export class RoomDurableObject {
     }
 
     if (this.roomState === "playing" && this.simulation && !this.simulation.finished) {
-      // Run simulation steps
-      const allEvents: import("@server/simulation").VsGameEvent[] = [];
+      const allEvents: VsGameEvent[] = [];
       for (let i = 0; i < VS_BROADCAST_INTERVAL; i++) {
         const result = this.simulation.step();
         allEvents.push(...result.events);
@@ -161,10 +194,10 @@ export class RoomDurableObject {
           winner: this.simulation.winner,
           players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
         });
+        await this.saveMeta();
         return;
       }
 
-      // Broadcast state
       const statePayload = JSON.stringify({
         frame: this.simulation.frame,
         players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
@@ -181,7 +214,6 @@ export class RoomDurableObject {
         hmac,
       });
 
-      // Broadcast damage/heal events
       for (const ev of allEvents) {
         if (ev.type === "damage") {
           this.broadcastEncrypted({ type: "damage", targetPlayer: ev.player, amount: ev.amount, source: ev.source as "wall" | "orb" });
@@ -190,7 +222,6 @@ export class RoomDurableObject {
         }
       }
 
-      // Schedule next tick batch (50ms = 20Hz)
       await this.state.storage.setAlarm(Date.now() + 50);
       return;
     }
@@ -212,42 +243,42 @@ export class RoomDurableObject {
       return;
     }
 
-    // Reject if this WS is already joined
+    // Reject if already joined
     if (this.findPlayerIndex(ws) !== -1) {
       this.send(ws, { type: "error", message: "Already joined" });
       return;
     }
 
-    const idx = this.players[0] === null ? 0 : this.players[1] === null ? 1 : -1;
+    // Find slot from WS tags
+    const idx = this.findSlotByWs(ws);
     if (idx === -1) {
       this.send(ws, { type: "error", message: "Room full" });
       return;
     }
 
-    this.players[idx] = { ws, username: validName, keyPart, inputCount: 0, inputWindowStart: Date.now() };
+    this.playerMeta[idx] = { username: validName, keyPart, inputCount: 0, inputWindowStart: Date.now() };
 
     this.send(ws, { type: "joined", playerIndex: idx as 0 | 1, roomId: this.roomId, mode: this.mode });
 
-    // Notify opponent
-    const other = this.players[1 - idx];
-    if (other) {
-      this.send(other.ws, { type: "opponent_joined", username: validName });
-      this.send(ws, { type: "opponent_joined", username: other.username });
+    // Check if both players have joined
+    if (this.playerMeta[0] && this.playerMeta[1]) {
+      const other = this.playerMeta[1 - idx];
+      if (other) {
+        const otherWs = this.getPlayerWs(1 - idx);
+        if (otherWs) this.send(otherWs, { type: "opponent_joined", username: validName });
+        this.send(ws, { type: "opponent_joined", username: other.username });
+      }
 
-      const p0 = this.players[0];
-      const p1 = this.players[1];
-      if (!p0 || !p1) return;
-
-      const combined = combineKeys(p0.keyPart, p1.keyPart);
+      const combined = combineKeys(this.playerMeta[0].keyPart, this.playerMeta[1].keyPart);
       this.combinedKey = combined;
       const keyB64 = base64Encode(combined);
       this.broadcast({ type: "key_exchange", combinedKey: keyB64 });
 
-      // Start countdown
       this.roomState = "countdown";
       this.countdownRemaining = 3;
       this.broadcast({ type: "countdown", seconds: 3 });
       await this.state.storage.setAlarm(Date.now() + 1000);
+      await this.saveMeta();
     }
   }
 
@@ -257,40 +288,42 @@ export class RoomDurableObject {
     const idx = this.findPlayerIndex(ws);
     if (idx === -1) return;
 
-    const player = this.players[idx];
-    if (!player) return;
+    const meta = this.playerMeta[idx];
+    if (!meta) return;
 
-    // Rate limit: max inputs per second
     const now = Date.now();
-    if (now - player.inputWindowStart > 1000) {
-      player.inputCount = 0;
-      player.inputWindowStart = now;
+    if (now - meta.inputWindowStart > 1000) {
+      meta.inputCount = 0;
+      meta.inputWindowStart = now;
     }
-    if (player.inputCount >= VS_MAX_INPUTS_PER_SECOND) return;
-    player.inputCount++;
+    if (meta.inputCount >= VS_MAX_INPUTS_PER_SECOND) return;
+    meta.inputCount++;
 
-    // Frame validation
     if (Math.abs(frame - this.simulation.frame) > VS_FRAME_TOLERANCE) return;
-
-    // Ball index validation
     if (!this.config || ballIndex < 0 || ballIndex >= this.config.balls.length) return;
-
-    // Action validation
     if (action !== "dodge" && action !== "undodge") return;
 
     this.simulation.applyInput(idx as 0 | 1, action, ballIndex);
   }
 
+  /** Find which player slot a WebSocket belongs to, using tags. */
   private findPlayerIndex(ws: WebSocket): number {
-    if (this.players[0]?.ws === ws) return 0;
-    if (this.players[1]?.ws === ws) return 1;
+    const tags = this.state.getTags(ws);
+    if (tags.includes("p0")) return 0;
+    if (tags.includes("p1")) return 1;
     return -1;
+  }
+
+  /** Find the slot assigned to this WS (same as findPlayerIndex but for pre-join). */
+  private findSlotByWs(ws: WebSocket): number {
+    return this.findPlayerIndex(ws);
   }
 
   private async startGame(): Promise<void> {
     if (!this.config) return;
-    if (!this.players[0] || !this.players[1]) {
+    if (!this.getPlayerWs(0) || !this.getPlayerWs(1)) {
       this.roomState = "waiting";
+      await this.saveMeta();
       return;
     }
 
@@ -300,6 +333,7 @@ export class RoomDurableObject {
 
     this.simulation = new VsSimulation(this.seed, this.config);
     this.roomState = "playing";
+    await this.saveMeta();
 
     this.broadcast({
       type: "game_start",
@@ -308,7 +342,6 @@ export class RoomDurableObject {
       fixedDt: VS_FIXED_DT,
     });
 
-    // Start game loop
     await this.state.storage.setAlarm(Date.now() + 50);
   }
 
@@ -316,23 +349,20 @@ export class RoomDurableObject {
     try {
       ws.send(JSON.stringify(msg));
     } catch {
-      // Connection may be closed
+      // closed
     }
   }
 
   private broadcast(msg: ServerMessage): void {
     const data = JSON.stringify(msg);
-    for (const p of this.players) {
-      if (!p) continue;
-      try {
-        p.ws.send(data);
-      } catch {
-        // Connection may be closed
+    for (let i = 0; i < 2; i++) {
+      const ws = this.getPlayerWs(i);
+      if (ws) {
+        try { ws.send(data); } catch { /* closed */ }
       }
     }
   }
 
-  /** Broadcast with XOR encryption using combinedKey. */
   private broadcastEncrypted(msg: ServerMessage): void {
     if (!this.combinedKey) {
       this.broadcast(msg);
@@ -341,12 +371,10 @@ export class RoomDurableObject {
     const plaintext = JSON.stringify(msg);
     const encrypted = xorEncrypt(this.combinedKey, plaintext);
     const envelope = JSON.stringify({ type: "encrypted", data: encrypted });
-    for (const p of this.players) {
-      if (!p) continue;
-      try {
-        p.ws.send(envelope);
-      } catch {
-        // Connection may be closed
+    for (let i = 0; i < 2; i++) {
+      const ws = this.getPlayerWs(i);
+      if (ws) {
+        try { ws.send(envelope); } catch { /* closed */ }
       }
     }
   }
