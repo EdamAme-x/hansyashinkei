@@ -18,6 +18,7 @@ import type { ManageReplay } from "@application/usecases/ManageReplay";
 import type { VsMatchService } from "@application/usecases/VsMatchService";
 import { AchievementToast } from "./AchievementToast";
 import { AudioManager } from "./AudioManager";
+import { setupCustomCursor } from "./CustomCursor";
 
 type VsPhase = "connecting" | "waiting" | "countdown" | "playing" | "ended" | "error";
 
@@ -131,6 +132,7 @@ export class VsApp {
 
     this.setupInput();
     this.setupResize();
+    setupCustomCursor(() => this.phase === "playing");
   }
 
   private get isMobile(): boolean {

@@ -23,6 +23,7 @@ import { EncryptedLocalStorage } from "@infrastructure/crypto/EncryptedLocalStor
 import { AudioManager } from "@presentation/AudioManager";
 import { loadUsername, saveUsername } from "@infrastructure/storage/UsernameStore";
 import { VsMatchService } from "@application/usecases/VsMatchService";
+import { setupCustomCursor } from "@presentation/CustomCursor";
 
 async function main() {
   const container = document.getElementById("app");
@@ -57,7 +58,10 @@ async function main() {
   const vsParam = url.searchParams.get("vs");
 
   if (vsParam !== null) {
-    // VS mode — need username
+    // VS mode — setup cursor early (before modal)
+    setupCustomCursor();
+
+    // Need username
     let username = loadUsername(kv);
     if (!username) {
       username = await promptUsername();
@@ -148,17 +152,21 @@ function promptUsername(): Promise<string | null> {
     input.value = "";
     input.focus();
 
+    // Prevent global key handlers from intercepting input
+    input.addEventListener("keydown", (e) => e.stopPropagation());
+
     const done = () => {
       const val = input.value.trim();
       if (val.length < 1 || val.length > 10) return;
       overlay.classList.add("hidden");
+      okBtn.removeEventListener("click", done);
       resolve(val);
     };
 
-    okBtn.addEventListener("click", done, { once: true });
+    okBtn.addEventListener("click", done);
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") done();
-    }, { once: true });
+    });
   });
 }
 

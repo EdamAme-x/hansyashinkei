@@ -28,6 +28,7 @@ import { AchievementToast } from "./AchievementToast";
 import { getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
 import { getSkinSpeedMultiplier } from "@domain/entities/SkinDefs";
 import { loadUsername, saveUsername } from "@infrastructure/storage/UsernameStore";
+import { setupCustomCursor } from "./CustomCursor";
 import { downloadBlob } from "./dom";
 
 interface RecordingSession {
@@ -153,7 +154,7 @@ export class App {
 
     this.setupInput();
     this.setupResize();
-    this.setupCursor();
+    setupCustomCursor(() => this.sm.state === GameState.Playing);
     this.setupTitleButtons();
     this.hud.show(GameState.Title);
     this.updateKeyHints();
@@ -508,66 +509,6 @@ export class App {
       timer = window.setTimeout(() => {
         this.renderer.resize(window.innerWidth, window.innerHeight);
       }, 100);
-    });
-  }
-
-  private setupCursor(): void {
-    const cursor = document.getElementById("custom-cursor");
-    if (!cursor || this.isTouchOnly) return;
-
-    const TRAIL_COUNT = 12;
-    const trails: HTMLElement[] = [];
-    for (let i = 0; i < TRAIL_COUNT; i++) {
-      const t = document.createElement("div");
-      t.className = "cursor-trail";
-      t.style.opacity = "0";
-      document.body.appendChild(t);
-      trails.push(t);
-    }
-
-    let mx = -100;
-    let my = -100;
-    let hidden = false;
-    const positions: { x: number; y: number }[] = Array.from(
-      { length: TRAIL_COUNT },
-      () => ({ x: -100, y: -100 }),
-    );
-
-    window.addEventListener("mousemove", (e) => {
-      mx = e.clientX;
-      my = e.clientY;
-      cursor.style.left = `${mx}px`;
-      cursor.style.top = `${my}px`;
-    });
-
-    const animateTrails = () => {
-      // Each trail follows the one ahead with lerp for smooth lag
-      positions[0].x += (mx - positions[0].x) * 0.5;
-      positions[0].y += (my - positions[0].y) * 0.5;
-      for (let i = 1; i < TRAIL_COUNT; i++) {
-        positions[i].x += (positions[i - 1].x - positions[i].x) * 0.45;
-        positions[i].y += (positions[i - 1].y - positions[i].y) * 0.45;
-      }
-
-      for (let i = 0; i < trails.length; i++) {
-        const t = trails[i];
-        const p = positions[i];
-        const size = 12 - i * 0.8;
-        const alpha = hidden ? 0 : 0.45 * (1 - i / trails.length);
-        t.style.left = `${p.x}px`;
-        t.style.top = `${p.y}px`;
-        t.style.width = `${size}px`;
-        t.style.height = `${size}px`;
-        t.style.opacity = String(alpha);
-      }
-      requestAnimationFrame(animateTrails);
-    };
-    requestAnimationFrame(animateTrails);
-
-    // Hide cursor during gameplay
-    this.sm.onStateChange((_prev, next) => {
-      hidden = next === GameState.Playing;
-      cursor.classList.toggle("hide", hidden);
     });
   }
 
