@@ -15,9 +15,9 @@ import type { InputConfig } from "./InputConfig";
 import type { ManageAchievement } from "@application/usecases/ManageAchievement";
 import type { ManageScore } from "@application/usecases/ManageScore";
 import type { ManageReplay } from "@application/usecases/ManageReplay";
+import type { VsMatchService } from "@application/usecases/VsMatchService";
 import { AchievementToast } from "./AchievementToast";
 import { AudioManager } from "./AudioManager";
-import { createRoom } from "@infrastructure/api/VsApiClient";
 
 type VsPhase = "connecting" | "waiting" | "countdown" | "playing" | "ended" | "error";
 
@@ -68,6 +68,7 @@ export class VsApp {
   private readonly manageAchievement: ManageAchievement;
   private readonly manageScore: ManageScore;
   private readonly manageReplay: ManageReplay;
+  private readonly vsMatch: VsMatchService;
   private readonly achievementToast: AchievementToast;
   private readonly theme: ThemeConfig;
   private readonly username: string;
@@ -80,6 +81,7 @@ export class VsApp {
     manageAchievement: ManageAchievement,
     manageScore: ManageScore,
     manageReplay: ManageReplay,
+    vsMatch: VsMatchService,
     username: string,
   ) {
     this.theme = theme;
@@ -88,6 +90,7 @@ export class VsApp {
     this.manageAchievement = manageAchievement;
     this.manageScore = manageScore;
     this.manageReplay = manageReplay;
+    this.vsMatch = vsMatch;
     this.achievementToast = new AchievementToast();
     this.username = username;
     this.ws = new WsClient();
@@ -132,11 +135,11 @@ export class VsApp {
     this.mode = mode;
     this.updateOverlay("ルーム作成中...");
 
-    const { roomId } = await createRoom(mode);
+    const { roomId } = await this.vsMatch.createRoom(mode);
     this.roomId = roomId;
     this.updateOverlay(`ルームID: ${roomId}\n相手を待っています...`);
 
-    await this.ws.connect(roomId);
+    await this.ws.connect(this.vsMatch.getWsUrl(roomId));
     this.sendJoin();
   }
 
@@ -145,7 +148,7 @@ export class VsApp {
     this.roomId = roomId;
     this.updateOverlay("接続中...");
 
-    await this.ws.connect(roomId);
+    await this.ws.connect(this.vsMatch.getWsUrl(roomId));
     this.sendJoin();
   }
 

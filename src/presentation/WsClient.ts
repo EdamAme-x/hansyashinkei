@@ -1,5 +1,4 @@
 import type { ClientMessage, ServerMessage } from "@shared/protocol";
-import { getWsUrl } from "@infrastructure/api/VsApiClient";
 
 export type WsHandler = (msg: ServerMessage) => void;
 
@@ -11,9 +10,9 @@ export class WsClient {
   onMessage(handler: WsHandler): void { this.handler = handler; }
   onClose(handler: () => void): void { this.closeHandler = handler; }
 
-  connect(roomId: string): Promise<void> {
+  connect(wsUrl: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(getWsUrl(roomId));
+      const ws = new WebSocket(wsUrl);
       this.ws = ws;
 
       ws.onopen = () => resolve();

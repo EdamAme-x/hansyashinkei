@@ -1,21 +1,20 @@
-const WINDOW_MS = 60_000;
+const WINDOW_SECONDS = 60;
 const MAX_REQUESTS = 3;
 
-const windows = new Map<string, { count: number; resetAt: number }>();
+export async function checkRateLimit(kv: KVNamespace, ip: string): Promise<boolean> {
+  const key = `rl:${ip}`;
+  const raw = await kv.get(key);
 
-export function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = windows.get(ip);
-
-  if (!entry || now >= entry.resetAt) {
-    windows.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+  if (!raw) {
+    await kv.put(key, "1", { expirationTtl: WINDOW_SECONDS });
     return true;
   }
 
-  if (entry.count >= MAX_REQUESTS) {
+  const count = parseInt(raw, 10);
+  if (count >= MAX_REQUESTS) {
     return false;
   }
 
-  entry.count++;
+  await kv.put(key, String(count + 1), { expirationTtl: WINDOW_SECONDS });
   return true;
 }

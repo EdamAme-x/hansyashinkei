@@ -8,6 +8,7 @@ export { RoomDurableObject } from "@server/room";
 
 interface Env {
   ROOM: DurableObjectNamespace;
+  RATE_LIMIT: KVNamespace;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -23,7 +24,7 @@ const routes = app
   // Create a new room
   .post("/api/rooms", async (c) => {
     const ip = c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For") ?? "unknown";
-    if (!checkRateLimit(ip)) {
+    if (!await checkRateLimit(c.env.RATE_LIMIT, ip)) {
       return c.json({ error: "Rate limit exceeded. Try again later." }, 429);
     }
 

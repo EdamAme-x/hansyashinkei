@@ -22,6 +22,7 @@ import { LocalStorageModeRepository } from "@infrastructure/storage/LocalStorage
 import { EncryptedLocalStorage } from "@infrastructure/crypto/EncryptedLocalStorage";
 import { AudioManager } from "@presentation/AudioManager";
 import { loadUsername, saveUsername } from "@infrastructure/storage/UsernameStore";
+import { VsMatchService } from "@application/usecases/VsMatchService";
 
 async function main() {
   const container = document.getElementById("app");
@@ -69,7 +70,8 @@ async function main() {
 
     const theme = themeManager.current;
     const audio = new AudioManager(theme.audio, kv);
-    const vsApp = new VsApp(container, theme, inputConfig, audio, manageAchievement, manageScore, manageReplay, username);
+    const vsMatchService = new VsMatchService();
+    const vsApp = new VsApp(container, theme, inputConfig, audio, manageAchievement, manageScore, manageReplay, vsMatchService, username);
 
     if (vsParam === "") {
       // Create new room: hs.evex.land?vs
