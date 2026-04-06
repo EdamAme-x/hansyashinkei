@@ -32,7 +32,8 @@ export type AchievementCondition =
   | { readonly type: "win_streak"; readonly minScore: number; readonly count: number; readonly mode?: GameMode }
   | { readonly type: "exact_score"; readonly value: number }
   | { readonly type: "rapid_keys"; readonly keysPerSecond: number }
-  | { readonly type: "random_chance"; readonly denominator: number };
+  | { readonly type: "random_chance"; readonly denominator: number }
+  | { readonly type: "vs_played" };
 
 // ── Achievement definition (static master data) ──
 

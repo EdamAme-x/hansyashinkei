@@ -15,6 +15,7 @@ export default defineConfig({
       "@application": resolve(import.meta.dirname!, "src/application"),
       "@infrastructure": resolve(import.meta.dirname!, "src/infrastructure"),
       "@presentation": resolve(import.meta.dirname!, "src/presentation"),
+      "@shared": resolve(import.meta.dirname!, "src/shared"),
     },
   },
   build: {

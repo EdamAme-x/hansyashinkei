@@ -27,6 +27,7 @@ import { AchievementUI } from "./AchievementUI";
 import { AchievementToast } from "./AchievementToast";
 import { getSkinDef, DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";
 import { getSkinSpeedMultiplier } from "@domain/entities/SkinDefs";
+import { loadUsername, saveUsername } from "@infrastructure/storage/UsernameStore";
 import { downloadBlob } from "./dom";
 
 interface RecordingSession {
@@ -50,6 +51,7 @@ export class App {
   private readonly manageAchievement: ManageAchievement;
   private readonly bestScoreRepo: BestScoreRepository;
   private readonly modeRepo: ModeRepository;
+  private readonly kv: KVStore;
   private readonly achievementUI: AchievementUI;
   private readonly achievementToast: AchievementToast;
   private readonly _classicConfig: GameConfig;
@@ -93,6 +95,7 @@ export class App {
     this._classicConfig = gameConfig;
     this._tripleConfig = tripleConfig;
     this.modeRepo = modeRepo;
+    this.kv = kv;
     this.activeMode = modeRepo.load();
     this.inputConfig = inputConfig;
     this.renderer = new GameRenderer(container, this.gameConfig, theme);
@@ -361,6 +364,11 @@ export class App {
       e.stopPropagation();
       this.achievementUI.show();
     });
+    document.getElementById("btn-vs")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Navigate to VS mode — create new room with current mode
+      location.href = `${location.origin}?vs`;
+    });
     document.getElementById("back-to-title-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.sm.dispatch(GameEvent.BackToTitle);
@@ -401,6 +409,14 @@ export class App {
     document.getElementById("settings-theme")?.addEventListener("click", () => {
       settingsScreen?.classList.add("hidden");
       this.themeUI.show();
+    });
+
+    document.getElementById("settings-username")?.addEventListener("click", () => {
+      const current = loadUsername(this.kv) ?? "";
+      const name = window.prompt("ユーザー名 (1-10文字)", current);
+      if (name && name.trim().length >= 1 && name.trim().length <= 10) {
+        saveUsername(this.kv, name.trim());
+      }
     });
 
     // (achievements button is on title screen, not settings)

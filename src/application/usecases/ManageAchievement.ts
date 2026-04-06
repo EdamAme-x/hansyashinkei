@@ -24,12 +24,12 @@ export class ManageAchievement {
   ) {}
 
   /** Called after game over. Returns newly unlocked achievements. */
-  async evaluateAndUnlock(newScore: Score, maxKeysPerSecond = 0): Promise<UnlockEvent[]> {
+  async evaluateAndUnlock(newScore: Score, maxKeysPerSecond = 0, vsPlayed = false): Promise<UnlockEvent[]> {
     const allScores = await this.scoreRepo.getAll();
     const existing = await this.repo.getAll();
     const alreadyUnlocked = new Set(existing.map((r) => r.id));
 
-    const ctx: EvalContext = { scores: allScores, newScore, alreadyUnlocked, maxKeysPerSecond };
+    const ctx: EvalContext = { scores: allScores, newScore, alreadyUnlocked, maxKeysPerSecond, vsPlayed };
     const results = evaluateAchievements(ACHIEVEMENT_DEFS, ctx);
     const events: UnlockEvent[] = [];
 

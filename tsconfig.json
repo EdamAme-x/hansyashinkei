@@ -19,7 +19,8 @@
       "@domain/*": ["src/domain/*"],
       "@application/*": ["src/application/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
-      "@presentation/*": ["src/presentation/*"]
+      "@presentation/*": ["src/presentation/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

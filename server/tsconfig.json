@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "@domain/*": ["../src/domain/*"],
+      "@shared/*": ["../src/shared/*"],
+      "@server/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "../src/domain/**/*.ts", "../src/shared/**/*.ts"]
+}

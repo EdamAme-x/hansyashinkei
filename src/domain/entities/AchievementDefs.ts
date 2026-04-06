@@ -140,7 +140,7 @@ export const ACHIEVEMENT_DEFS: readonly AchievementDef[] = [
     id: "invisible",
     label: "INVISIBLE",
     description: "???",
-    condition: { type: "exact_score", value: -1 }, // unreachable stub
+    condition: { type: "vs_played" },
     rewardSkinId: "skin_invisible",
     hidden: true,
   },

@@ -583,6 +583,131 @@
       .achievement-toast-label { font-size: 0.9rem; font-weight: 900; margin: 0.2em 0; }
       .achievement-toast-skin { font-size: 0.6rem; color: #aaa; }
 
+      /* VS mode */
+      #vs-overlay {
+        position: fixed; inset: 0; z-index: 30;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.92); pointer-events: auto;
+      }
+      #vs-overlay.hidden { display: none; }
+      .vs-overlay-text {
+        font-size: 1.5rem; font-weight: 900; letter-spacing: 0.15em;
+        text-align: center; white-space: pre-line; line-height: 2;
+      }
+      .vs-room-id {
+        font-size: 2.5rem; font-weight: 900; letter-spacing: 0.3em;
+        color: #ffd700; margin: 1rem 0;
+      }
+      .vs-copy-btn {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.75rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 1.5em; border-radius: 5px; cursor: pointer;
+        margin-top: 0.5rem;
+      }
+      .vs-copy-btn:hover { background: rgba(255,255,255,0.15); }
+
+      /* VS HP bars */
+      .vs-hp-container {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+        display: flex; gap: 0.5rem; padding: 0.6rem 1rem;
+        pointer-events: none;
+      }
+      .vs-hp-container.hidden { display: none; }
+      .vs-hp-side { flex: 1; }
+      .vs-hp-label {
+        font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+        opacity: 0.5; margin-bottom: 0.2rem;
+      }
+      .vs-hp-bar {
+        height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;
+        overflow: hidden;
+      }
+      .vs-hp-fill {
+        height: 100%; border-radius: 4px; transition: width 0.15s;
+        width: 100%;
+      }
+      .vs-hp-fill.self { background: linear-gradient(90deg, #22cc44, #44ff66); }
+      .vs-hp-fill.opponent { background: linear-gradient(90deg, #cc2244, #ff4466); }
+      .vs-hp-value {
+        font-size: 0.7rem; font-weight: 900; letter-spacing: 0.05em;
+        margin-top: 0.15rem;
+      }
+
+      /* VS damage flash */
+      #vs-damage-flash {
+        position: fixed; inset: 0; z-index: 18;
+        background: rgba(255,0,0,0.15); pointer-events: none;
+        opacity: 0; transition: opacity 0.1s;
+      }
+      #vs-damage-flash.hidden { display: none; }
+      #vs-damage-flash.active { opacity: 1; }
+
+      /* VS damage numbers */
+      .vs-damage-area {
+        position: fixed; z-index: 22; pointer-events: none;
+        top: 4rem;
+      }
+      #vs-self-damage { left: 25%; transform: translateX(-50%); }
+      #vs-opponent-damage { right: 25%; transform: translateX(50%); }
+      .vs-damage-num {
+        font-size: 1.4rem; font-weight: 900; color: #ff4444;
+        text-shadow: 0 0 8px rgba(255,0,0,0.5);
+        opacity: 1; transition: opacity 0.6s, transform 0.6s;
+      }
+      .vs-damage-num.float-up { opacity: 0; transform: translateY(-2rem); }
+
+      /* VS result */
+      #vs-result {
+        position: fixed; inset: 0; z-index: 35;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.9); pointer-events: auto;
+      }
+      #vs-result.hidden { display: none; }
+      .vs-result-text {
+        font-size: 4rem; font-weight: 900; letter-spacing: 0.3em;
+      }
+      .vs-result-back {
+        margin-top: 2rem;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.6em 2em; border-radius: 5px; cursor: pointer;
+      }
+      .vs-result-back:hover { background: rgba(255,255,255,0.15); }
+
+      /* Username modal */
+      #username-modal {
+        position: fixed; inset: 0; z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.9);
+      }
+      #username-modal.hidden { display: none; }
+      .username-box {
+        background: #111; border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; padding: 2rem; text-align: center;
+        max-width: 320px; width: 90%;
+      }
+      .username-box h3 {
+        font-size: 1rem; font-weight: 900; letter-spacing: 0.15em;
+        margin-bottom: 1rem;
+      }
+      #username-input {
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 1rem;
+        text-align: center; width: 100%; max-width: 200px;
+        padding: 0.5em; border-radius: 5px; outline: none;
+      }
+      #username-input:focus { border-color: rgba(255,255,255,0.6); }
+      #username-ok {
+        display: block; margin: 1rem auto 0;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
+        font-weight: 700; letter-spacing: 0.1em;
+        padding: 0.5em 2em; border-radius: 5px; cursor: pointer;
+      }
+      #username-ok:hover { background: rgba(255,255,255,0.15); }
+
       /* Mode selector */
       .mode-selector {
         display: flex; gap: 0.5rem; margin-top: 0.8rem; pointer-events: auto;
@@ -731,6 +856,7 @@
           <button id="btn-achievements" aria-label="実績">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
           </button>
+          <button id="btn-vs" aria-label="オンライン対戦">VS</button>
           <button id="btn-settings" aria-label="設定">SETTINGS</button>
         </div>
 
@@ -790,6 +916,7 @@
           <button id="settings-keys" class="settings-item">KEYS</button>
           <button id="settings-sound" class="settings-item"><span id="settings-sound-label">SOUND ON</span></button>
           <button id="settings-theme" class="settings-item">CUSTOMIZE</button>
+          <button id="settings-username" class="settings-item">USERNAME</button>
           <div class="settings-row">
             <button id="settings-export-settings" class="settings-item">EXPORT</button>
             <button id="settings-import" class="settings-item">IMPORT</button>
@@ -904,6 +1031,44 @@
 
     <div id="achievement-toast" aria-live="assertive" aria-atomic="false"></div>
     <div id="custom-cursor"></div>
+
+    <!-- VS mode overlays -->
+    <div id="vs-overlay" class="hidden">
+      <div class="vs-overlay-text"></div>
+      <div class="vs-room-id" id="vs-room-id"></div>
+      <button class="vs-copy-btn" id="vs-copy-btn" style="display:none">URLをコピー</button>
+    </div>
+
+    <div class="vs-hp-container hidden" id="vs-hp-container">
+      <div class="vs-hp-side">
+        <div class="vs-hp-label">YOU</div>
+        <div class="vs-hp-bar"><div class="vs-hp-fill self" id="vs-self-hp-fill"></div></div>
+        <div class="vs-hp-value" id="vs-self-hp-value">1000</div>
+      </div>
+      <div class="vs-hp-side">
+        <div class="vs-hp-label">OPPONENT</div>
+        <div class="vs-hp-bar"><div class="vs-hp-fill opponent" id="vs-opponent-hp-fill"></div></div>
+        <div class="vs-hp-value" id="vs-opponent-hp-value">1000</div>
+      </div>
+    </div>
+
+    <div id="vs-damage-flash" class="hidden"></div>
+    <div class="vs-damage-area" id="vs-self-damage"></div>
+    <div class="vs-damage-area" id="vs-opponent-damage"></div>
+
+    <div id="vs-result" class="hidden">
+      <div class="vs-result-text"></div>
+      <button class="vs-result-back" onclick="location.href='/'">TITLE</button>
+    </div>
+
+    <!-- Username modal -->
+    <div id="username-modal" class="hidden">
+      <div class="username-box">
+        <h3>USERNAME</h3>
+        <input id="username-input" type="text" maxlength="10" placeholder="1-10文字" autocomplete="off" />
+        <button id="username-ok">OK</button>
+      </div>
+    </div>
 
     <div id="migrate-confirm" class="migrate-confirm-overlay hidden" role="dialog" aria-label="移行確認">
       <div class="migrate-confirm-box">

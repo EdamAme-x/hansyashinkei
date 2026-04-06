@@ -11,6 +11,8 @@ export interface EvalContext {
   readonly alreadyUnlocked: ReadonlySet<string>;
   /** Max dodge key presses per second during this game (for rapid_keys condition). */
   readonly maxKeysPerSecond?: number;
+  /** Whether a VS match was played (for vs_played condition). */
+  readonly vsPlayed?: boolean;
 }
 
 export interface EvalResult {
@@ -110,6 +112,11 @@ function checkCondition(def: AchievementDef, ctx: EvalContext): EvalResult | nul
       if (allWins) return null; // RNG is compromised
 
       return scoreResult(def.id, newScore, condition.type, 1);
+    }
+
+    case "vs_played": {
+      if (!ctx.vsPlayed) return null;
+      return aggregateResult(def.id, condition.type, 1);
     }
   }
 }

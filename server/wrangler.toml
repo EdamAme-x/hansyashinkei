@@ -1,0 +1,18 @@
+name = "hs-vs-server"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[alias]
+"@domain" = "../src/domain"
+"@shared" = "../src/shared"
+"@server" = "./src"
+
+[durable_objects]
+bindings = [
+  { name = "ROOM", class_name = "RoomDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RoomDurableObject"]
