@@ -123,17 +123,18 @@ export function tick(world: GameWorldState, dt: number): void {
   const hitMin = BALL_Z - config.hitZone;
   const hitMax = BALL_Z + config.hitZone;
 
+  let hit = false;
+
   for (const wall of world.walls) {
     const prevZ = wall.z;
     wall.z += world.speed * dt;
 
     if (wall.passed) continue;
-    // Sweep test: wall crossed through hitZone between prevZ and wall.z
-    if (prevZ <= hitMax && wall.z >= hitMin) {
+    if (!hit && prevZ <= hitMax && wall.z >= hitMin) {
       for (const ball of world.balls) {
         if (ball.lane === wall.lane) {
-          world.alive = false;
-          return;
+          hit = true;
+          break;
         }
       }
     }
@@ -160,5 +161,10 @@ export function tick(world: GameWorldState, dt: number): void {
     const jitter = (prng() - 0.5) * 2 * config.spawnJitter * baseInterval;
     world.spawnTimer = jitter;
     spawnWalls(world);
+  }
+
+  // Set alive=false AFTER all tick logic (PRNG consumption is deterministic)
+  if (hit) {
+    world.alive = false;
   }
 }
