@@ -1,4 +1,4 @@
-const VS_SERVER_URL = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_VS_SERVER_URL ?? "https://vs.hs.evex.land";
+const VS_SERVER_URL = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_VS_SERVER_URL ?? "https://hs-vs-server.edamamex.workers.dev";
 
 export async function createRoom(mode: "classic" | "triple"): Promise<{ roomId: string; mode: string }> {
   const res = await fetch(`${VS_SERVER_URL}/api/rooms`, {

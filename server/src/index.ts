@@ -13,7 +13,7 @@ interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("*", cors({
-  origin: ["https://hs.evex.land", "http://localhost:5173", "http://localhost:4173"],
+  origin: ["https://hs.evex.land", "http://localhost:5173", "http://localhost:4173", "https://hs-vs-server.edamamex.workers.dev"],
   allowMethods: ["GET", "POST"],
   allowHeaders: ["Content-Type"],
 }));
