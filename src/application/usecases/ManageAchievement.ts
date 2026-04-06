@@ -3,7 +3,7 @@ import type { AchievementRecord, UnlockProof, AchievementDef } from "@domain/ent
 import type { AchievementRepository } from "@domain/repositories/AchievementRepository";
 import type { ScoreRepository } from "@domain/repositories/ScoreRepository";
 import type { ReplayRepository } from "@domain/repositories/ReplayRepository";
-import type { AchievementSigner, SignPayload } from "@infrastructure/crypto/AchievementSigner";
+import type { AchievementSigner, SignPayload } from "@domain/repositories/AchievementSigner";
 import { evaluateAchievements, type EvalContext } from "@domain/entities/AchievementEvaluator";
 import { ACHIEVEMENT_DEFS, getAchievementDef } from "@domain/entities/AchievementDefs";
 import { DEFAULT_SKIN_ID } from "@domain/entities/SkinDefs";

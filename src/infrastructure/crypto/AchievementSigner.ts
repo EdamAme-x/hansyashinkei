@@ -47,14 +47,8 @@ async function getOrCreateHmacKey(): Promise<CryptoKey> {
   return key;
 }
 
-export interface SignPayload {
-  achievementId: string;
-  unlockedAt: number;
-  scoreId: string | null;
-  replayId: string | null;
-  conditionType: string;
-  satisfiedValue: number;
-}
+import type { SignPayload, AchievementSigner } from "@domain/repositories/AchievementSigner";
+export type { SignPayload } from "@domain/repositories/AchievementSigner";
 
 function canonicalize(p: SignPayload): string {
   return `${p.achievementId}|${p.unlockedAt}|${p.scoreId ?? "null"}|${p.replayId ?? "null"}|${p.conditionType}|${p.satisfiedValue}`;
@@ -76,7 +70,7 @@ function fromBase64Url(s: string): Uint8Array {
   return bytes;
 }
 
-export class AchievementSigner {
+export class AchievementSignerImpl implements AchievementSigner {
   private key: CryptoKey | null = null;
 
   async init(): Promise<void> {

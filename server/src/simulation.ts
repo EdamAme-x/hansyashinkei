@@ -171,7 +171,7 @@ export class VsSimulation {
     }
 
     // Remove collected/despawned orbs
-    this.orbs = this.orbs.filter((o) => !o.collected || o.z <= this.config.despawnZ + 1);
+    this.orbs = this.orbs.filter((o) => !o.collected);
   }
 
   getPlayerState(index: 0 | 1): VsPlayerState {

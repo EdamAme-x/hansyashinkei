@@ -11,7 +11,7 @@ import { IndexedDbAchievementRepository } from "@infrastructure/storage/IndexedD
 import { ReplayFileSerializer } from "@infrastructure/storage/ReplayFileSerializer";
 import { SaveFileSerializer } from "@infrastructure/storage/SaveFileSerializer";
 import { DeviceKeyStore } from "@infrastructure/crypto/DeviceKeyStore";
-import { AchievementSigner } from "@infrastructure/crypto/AchievementSigner";
+import { AchievementSignerImpl } from "@infrastructure/crypto/AchievementSigner";
 import { ThemeRepository } from "@infrastructure/storage/ThemeRepository";
 import { ImageStore } from "@infrastructure/storage/ImageStore";
 import { createDefaultConfig, createTripleConfig } from "@domain/entities/GameConfig";
@@ -31,7 +31,7 @@ async function main() {
   const deviceKey = new DeviceKeyStore();
   await deviceKey.init();
 
-  const achievementSigner = new AchievementSigner();
+  const achievementSigner = new AchievementSignerImpl();
   await achievementSigner.init();
 
   const scoreRepo = new IndexedDbScoreRepository(deviceKey);

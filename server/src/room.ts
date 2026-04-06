@@ -105,6 +105,13 @@ export class RoomDurableObject {
       this.simulation.winner = winner;
       this.broadcast({ type: "game_over", winner, players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)] });
     }
+
+    // If countdown/waiting, cancel and notify remaining player
+    if (this.roomState === "countdown" || this.roomState === "waiting") {
+      this.roomState = "waiting";
+      this.countdownRemaining = 3;
+      this.broadcast({ type: "error", message: "対戦相手が切断しました" });
+    }
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
@@ -257,6 +264,10 @@ export class RoomDurableObject {
 
   private async startGame(): Promise<void> {
     if (!this.config) return;
+    if (!this.players[0] || !this.players[1]) {
+      this.roomState = "waiting";
+      return;
+    }
 
     const seedBuf = new Uint32Array(1);
     crypto.getRandomValues(seedBuf);
