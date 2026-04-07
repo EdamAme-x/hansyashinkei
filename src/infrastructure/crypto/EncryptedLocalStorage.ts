@@ -17,21 +17,29 @@ function xorKey(): string {
   return cachedKey;
 }
 
-function xorApply(input: string, key: string): string {
-  const out: string[] = [];
+function xorApplyBytes(input: Uint8Array, key: string): Uint8Array {
+  const out = new Uint8Array(input.length);
   for (let i = 0; i < input.length; i++) {
-    out.push(String.fromCharCode(input.charCodeAt(i) ^ key.charCodeAt(i % key.length)));
+    out[i] = input[i] ^ key.charCodeAt(i % key.length);
   }
-  return out.join("");
+  return out;
 }
 
 function encode(plain: string): string {
-  return btoa(xorApply(plain, xorKey()));
+  const bytes = new TextEncoder().encode(plain);
+  const xored = xorApplyBytes(bytes, xorKey());
+  let bin = "";
+  for (const b of xored) bin += String.fromCharCode(b);
+  return btoa(bin);
 }
 
 function decode(encoded: string): string {
   try {
-    return xorApply(atob(encoded), xorKey());
+    const bin = atob(encoded);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const xored = xorApplyBytes(bytes, xorKey());
+    return new TextDecoder().decode(xored);
   } catch {
     return "";
   }
