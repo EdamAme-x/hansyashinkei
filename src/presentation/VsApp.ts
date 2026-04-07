@@ -4,7 +4,7 @@ import type { ReplayEvent } from "@domain/entities/Replay";
 import { createReplay } from "@domain/entities/Replay";
 import { createVsScore } from "@domain/entities/Score";
 import type { ServerMessage } from "@shared/protocol";
-import { VS_FIXED_DT, VS_MAX_HP, VS_ORB_CHANCE } from "@shared/protocol";
+import { VS_FIXED_DT, VS_MAX_HP, VS_ORB_CHANCE, VS_ORB_SPAWN_Z, VS_ORB_PICKUP_RANGE } from "@shared/protocol";
 import { WsClient } from "./WsClient";
 import { GameRenderer } from "./GameRenderer";
 import type { ThemeConfig } from "@domain/entities/ThemeConfig";
@@ -303,7 +303,7 @@ export class VsApp {
                 const safeLanes = validLanes.filter((l) => !wallLanes.has(l));
                 if (safeLanes.length > 0) {
                   const lane = safeLanes[Math.floor(this.orbPrng() * safeLanes.length)];
-                  this.orbs.push({ id: this.orbIdGen++, lane, z: this.gameConfig.spawnZ });
+                  this.orbs.push({ id: this.orbIdGen++, lane, z: VS_ORB_SPAWN_Z });
                 }
               }
             }
@@ -311,11 +311,10 @@ export class VsApp {
           }
 
           // Move orbs + check collection (wider range for reliable pickup)
-          const orbPickupRange = 1.5;
           for (let oi = this.orbs.length - 1; oi >= 0; oi--) {
             const orb = this.orbs[oi];
             orb.z += this.selfWorld.speed * VS_FIXED_DT;
-            if (orb.z >= -orbPickupRange && orb.z <= orbPickupRange) {
+            if (orb.z >= -VS_ORB_PICKUP_RANGE && orb.z <= VS_ORB_PICKUP_RANGE) {
               for (const ball of this.selfWorld.balls) {
                 if (ball.lane === orb.lane) {
                   this.ws.send({ type: "orb_collect" });
@@ -352,7 +351,7 @@ export class VsApp {
                 const safeLanes = validLanes.filter((l) => !wallLanes.has(l));
                 if (safeLanes.length > 0) {
                   const lane = safeLanes[Math.floor(this.oppOrbPrng() * safeLanes.length)];
-                  this.oppOrbs.push({ id: this.orbIdGen++, lane, z: this.gameConfig.spawnZ });
+                  this.oppOrbs.push({ id: this.orbIdGen++, lane, z: VS_ORB_SPAWN_Z });
                 }
               }
             }

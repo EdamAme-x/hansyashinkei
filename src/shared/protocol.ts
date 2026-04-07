@@ -55,7 +55,9 @@ export const VS_WALL_DAMAGE = 200;
 export const VS_ORB_DAMAGE = 75;
 export const VS_PASS_HEAL = 25;
 export const VS_INVINCIBLE_FRAMES = 120; // 2 seconds at 60fps
-export const VS_ORB_CHANCE = 1 / 2;
+export const VS_ORB_CHANCE = 2 / 3;
+export const VS_ORB_SPAWN_Z = -40;
+export const VS_ORB_PICKUP_RANGE = 1.5;
 export const VS_FIXED_DT = 1 / 60;
 export const VS_BROADCAST_INTERVAL = 3; // every 3 ticks = 20Hz
 export const VS_MAX_INPUTS_PER_SECOND = 20;

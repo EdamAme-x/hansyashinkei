@@ -5,7 +5,7 @@ import type { ClientMessage, ServerMessage } from "@shared/protocol";
 import { VS_FIXED_DT } from "@shared/protocol";
 import { VsSimulation } from "@server/simulation";
 import type { VsGameEvent } from "@server/simulation";
-import { combineKeys, base64Decode, base64Encode, hmacSign, validateUsername, xorEncrypt } from "@server/auth";
+import { combineKeys, base64Decode, base64Encode, validateUsername, xorEncrypt } from "@server/auth";
 
 type RoomState = "waiting" | "countdown" | "playing" | "finished";
 
@@ -61,6 +61,15 @@ export class RoomDurableObject {
     // Restore simulation if game was in progress
     if (this.roomState === "playing" && !this.simulation) {
       await this.restoreSimulation();
+    }
+  }
+
+  /** Re-schedule alarm if it got lost during hibernation. */
+  private async ensureAlarm(): Promise<void> {
+    if (this.roomState !== "playing") return;
+    const current = await this.state.storage.getAlarm();
+    if (!current) {
+      await this.state.storage.setAlarm(Date.now() + 50);
     }
   }
 
@@ -198,9 +207,11 @@ export class RoomDurableObject {
         break;
       case "input":
         this.handleInput(ws, msg.action, msg.ballIndex);
+        await this.ensureAlarm();
         break;
       case "wall_hit":
         this.handleReport(ws, "wall_hit");
+        await this.ensureAlarm();
         break;
       case "orb_collect":
         this.handleReport(ws, "orb_collect");
@@ -257,20 +268,12 @@ export class RoomDurableObject {
     if (this.roomState === "playing" && this.simulation && !this.simulation.finished) {
       this.simulation.step();
 
-      const statePayload = JSON.stringify({
-        frame: this.simulation.frame,
-        players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
-        orbs: this.simulation.getOrbStates(),
-      });
-
-      const hmac = this.combinedKey ? await hmacSign(this.combinedKey, statePayload) : "";
-
       this.broadcastEncrypted({
         type: "state",
         frame: this.simulation.frame,
         players: [this.simulation.getPlayerState(0), this.simulation.getPlayerState(1)],
         orbs: this.simulation.getOrbStates(),
-        hmac,
+        hmac: "",
       });
 
       await this.state.storage.setAlarm(Date.now() + 50);
