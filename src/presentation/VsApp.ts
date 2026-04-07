@@ -253,9 +253,10 @@ export class VsApp {
   }
 
   private onDamage(target: 0 | 1, amount: number, source: "wall" | "orb"): void {
-    if (target === this.playerIndex) { this.showDamageFlash(); this.audio.playHit(); }
+    if (target === this.playerIndex) { this.audio.playHit(); }
     else if (source === "orb") this.audio.playOrbDamage();
     this.showDamageNumber(target === this.playerIndex ? "self" : "opponent", amount);
+    this.updateHpDisplay();
   }
 
   private onHeal(target: 0 | 1, amount: number): void {
@@ -319,6 +320,7 @@ export class VsApp {
                 if (ball.lane === orb.lane) {
                   this.ws.send({ type: "orb_collect" });
                   this.audio.playOrbDamage();
+                  this.showOrbCollect();
                   this.orbs.splice(oi, 1);
                   break;
                 }
@@ -496,22 +498,22 @@ export class VsApp {
   private updateHpDisplay(): void {
     const sb = document.getElementById("vs-self-hp-fill"), ob = document.getElementById("vs-opponent-hp-fill");
     const sl = document.getElementById("vs-self-hp-value"), ol = document.getElementById("vs-opponent-hp-value");
-    if (sb) sb.style.width = `${Math.max(0, this.selfHp / 10)}%`;
-    if (ob) ob.style.width = `${Math.max(0, this.oppHp / 10)}%`;
+    if (sb) { sb.style.width = `${Math.max(0, this.selfHp / 10)}%`; sb.classList.remove("hit"); void sb.offsetWidth; sb.classList.add("hit"); }
+    if (ob) { ob.style.width = `${Math.max(0, this.oppHp / 10)}%`; ob.classList.remove("hit"); void ob.offsetWidth; ob.classList.add("hit"); }
     if (sl) sl.textContent = String(Math.max(0, this.selfHp));
     if (ol) ol.textContent = String(Math.max(0, this.oppHp));
-  }
-
-  private showDamageFlash(): void {
-    const f = document.getElementById("vs-damage-flash"); if (!f) return;
-    f.classList.remove("hidden"); f.classList.add("active");
-    setTimeout(() => { f.classList.remove("active"); f.classList.add("hidden"); }, 300);
   }
 
   private showDamageNumber(target: "self" | "opponent", amount: number): void {
     const c = document.getElementById(target === "self" ? "vs-self-damage" : "vs-opponent-damage"); if (!c) return;
     const el = document.createElement("div"); el.className = "vs-damage-num"; el.textContent = `-${amount}`;
     c.appendChild(el); requestAnimationFrame(() => el.classList.add("float-up")); setTimeout(() => el.remove(), 1000);
+  }
+
+  private showOrbCollect(): void {
+    const c = document.getElementById("vs-self-damage"); if (!c) return;
+    const el = document.createElement("div"); el.className = "vs-orb-collect"; el.textContent = "ORB! →-75";
+    c.appendChild(el); requestAnimationFrame(() => el.classList.add("float-up")); setTimeout(() => el.remove(), 1200);
   }
 
   private showResult(result: string): void {

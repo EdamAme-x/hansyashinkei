@@ -635,6 +635,11 @@
       }
       .vs-hp-fill.self { background: linear-gradient(90deg, #22cc44, #44ff66); }
       .vs-hp-fill.opponent { background: linear-gradient(90deg, #cc2244, #ff4466); }
+      .vs-hp-fill.hit { animation: hp-hit 0.4s ease-out; }
+      @keyframes hp-hit {
+        0% { filter: brightness(2); }
+        100% { filter: brightness(1); }
+      }
       .vs-hp-value {
         font-size: 0.7rem; font-weight: 900; letter-spacing: 0.05em;
         margin-top: 0.15rem;
@@ -664,6 +669,13 @@
         opacity: 1; transition: opacity 0.8s, transform 0.8s;
       }
       .vs-damage-num.float-up { opacity: 0; transform: translateY(-3rem); }
+      .vs-orb-collect {
+        font-size: 1.2rem; font-weight: 900;
+        color: #ffcc00;
+        text-shadow: 0 0 12px rgba(255,200,0,0.6), 0 2px 4px rgba(0,0,0,0.5);
+        opacity: 1; transition: opacity 0.8s, transform 0.8s;
+      }
+      .vs-orb-collect.float-up { opacity: 0; transform: translateY(-3rem); }
 
       /* VS result */
       #vs-result {
